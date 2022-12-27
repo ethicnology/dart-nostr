@@ -1,14 +1,15 @@
 name: nostr
-description: A starting point for Dart libraries or applications.
+description: A library for nostr protocol implemented in dart for flutter
 version: 1.0.0
-# homepage: https://www.example.com
+homepage: https://github.com/ethicnology/dart-nostr
 
 environment:
   sdk: '>=2.18.5 <3.0.0'
 
-# dependencies:
-#   path: ^1.8.0
-
 dev_dependencies:
   lints: ^2.0.0
   test: ^1.16.0
+dependencies:
+  bip340: ^0.0.4
+  convert: ^3.1.1
+  crypto: ^3.0.2
