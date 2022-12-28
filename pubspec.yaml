@@ -1,6 +1,6 @@
 name: nostr
 description: A library for nostr protocol implemented in dart for flutter
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/ethicnology/dart-nostr
 
 environment:
