@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bip340/bip340.dart';
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
@@ -33,9 +35,10 @@ void main() {
       expect(event.tags, tags);
       expect(event.content, content);
       expect(event.sig, sig);
+      expect(event.subscriptionId, null);
     });
 
-    test('Constructor from', () {
+    test('Constructor.from', () {
       int createdAt = 1672175320;
       int kind = 1;
       List<List<String>> tags = [];
@@ -65,5 +68,131 @@ void main() {
       expect(event.content, content);
       expect(verify(event.pubkey, event.id, event.sig), true);
     });
+
+    test('Constructor.from generated createdAt', () {
+      Event event = Event.from(
+        kind: 1,
+        tags: [],
+        content: "",
+        privkey:
+            "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+      );
+      expect(event.createdAt != 0, isTrue);
+    });
+
+    test('Constructor.fromJson', () {
+      var json = {
+        "kind": 1,
+        "pubkey":
+            "0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db",
+        "content": "dart-nostr",
+        "tags": [],
+        "created_at": 1672477962,
+        "sig":
+            "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
+        "id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"
+      };
+      Event event = Event.fromJson(json);
+      expect(event.id, json['id']);
+      expect(event.pubkey, json['pubkey']);
+      expect(event.createdAt, json['created_at']);
+      expect(event.kind, json['kind']);
+      expect(event.tags, json['tags']);
+      expect(event.content, json['content']);
+      expect(event.sig, json['sig']);
+    });
+
+    test('Constructor.toJson', () {
+      Map<String, dynamic> json = {
+        "pubkey":
+            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
+        "content": "How does this work? ð",
+        "id":
+            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
+        "created_at": 1672477967,
+        "sig":
+            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
+        "kind": 1,
+        "tags": [
+          [
+            "e",
+            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
+          ],
+          [
+            "e",
+            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
+          ],
+          [
+            "p",
+            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
+          ]
+        ]
+      };
+      Event event = Event.fromJson(json);
+      Map<String, dynamic> toJson = event.toJson();
+      expect(toJson, json);
+    });
+  });
+
+  test('Constructor.serialize', () {
+    var serialized = [
+      "EVENT",
+      {
+        "id":
+            "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2",
+        "pubkey":
+            "0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db",
+        "created_at": 1672477962,
+        "kind": 1,
+        "tags": [],
+        "content": "dart-nostr",
+        "sig":
+            "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
+      }
+    ];
+    Event event = Event.fromJson(serialized[1] as Map<String, dynamic>);
+    expect(event.serialize(), jsonEncode(serialized));
+  });
+
+  test('Constructor.deserialize', () {
+    var serialized = [
+      "EVENT",
+      "7971516031312706",
+      {
+        "id":
+            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
+        "pubkey":
+            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
+        "created_at": 1672477967,
+        "kind": 1,
+        "tags": [
+          [
+            "e",
+            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
+          ],
+          [
+            "e",
+            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
+          ],
+          [
+            "p",
+            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
+          ]
+        ],
+        "content": "How does this work? ð",
+        "sig":
+            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
+      }
+    ];
+    Event event = Event.deserialize(serialized);
+    expect(event.subscriptionId, serialized[1]);
+    var json = serialized[2] as Map<String, dynamic>;
+    expect(event.id, json['id']);
+    expect(event.pubkey, json['pubkey']);
+    expect(event.createdAt, json['created_at']);
+    expect(event.kind, json['kind']);
+    expect(event.tags, json['tags']);
+    expect(event.content, json['content']);
+    expect(event.sig, json['sig']);
   });
 }
