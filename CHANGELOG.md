@@ -7,3 +7,12 @@
 - Fix createdAt initialization
 - Add asserts
 - Code comments
+
+## 1.1.0
+
+- fix Event.fromJson
+- add subscriptionId
+- deserialization of NOSTR formatted events with or without subscription_id
+- add unit tests for Event to improve coverage
+- Create Keychain container for private/public keys to encapsulate bip340 and add handy methods.
+- Documentation
