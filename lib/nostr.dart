@@ -5,4 +5,6 @@ library nostr;
 
 export 'src/event.dart';
 export 'src/keychain.dart';
+export 'src/request.dart';
+export 'src/filter.dart';
 export 'src/utils.dart';

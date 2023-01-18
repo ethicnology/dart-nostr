@@ -16,3 +16,9 @@
 - add unit tests for Event to improve coverage
 - Create Keychain container for private/public keys to encapsulate bip340 and add handy methods.
 - Documentation
+
+## 1.2.0
+
+- add Filters (+ unit tests)
+- add Request (+ unit tests)
+- Documentation
