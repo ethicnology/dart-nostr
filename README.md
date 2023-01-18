@@ -3,7 +3,9 @@
 [![pub package](https://img.shields.io/pub/v/nostr.svg)](https://pub.dartlang.org/packages/nostr)
 [![codecov](https://codecov.io/gh/ethicnology/dart-nostr/branch/main/graph/badge.svg?token=RNIA9IIRB6)](https://codecov.io/gh/ethicnology/dart-nostr)
 # nostr
-A library for nostr protocol implemented in dart for flutter
+A library for nostr protocol implemented in dart for flutter.  
+
+[Dispute](https://github.com/ethicnology/dispute) is a basic nostr client written in flutter with this library that will show you an implementation.   
 
 ## Getting started
 ```sh
@@ -12,10 +14,12 @@ flutter pub add nostr
 
 
 ## [NIPS](https://github.com/nostr-protocol/nips)
-* [NIP01 Events and signature](https://github.com/nostr-protocol/nips/blob/master/01.md)
+- [x] [NIP01 Events and signature](https://github.com/nostr-protocol/nips/blob/master/01.md#events-and-signatures)
+- [x] [NIP01 Request and filters](https://github.com/nostr-protocol/nips/blob/master/01.md#communication-between-clients-and-relays)
+- [ ] [NIP01 Close](https://github.com/nostr-protocol/nips/blob/master/01.md#communication-between-clients-and-relays)
 
 ## Usage
-
+### Events messages
 ```dart
 import 'dart:io';
 import 'package:nostr/nostr.dart';
@@ -78,6 +82,43 @@ void main() async {
 
   // Send an event to the WebSocket server
   webSocket.add(anotherEvent.serialize());
+
+  // Listen for events from the WebSocket server
+  await Future.delayed(Duration(seconds: 1));
+  webSocket.listen((event) {
+    print('Received event: $event');
+  });
+
+  // Close the WebSocket connection
+  await webSocket.close();
+}
+```
+
+### Request messages and filters
+```dart
+import 'dart:io';
+import 'package:nostr/nostr.dart';
+
+void main() async {
+// Create a subscription message request with one or many filters
+  Request requestWithFilter = Request(generate64RandomHexChars(), [
+    Filter(
+      kinds: [0, 1, 2, 7],
+      since: 1674063680,
+      limit: 450,
+    )
+  ]);
+
+  // Connecting to a nostr relay using websocket
+  WebSocket webSocket = await WebSocket.connect(
+    'wss://relay.nostr.info', // or any nostr relay
+  );
+  // if the current socket fail try another one
+  // wss://nostr.sandwich.farm
+  // wss://relay.damus.io
+
+  // Send a request message to the WebSocket server
+  webSocket.add(requestWithFilter.serialize());
 
   // Listen for events from the WebSocket server
   await Future.delayed(Duration(seconds: 1));
