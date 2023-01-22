@@ -1,5 +1,4 @@
 import 'package:nostr/nostr.dart';
-import 'package:nostr/src/close.dart';
 import 'package:test/test.dart';
 
 void main() {
