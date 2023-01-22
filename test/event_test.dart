@@ -150,8 +150,31 @@ void main() {
             "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
       }
     ];
+    var serializedWithSubscriptionId = [
+      "EVENT",
+      "subscription_id",
+      {
+        "id":
+            "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2",
+        "pubkey":
+            "0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db",
+        "created_at": 1672477962,
+        "kind": 1,
+        "tags": [],
+        "content": "dart-nostr",
+        "sig":
+            "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
+      }
+    ];
+
     Event event = Event.fromJson(serialized[1] as Map<String, dynamic>);
     expect(event.serialize(), jsonEncode(serialized));
+    Event eventWithSubscriptionId =
+        Event.deserialize(serializedWithSubscriptionId);
+    expect(
+      eventWithSubscriptionId.serialize(),
+      jsonEncode(serializedWithSubscriptionId),
+    );
   });
 
   test('Constructor.deserialize', () {
@@ -194,5 +217,25 @@ void main() {
     expect(event.tags, json['tags']);
     expect(event.content, json['content']);
     expect(event.sig, json['sig']);
+
+    var serializeWithoutSubscriptionId = [
+      "EVENT",
+      {
+        "id":
+            "67bd60e47d7fdddadebff890143167bcd7b5d28b2c3008eae40e0ac5ba0e6b34",
+        "kind": 1,
+        "pubkey":
+            "36685fa5106b1bc03ae7bea82eded855d8f56c41db4c8bdef8099e1e0f2b2afa",
+        "created_at": 1674403511,
+        "content":
+            "Block 773103 was just confirmed. The total value of all the non-coinbase outputs was 61,549,183,849 sats, or \$14,025,828",
+        "tags": [],
+        "sig":
+            "4912a6850a711a876fd2443771f69e094041f7e832df65646a75c2c77989480cce9b41aa5ea3d055c16fe5beb7d11d3d5fa29b4c4046c150b09393c4d3d16eb4"
+      }
+    ];
+    Event eventWithoutSubscriptionId =
+        Event.deserialize(serializeWithoutSubscriptionId);
+    expect(eventWithoutSubscriptionId.subscriptionId, null);
   });
 }
