@@ -22,3 +22,7 @@
 - add Filters (+ unit tests)
 - add Request (+ unit tests)
 - Documentation
+
+## 1.3.0
+
+- 
