@@ -25,13 +25,13 @@ void main() async {
       "797c47bef50eff748b8af0f38edcb390facf664b2367d72eb71c50b5f37bc83c4ae9cc9007e8489f5f63c66a66e101fd1515d0a846385953f5f837efb9afe885";
 
   Event oneEvent = Event(
-    id,
-    pubkey,
-    createdAt,
-    kind,
-    tags,
-    content,
-    sig,
+    id: id,
+    pubkey: pubkey,
+    createdAt: createdAt,
+    kind: kind,
+    tags: tags,
+    content: content,
+    sig: sig,
   );
 
   print(oneEvent.id);

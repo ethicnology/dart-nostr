@@ -1,4 +1,9 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'filter.g.dart';
+
 /// filter is a JSON object that determines what events will be sent in that subscription
+@JsonSerializable(includeIfNull: false)
 class Filter {
   /// a list of event ids or prefixes
   List<String>? ids;
@@ -10,9 +15,11 @@ class Filter {
   List<int>? kinds;
 
   /// a list of event ids that are referenced in an "e" tag
+  @JsonKey(name: '#e')
   List<String>? e;
 
   /// a list of pubkeys that are referenced in a "p" tag
+  @JsonKey(name: '#p')
   List<String>? p;
 
   /// a timestamp, events must be newer than this to pass
@@ -25,56 +32,18 @@ class Filter {
   int? limit;
 
   /// Default constructor
-  Filter(
-      {this.ids,
-      this.authors,
-      this.kinds,
-      this.e,
-      this.p,
-      this.since,
-      this.until,
-      this.limit});
+  Filter({
+    this.ids,
+    this.authors,
+    this.kinds,
+    this.e,
+    this.p,
+    this.since,
+    this.until,
+    this.limit,
+  });
 
-  /// Deserialize a filter from a JSON
-  Filter.fromJson(Map<String, dynamic> json) {
-    ids = json['ids'] == null ? null : List<String>.from(json['ids']);
-    authors =
-        json['authors'] == null ? null : List<String>.from(json['authors']);
-    kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
-    e = json['#e'] == null ? null : List<String>.from(json['#e']);
-    p = json['#p'] == null ? null : List<String>.from(json['#p']);
-    since = json['since'];
-    until = json['until'];
-    limit = json['limit'];
-  }
+  factory Filter.fromJson(Map<String, dynamic> json) => _$FilterFromJson(json);
 
-  /// Serialize a filter in JSON
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (ids != null) {
-      data['ids'] = ids;
-    }
-    if (authors != null) {
-      data['authors'] = authors;
-    }
-    if (kinds != null) {
-      data['kinds'] = kinds;
-    }
-    if (e != null) {
-      data['#e'] = e;
-    }
-    if (p != null) {
-      data['#p'] = p;
-    }
-    if (since != null) {
-      data['since'] = since;
-    }
-    if (until != null) {
-      data['until'] = until;
-    }
-    if (limit != null) {
-      data['limit'] = limit;
-    }
-    return data;
-  }
+  Map<String, dynamic> toJson() => _$FilterToJson(this);
 }
