@@ -13,3 +13,4 @@ dependencies:
   bip340: ^0.0.4
   convert: ^3.1.1
   crypto: ^3.0.2
+  dart_bech32: ^2.0.0
