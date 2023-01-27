@@ -25,4 +25,6 @@
 
 ## 1.3.0
 
-- 
+- add Close (+ unit tests)
+- add Message wrapper deserializer (+ unit tests)
+- Documentation
