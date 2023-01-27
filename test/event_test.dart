@@ -238,4 +238,26 @@ void main() {
         Event.deserialize(serializeWithoutSubscriptionId);
     expect(eventWithoutSubscriptionId.subscriptionId, null);
   });
+
+  test('Empty string in event tags', () {
+    var json = {
+      "kind": 1,
+      "pubkey":
+          "0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db",
+      "content": "dart-nostr",
+      "tags": [
+        [
+          "p",
+          "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",
+          ""
+        ]
+      ],
+      "created_at": 1672477962,
+      "sig":
+          "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
+      "id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"
+    };
+    Event event = Event.fromJson(json);
+    expect(event.tags[0][2], equals(""));
+  });
 }
