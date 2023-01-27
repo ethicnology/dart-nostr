@@ -9,7 +9,11 @@ environment:
 dev_dependencies:
   lints: ^2.0.0
   test: ^1.16.0
+  build_runner: ^2.3.3
+  json_serializable: ^6.6.0
+
 dependencies:
   bip340: ^0.0.4
   convert: ^3.1.1
   crypto: ^3.0.2
+  json_annotation: ^4.8.0

@@ -3,6 +3,9 @@ import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/src/utils.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'event.g.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
 ///
@@ -16,6 +19,7 @@ import 'package:nostr/src/utils.dart';
 ///  ],
 /// - "content": "arbitrary string",
 /// - "sig": "64-bytes signature of the sha256 hash of the serialized event data, which is the same as the 'id' field"
+@JsonSerializable()
 class Event {
   /// 32-bytes hex-encoded sha256 of the the serialized event data (hex)
   late String id;
@@ -24,6 +28,9 @@ class Event {
   late String pubkey;
 
   /// unix timestamp in seconds
+  @JsonKey(
+    name: 'created_at',
+  )
   late int createdAt;
 
   /// -  0: set_metadata: the content is set to a stringified JSON object {name: <username>, about: <string>, picture: <url, string>} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
@@ -43,6 +50,7 @@ class Event {
   late String sig;
 
   /// subscription_id is a random string that should be used to represent a subscription.
+  @JsonKey(includeIfNull: false, toJson: null)
   String? subscriptionId;
 
   /// Default constructor
@@ -82,20 +90,12 @@ class Event {
   }
 
   /// Deserialize an event from a JSON
-  Event.fromJson(Map<String, dynamic> json, {this.subscriptionId}) {
-    id = json['id'];
-    pubkey = json['pubkey'];
-    createdAt = json['created_at'];
-    kind = json['kind'];
-    tags = (json['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
-    content = json['content'];
-    sig = json['sig'];
-  }
+  factory Event.fromJson(Map<String, dynamic> json) => _$EventFromJson(json);
 
   /// Serialize an event in JSON
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() => _$EventToJson(this);
+
+  Map<String, dynamic> toJson2() => {
         'id': id,
         'pubkey': pubkey,
         'created_at': createdAt,
@@ -119,25 +119,17 @@ class Event {
   /// Deserialize a nostr event message
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
-  Event.deserialize(input) {
+  factory Event.deserialize(input) {
     Map<String, dynamic> json = {};
     if (input.length == 2) {
       json = input[1] as Map<String, dynamic>;
     } else if (input.length == 3) {
       json = input[2] as Map<String, dynamic>;
-      subscriptionId = input[1];
+      json['subscriptionId'] = input[1];
     } else {
       throw Exception('invalid input');
     }
-    id = json['id'];
-    pubkey = json['pubkey'];
-    createdAt = json['created_at'];
-    kind = json['kind'];
-    tags = (json['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
-    content = json['content'];
-    sig = json['sig'];
+    return _$EventFromJson(json);
   }
 
   /// To obtain the event.id, we sha256 the serialized event.
@@ -152,10 +144,14 @@ class Event {
   ///  <content, as a string>
   ///]
   String getEventId() {
+    // FIXME since json_annotation getEventId generates sometimes wrong ID
+    print('$id $pubkey $createdAt $kind $tags $content $sig');
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
     String serializedEvent = json.encode(data);
     List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
-    return hex.encode(hash);
+    var tmp = hex.encode(hash);
+    print(tmp);
+    return tmp;
   }
 
   /// Each user has a keypair. Signatures, public key, and encodings are done according to the Schnorr signatures standard for the curve secp256k1
