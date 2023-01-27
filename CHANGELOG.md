@@ -28,3 +28,7 @@
 - add Close (+ unit tests)
 - add Message wrapper deserializer (+ unit tests)
 - Documentation
+
+## 1.3.1
+
+- fix: Inconsitency in events is breaking tags

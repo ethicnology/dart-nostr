@@ -87,7 +87,9 @@ class Event {
     pubkey = json['pubkey'];
     createdAt = json['created_at'];
     kind = json['kind'];
-    tags = json['tags'].cast<List<String>>();
+    tags = (json['tags'] as List<dynamic>)
+        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
+        .toList();
     content = json['content'];
     sig = json['sig'];
   }
@@ -131,7 +133,9 @@ class Event {
     pubkey = json['pubkey'];
     createdAt = json['created_at'];
     kind = json['kind'];
-    tags = json['tags'].cast<List<String>>();
+    tags = (json['tags'] as List<dynamic>)
+        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
+        .toList();
     content = json['content'];
     sig = json['sig'];
   }
