@@ -19,13 +19,13 @@ void main() {
           "797c47bef50eff748b8af0f38edcb390facf664b2367d72eb71c50b5f37bc83c4ae9cc9007e8489f5f63c66a66e101fd1515d0a846385953f5f837efb9afe885";
 
       Event event = Event(
-        id: id,
-        pubkey: pubKey,
-        createdAt: createdAt,
-        kind: kind,
-        tags: tags,
-        content: content,
-        sig: sig,
+        id,
+        pubKey,
+        createdAt,
+        kind,
+        tags,
+        content,
+        sig,
       );
 
       expect(event.id, id);
@@ -128,6 +128,7 @@ void main() {
           ]
         ]
       };
+
       Event event = Event.fromJson(json);
       Map<String, dynamic> toJson = event.toJson();
       expect(toJson, json);
@@ -181,31 +182,27 @@ void main() {
   test('Constructor.deserialize', () {
     var serialized = [
       "EVENT",
-      "7971516031312706",
+      "global",
       {
         "id":
-            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
-        "pubkey":
-            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
-        "created_at": 1672477967,
+            "654fd512517648d1d1f122bc56c55e626a22c4dd2087457116e9852c6baf6be9",
         "kind": 1,
+        "pubkey":
+            "8f474abb70c3987ff7e93fdd9e01cbade2dad5a8b3469fa1aba299823a1cee89",
+        "created_at": 1674925169,
+        "content": "\n\nhttps://i.imgur.com/bX7arPB.jpg",
         "tags": [
           [
             "e",
-            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
-          ],
-          [
-            "e",
-            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
+            "2da09b1cf751eaeb56027b7896215145737d6e88a2797b3fef6e8b974f504cac"
           ],
           [
             "p",
-            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
+            "fe7f6bc6f7338b76bbf80db402ade65953e20b2f23e66e898204b63cc42539a3"
           ]
         ],
-        "content": "How does this work? ð",
         "sig":
-            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
+            "de65472a58520ea7d5d4f37e329a6468d12bf9aa8e6b6148b8bd7f87484d38578e8d28a50512699df1f88641ce27084d12c2f9a7ba1b3b6daf49e2d0372c5278"
       }
     ];
     Event event = Event.deserialize(serialized);

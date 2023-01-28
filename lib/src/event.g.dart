@@ -7,15 +7,15 @@ part of 'event.dart';
 // **************************************************************************
 
 Event _$EventFromJson(Map<String, dynamic> json) => Event(
-      id: json['id'] as String,
-      pubkey: json['pubkey'] as String,
-      createdAt: json['created_at'] as int,
-      kind: json['kind'] as int,
-      tags: (json['tags'] as List<dynamic>)
+      json['id'] as String,
+      json['pubkey'] as String,
+      json['created_at'] as int,
+      json['kind'] as int,
+      (json['tags'] as List<dynamic>)
           .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
           .toList(),
-      content: json['content'] as String? ?? '',
-      sig: json['sig'] as String,
+      json['content'] as String? ?? '',
+      json['sig'] as String,
       subscriptionId: json['subscriptionId'] as String?,
     );
 

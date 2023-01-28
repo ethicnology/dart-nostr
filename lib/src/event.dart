@@ -22,10 +22,10 @@ part 'event.g.dart';
 @JsonSerializable()
 class Event {
   /// 32-bytes hex-encoded sha256 of the the serialized event data (hex)
-  late final String id;
+  late String id;
 
   /// 32-bytes hex-encoded public key of the event creator (hex)
-  late final String pubkey;
+  late String pubkey;
 
   /// unix timestamp in seconds
   @JsonKey(
@@ -44,25 +44,33 @@ class Event {
   final List<List<String>> tags;
 
   /// arbitrary string
+  @JsonKey(defaultValue: '')
   String content;
 
   /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
-  late final String sig;
+  late String sig;
 
   /// subscription_id is a random string that should be used to represent a subscription.
   @JsonKey(includeIfNull: false, toJson: null)
   String? subscriptionId;
 
-  Event({
-    required this.id,
-    required this.pubkey,
-    required this.createdAt,
-    required this.kind,
-    required this.tags,
-    this.content = '',
-    required this.sig,
+  Event(
+    this.id,
+    this.pubkey,
+    this.createdAt,
+    this.kind,
+    this.tags,
+    this.content,
+    this.sig, {
     this.subscriptionId,
-  });
+  }) {
+    assert(createdAt.toString().length == 10);
+    assert(createdAt <= currentUnixTimestampSeconds());
+    pubkey = pubkey.toLowerCase();
+    String id = getEventId();
+    assert(this.id == id);
+    assert(bip340.verify(pubkey, id, sig));
+  }
 
   factory Event.fromJson(Map<String, dynamic> json) => _$EventFromJson(json);
 
