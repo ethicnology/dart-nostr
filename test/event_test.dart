@@ -221,4 +221,8 @@ void main() {
     Event event = Event.fromJson(json, verify: false);
     expect(event.tags[0][2], equals(""));
   });
+
+  test('Event.deserialize throw', () {
+    expect(() => Event.deserialize([]), throwsException);
+  });
 }
