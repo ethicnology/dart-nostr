@@ -53,24 +53,32 @@ class Event {
     this.kind,
     this.tags,
     this.content,
-    this.sig,
-  ) {
+    this.sig, {
+    this.subscriptionId,
+    bool verify = true,
+  }) {
     assert(createdAt.toString().length == 10);
-    assert(createdAt <= currentUnixTimestampSeconds());
     pubkey = pubkey.toLowerCase();
-    String id = getEventId();
-    assert(this.id == id);
-    assert(bip340.verify(pubkey, id, sig));
+
+    /// This option adds event checks such as id, signature, non-futuristic event: default=True
+    /// Performances could be a reason to disable event checks
+    if (verify == true) {
+      assert(createdAt <= currentUnixTimestampSeconds());
+      String verifyId = getEventId();
+      assert(id == verifyId);
+      assert(bip340.verify(pubkey, id, sig));
+    }
   }
 
   /// Instanciate Event object from the minimum available data
-  Event.from(
-      {this.createdAt = 0,
-      required this.kind,
-      required this.tags,
-      required this.content,
-      required String privkey,
-      this.subscriptionId}) {
+  Event.from({
+    this.createdAt = 0,
+    required this.kind,
+    required this.tags,
+    required this.content,
+    required String privkey,
+    this.subscriptionId,
+  }) {
     if (createdAt == 0) {
       createdAt = currentUnixTimestampSeconds();
     }
@@ -82,16 +90,20 @@ class Event {
   }
 
   /// Deserialize an event from a JSON
-  Event.fromJson(Map<String, dynamic> json, {this.subscriptionId}) {
-    id = json['id'];
-    pubkey = json['pubkey'];
-    createdAt = json['created_at'];
-    kind = json['kind'];
-    tags = (json['tags'] as List<dynamic>)
+  factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
+    var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
-    content = json['content'];
-    sig = json['sig'];
+    return Event(
+      json['id'],
+      json['pubkey'],
+      json['created_at'],
+      json['kind'],
+      tags,
+      json['content'],
+      json['sig'],
+      verify: verify,
+    );
   }
 
   /// Serialize an event in JSON
@@ -119,25 +131,33 @@ class Event {
   /// Deserialize a nostr event message
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
-  Event.deserialize(input) {
+  factory Event.deserialize(input, {bool verify = true}) {
     Map<String, dynamic> json = {};
+    String? subscriptionId;
     if (input.length == 2) {
       json = input[1] as Map<String, dynamic>;
     } else if (input.length == 3) {
       json = input[2] as Map<String, dynamic>;
-      subscriptionId = input[1];
+      subscriptionId = input[1] as String;
     } else {
       throw Exception('invalid input');
     }
-    id = json['id'];
-    pubkey = json['pubkey'];
-    createdAt = json['created_at'];
-    kind = json['kind'];
-    tags = (json['tags'] as List<dynamic>)
+
+    var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
-    content = json['content'];
-    sig = json['sig'];
+
+    return Event(
+      json['id'],
+      json['pubkey'],
+      json['created_at'],
+      json['kind'],
+      tags,
+      json['content'],
+      json['sig'],
+      subscriptionId: subscriptionId,
+      verify: verify,
+    );
   }
 
   /// To obtain the event.id, we sha256 the serialized event.

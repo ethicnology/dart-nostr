@@ -5,11 +5,11 @@ void main() {
   group('Message', () {
     test('EVENT', () {
       String payload =
-          '["EVENT","3979053091133091",{"id":"a60679692533b308f1d862c2a5ca5c08a304e5157b1df5cde0ff0454b9920605","pubkey":"7c579328cf9028a4548d5117afa4f8448fb510ca9023f576b7bc90fc5be6ce7e","created_at":1674405882,"kind":1,"tags":[],"content":"GM gm gm! Currently bathing my brain in coffee âï¸  hahaha. How many other nostrinos love coffee? ð¤ªð¤","sig":"10262aa6a83e0b744cda2097f06f7354357512b82846f6ef23ef7d997136b64815c343b613a0635a27da7e628c96ac2475f66dd72513c1fb8ce6560824eb25b8"}]';
+          '["EVENT","0954524188078879",{"id":"da5107e5aa00978e0dd9bb3c09b2303af414fe4c10600b3c61bb938675d191af","kind":1,"pubkey":"da0cc82154bdf4ce8bf417eaa2d2fa99aa65c96c77867d6656fccdbf8e781b18","created_at":1675015235,"content":"#[0] test","tags":[["p","939ddb0c77d18ccd1ebb44c7a32b9cdc29b489e710c54db7cf1383ee86674a24"]],"sig":"f2b507e1039084d07477ccd2876ee0eb9e80f214be80e4e2ab28ad60dc5858297bbd9bf177be230b571c0015deb05c12eb02b659586fd3573cfa84c9292400b5"}]';
       var msg = Message.deserialize(payload);
       expect(msg.type, "EVENT");
       expect(msg.message.id,
-          "a60679692533b308f1d862c2a5ca5c08a304e5157b1df5cde0ff0454b9920605");
+          "da5107e5aa00978e0dd9bb3c09b2303af414fe4c10600b3c61bb938675d191af");
     });
     test('REQ', () {
       String payload =

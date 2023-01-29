@@ -103,31 +103,8 @@ void main() {
     });
 
     test('Constructor.toJson', () {
-      Map<String, dynamic> json = {
-        "pubkey":
-            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
-        "content": "How does this work? ð",
-        "id":
-            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
-        "created_at": 1672477967,
-        "sig":
-            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
-        "kind": 1,
-        "tags": [
-          [
-            "e",
-            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
-          ],
-          [
-            "e",
-            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
-          ],
-          [
-            "p",
-            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
-          ]
-        ]
-      };
+      Map<String, dynamic> json = jsonDecode(
+          '{"id":"f9b8c5b7a8692b0f5b8ca9f2c29ff84d6baa5a60d14cbf1c54bd2bb77ee8b41f","kind":1,"pubkey":"891b945271cd3c65dc22cb9e77ba08f5cd165ad8d9fba370b740f7db95f98b10","created_at":1675015139,"content":"Authorize just this time...I have commitment issues.","tags":[["e","343ed9c6ca7a0a8f33f8cfed04b6cea4a4dda50a649daffaf85d6410507c5c7c","wss://relay.damus.io","reply"],["p","7b6461d02c6f0be1cacdcf968c4246105a2db51c7770993bf8bb25e59cedffa7"]],"sig":"bd63b762379bd06e536ccb943f909f075bd512315fbf2407be19f03ee9d3ef5b4a70205aa7a8e68cb8c2d250f56ef8f5074339abd741d32dbd18d16641a339ef"}');
       Event event = Event.fromJson(json);
       Map<String, dynamic> toJson = event.toJson();
       expect(toJson, json);
@@ -180,31 +157,29 @@ void main() {
   test('Constructor.deserialize', () {
     var serialized = [
       "EVENT",
-      "7971516031312706",
+      "0954524188078879",
       {
         "id":
-            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
-        "pubkey":
-            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
-        "created_at": 1672477967,
+            "f9b8c5b7a8692b0f5b8ca9f2c29ff84d6baa5a60d14cbf1c54bd2bb77ee8b41f",
         "kind": 1,
+        "pubkey":
+            "891b945271cd3c65dc22cb9e77ba08f5cd165ad8d9fba370b740f7db95f98b10",
+        "created_at": 1675015139,
+        "content": "Authorize just this time...I have commitment issues.",
         "tags": [
           [
             "e",
-            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
-          ],
-          [
-            "e",
-            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
+            "343ed9c6ca7a0a8f33f8cfed04b6cea4a4dda50a649daffaf85d6410507c5c7c",
+            "wss://relay.damus.io",
+            "reply"
           ],
           [
             "p",
-            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
+            "7b6461d02c6f0be1cacdcf968c4246105a2db51c7770993bf8bb25e59cedffa7"
           ]
         ],
-        "content": "How does this work? ð",
         "sig":
-            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
+            "bd63b762379bd06e536ccb943f909f075bd512315fbf2407be19f03ee9d3ef5b4a70205aa7a8e68cb8c2d250f56ef8f5074339abd741d32dbd18d16641a339ef"
       }
     ];
     Event event = Event.deserialize(serialized);
@@ -239,9 +214,11 @@ void main() {
     expect(eventWithoutSubscriptionId.subscriptionId, null);
   });
 
-  test('Generated from decoded json', () {
-    Event event = Event.fromJson(jsonDecode(
-        '{"kind": 1, "pubkey":"0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db","content": "dart-nostr","tags": [["p","052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",""]],"created_at": 1672477962,"sig":"246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b","id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"}'));
+  test('Fake event (verify=false) with empty tag', () {
+    var json = jsonDecode(
+      '{"kind": 1, "pubkey":"0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db","content": "dart-nostr","tags": [["p","052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",""]],"created_at": 1672477962,"sig":"246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b","id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"}',
+    );
+    Event event = Event.fromJson(json, verify: false);
     expect(event.tags[0][2], equals(""));
   });
 }
