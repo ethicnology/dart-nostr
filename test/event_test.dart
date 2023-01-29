@@ -104,25 +104,29 @@ void main() {
 
     test('Constructor.toJson', () {
       Map<String, dynamic> json = {
-        "id":
-            "654fd512517648d1d1f122bc56c55e626a22c4dd2087457116e9852c6baf6be9",
-        "kind": 1,
         "pubkey":
-            "8f474abb70c3987ff7e93fdd9e01cbade2dad5a8b3469fa1aba299823a1cee89",
-        "created_at": 1674925169,
-        "content": "\n\nhttps://i.imgur.com/bX7arPB.jpg",
+            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
+        "content": "How does this work? 👀",
+        "id":
+            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
+        "created_at": 1672477967,
+        "sig":
+            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
+        "kind": 1,
         "tags": [
           [
             "e",
-            "2da09b1cf751eaeb56027b7896215145737d6e88a2797b3fef6e8b974f504cac"
+            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
+          ],
+          [
+            "e",
+            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
           ],
           [
             "p",
-            "fe7f6bc6f7338b76bbf80db402ade65953e20b2f23e66e898204b63cc42539a3"
+            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
           ]
-        ],
-        "sig":
-            "de65472a58520ea7d5d4f37e329a6468d12bf9aa8e6b6148b8bd7f87484d38578e8d28a50512699df1f88641ce27084d12c2f9a7ba1b3b6daf49e2d0372c5278"
+        ]
       };
 
       Event event = Event.fromJson(json);
@@ -178,27 +182,31 @@ void main() {
   test('Constructor.deserialize', () {
     var serialized = [
       "EVENT",
-      "global",
+      "7971516031312706",
       {
         "id":
-            "654fd512517648d1d1f122bc56c55e626a22c4dd2087457116e9852c6baf6be9",
-        "kind": 1,
+            "883334badc17315fc61f0a13eec84c8c87df9d504ce0788f5eeab4a3527ddc97",
         "pubkey":
-            "8f474abb70c3987ff7e93fdd9e01cbade2dad5a8b3469fa1aba299823a1cee89",
-        "created_at": 1674925169,
-        "content": "\n\nhttps://i.imgur.com/bX7arPB.jpg",
+            "9be7376ef6c0d493235ddf9018ff675a04bfcaf34dc1f97a1d270470f28c0ae0",
+        "created_at": 1672477967,
+        "kind": 1,
         "tags": [
           [
             "e",
-            "2da09b1cf751eaeb56027b7896215145737d6e88a2797b3fef6e8b974f504cac"
+            "68ae015bf4833a6ff0ed86564c5afaa65c31791d35e8432755535d02eafc4375"
+          ],
+          [
+            "e",
+            "de2d85a00a52ceb25f3cfc41e22d927f6166250f210f928e2552b97c0bd66dcf"
           ],
           [
             "p",
-            "fe7f6bc6f7338b76bbf80db402ade65953e20b2f23e66e898204b63cc42539a3"
+            "052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2"
           ]
         ],
+        "content": "How does this work? 👀",
         "sig":
-            "de65472a58520ea7d5d4f37e329a6468d12bf9aa8e6b6148b8bd7f87484d38578e8d28a50512699df1f88641ce27084d12c2f9a7ba1b3b6daf49e2d0372c5278"
+            "3ce34915e90505f9760a463eb8f9e8b1748fd4c10c4cfddc09a2930ecce249ce8dd499eeffd6e24a215bb2f8265b68085f7104eb7d506f8d9b76a7c5312b09fd",
       }
     ];
     Event event = Event.deserialize(serialized);
@@ -234,8 +242,11 @@ void main() {
   });
 
   test('Generated from decoded json', () {
-    Event event = Event.fromJson(jsonDecode(
-        '{"kind": 1, "pubkey":"0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db","content": "dart-nostr","tags": [["p","052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",""]],"created_at": 1672477962,"sig":"246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b","id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"}'));
+    Event event = Event.fromJson(
+      jsonDecode(
+        '{"id":"28da0ba726ace0541719267975b25ebc1b31e2465436a1fb18440edc999bbab6","pubkey":"32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245","created_at":1674982433,"kind":1,"tags":[["e","9aa92f2a3e22f635341de94dce3bc2d93b80ea3af2eef4ce3ad224d7cf66c8b9",""],["e","33a5d8547fad29d509c735f2d56261d73c7437498802afe30d680fbaf473653a"],["p","0b118e40d6f3dfabb17f21a94a647701f140d8b063a9e84fe6e483644edc09cb"]],"content":"yeah it seems arbitrary at this point","sig":"89a2872b667abae8638e3ac346e6f0b3f5c239005beb71de8df03db730d13b4ed107920b77ef0cfb32a93fd08c50684d3ca14111381d17c10f4c36af45e7644a"}',
+      ),
+    );
     expect(event.tags[0][2], equals(""));
   });
 }
