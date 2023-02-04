@@ -46,6 +46,12 @@ class Event {
   String? subscriptionId;
 
   /// Default constructor
+  ///
+  /// verify: enable/disable events checks
+  ///
+  /// This option adds event checks such as id, signature, non-futuristic event: default=True
+  ///
+  /// Performances could be a reason to disable event checks
   Event(
     this.id,
     this.pubkey,
@@ -70,7 +76,7 @@ class Event {
     }
   }
 
-  /// Instanciate Event object from the minimum available data
+  /// Instantiate Event object from the minimum available data
   Event.from({
     this.createdAt = 0,
     required this.kind,
@@ -90,6 +96,12 @@ class Event {
   }
 
   /// Deserialize an event from a JSON
+  ///
+  /// verify: enable/disable events checks
+  ///
+  /// This option adds event checks such as id, signature, non-futuristic event: default=True
+  ///
+  /// Performances could be a reason to disable event checks
   factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
     var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
@@ -131,6 +143,12 @@ class Event {
   /// Deserialize a nostr event message
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
+  ///
+  /// verify: enable/disable events checks
+  ///
+  /// This option adds event checks such as id, signature, non-futuristic event: default=True
+  ///
+  /// Performances could be a reason to disable event checks
   factory Event.deserialize(input, {bool verify = true}) {
     Map<String, dynamic> json = {};
     String? subscriptionId;
