@@ -38,7 +38,7 @@ void main() async {
   var randomKeys = Keychain.generate();
   print(randomKeys.private);
 
-  // Instanciate an event with all the field
+  // Instantiate an event with all the field
   String id =
       "4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49";
   String pubkey = keys.public;
@@ -62,7 +62,7 @@ void main() async {
   print(oneEvent.id);
   // 4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49
 
-  // Instanciate an event with a partial data and let the library sign the event with your private key
+  // Instantiate an event with a partial data and let the library sign the event with your private key
   Event anotherEvent = Event.from(
     kind: 1,
     tags: [],
