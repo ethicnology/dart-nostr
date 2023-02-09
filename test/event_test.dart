@@ -26,6 +26,8 @@ void main() {
         tags,
         content,
         sig,
+        verify: true,
+        subscriptionId: null,
       );
 
       expect(event.id, id);
@@ -224,5 +226,18 @@ void main() {
 
   test('Event.deserialize throw', () {
     expect(() => Event.deserialize([]), throwsException);
+  });
+
+  test('Event.partial', () {
+    var emptyEvent = Event.partial();
+    expect(emptyEvent.isValid(), false);
+    emptyEvent.createdAt = currentUnixTimestampSeconds();
+    emptyEvent.pubkey =
+        "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
+    emptyEvent.id = emptyEvent.getEventId();
+    emptyEvent.sig = emptyEvent.getSignature(
+      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+    );
+    expect(emptyEvent.isValid(), true);
   });
 }

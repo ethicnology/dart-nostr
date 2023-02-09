@@ -6,10 +6,10 @@ void main() async {
   var keys = Keychain(
     "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
-  print(keys.public ==
+  assert(keys.public ==
       "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b");
 
-  // Generate random keys
+  // or generate random keys
   var randomKeys = Keychain.generate();
   print(randomKeys.private);
 
@@ -33,9 +33,20 @@ void main() async {
     content,
     sig,
   );
+  assert(oneEvent.id ==
+      "4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49");
 
-  print(oneEvent.id);
-  // 4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49
+  // Create a partial event from nothing and fill it with data until it is valid
+  var partialEvent = Event.partial();
+  assert(partialEvent.isValid() == false);
+  partialEvent.createdAt = currentUnixTimestampSeconds();
+  partialEvent.pubkey =
+      "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
+  partialEvent.id = partialEvent.getEventId();
+  partialEvent.sig = partialEvent.getSignature(
+    "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+  );
+  assert(partialEvent.isValid() == true);
 
   // Instantiate an event with a partial data and let the library sign the event with your private key
   Event anotherEvent = Event.from(
@@ -46,8 +57,8 @@ void main() async {
         "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12", // DO NOT REUSE THIS PRIVATE KEY
   );
 
-  print(anotherEvent.pubkey);
-  // 981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b
+  assert(anotherEvent.pubkey ==
+      "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b");
 
   // Connecting to a nostr relay using websocket
   WebSocket webSocket = await WebSocket.connect(
