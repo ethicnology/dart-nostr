@@ -46,6 +46,33 @@ class Event {
   String? subscriptionId;
 
   /// Default constructor
+  ///
+  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  ///
+  ///```dart
+  /// String id =
+  ///     "4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49";
+  /// String pubKey =
+  ///     "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
+  /// int createdAt = 1672175320;
+  /// int kind = 1;
+  /// List<List<String>> tags = [];
+  /// String content = "Ceci est une analyse du websocket";
+  /// String sig =
+  ///     "797c47bef50eff748b8af0f38edcb390facf664b2367d72eb71c50b5f37bc83c4ae9cc9007e8489f5f63c66a66e101fd1515d0a846385953f5f837efb9afe885";
+  ///
+  /// Event event = Event(
+  ///   id,
+  ///   pubKey,
+  ///   createdAt,
+  ///   kind,
+  ///   tags,
+  ///   content,
+  ///   sig,
+  ///   verify: true,
+  ///   subscriptionId: null,
+  /// );
+  ///```
   Event(
     this.id,
     this.pubkey,
@@ -57,20 +84,51 @@ class Event {
     this.subscriptionId,
     bool verify = true,
   }) {
-    assert(createdAt.toString().length == 10);
     pubkey = pubkey.toLowerCase();
-
-    /// This option adds event checks such as id, signature, non-futuristic event: default=True
-    /// Performances could be a reason to disable event checks
-    if (verify == true) {
-      assert(createdAt <= currentUnixTimestampSeconds());
-      String verifyId = getEventId();
-      assert(id == verifyId);
-      assert(bip340.verify(pubkey, id, sig));
-    }
+    if (verify) assert(isValid() == true);
   }
 
-  /// Instanciate Event object from the minimum available data
+  /// Partial constructor, you have to fill the fields yourself
+  ///
+  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  ///
+  /// ```dart
+  /// var partialEvent = Event.partial();
+  /// assert(partialEvent.isValid() == false);
+  /// partialEvent.createdAt = currentUnixTimestampSeconds();
+  /// partialEvent.pubkey =
+  ///     "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
+  /// partialEvent.id = partialEvent.getEventId();
+  /// partialEvent.sig = partialEvent.getSignature(
+  ///   "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+  /// );
+  /// assert(partialEvent.isValid() == true);
+  /// ```
+  Event.partial({
+    this.id = "",
+    this.pubkey = "",
+    this.createdAt = 0,
+    this.kind = 1,
+    this.tags = const [],
+    this.content = "",
+    this.sig = "",
+    this.subscriptionId,
+    bool verify = false,
+  }) {
+    if (verify) assert(isValid() == true);
+  }
+
+  /// Instantiate Event object from the minimum available data
+  ///
+  /// ```dart
+  ///Event event = Event.from(
+  ///  kind: 1,
+  ///  tags: [],
+  ///  content: "",
+  ///  privkey:
+  ///      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+  ///);
+  ///```
   Event.from({
     this.createdAt = 0,
     required this.kind,
@@ -79,17 +137,20 @@ class Event {
     required String privkey,
     this.subscriptionId,
   }) {
-    if (createdAt == 0) {
-      createdAt = currentUnixTimestampSeconds();
-    }
+    if (createdAt == 0) createdAt = currentUnixTimestampSeconds();
     assert(createdAt.toString().length == 10);
-    assert(createdAt <= currentUnixTimestampSeconds());
     pubkey = bip340.getPublicKey(privkey).toLowerCase();
     id = getEventId();
     sig = getSignature(privkey);
   }
 
   /// Deserialize an event from a JSON
+  ///
+  /// verify: enable/disable events checks
+  ///
+  /// This option adds event checks such as id, signature, non-futuristic event: default=True
+  ///
+  /// Performances could be a reason to disable event checks
   factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
     var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
@@ -131,6 +192,23 @@ class Event {
   /// Deserialize a nostr event message
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
+  /// ```dart
+  /// Event event = Event.deserialize([
+  ///   "EVENT",
+  ///   {
+  ///     "id": "67bd60e47d7fdddadebff890143167bcd7b5d28b2c3008eae40e0ac5ba0e6b34",
+  ///     "kind": 1,
+  ///     "pubkey":
+  ///         "36685fa5106b1bc03ae7bea82eded855d8f56c41db4c8bdef8099e1e0f2b2afa",
+  ///     "created_at": 1674403511,
+  ///     "content":
+  ///         "Block 773103 was just confirmed. The total value of all the non-coinbase outputs was 61,549,183,849 sats, or \$14,025,828",
+  ///     "tags": [],
+  ///     "sig":
+  ///         "4912a6850a711a876fd2443771f69e094041f7e832df65646a75c2c77989480cce9b41aa5ea3d055c16fe5beb7d11d3d5fa29b4c4046c150b09393c4d3d16eb4"
+  ///   }
+  /// ]);
+  /// ```
   factory Event.deserialize(input, {bool verify = true}) {
     Map<String, dynamic> json = {};
     String? subscriptionId;
@@ -185,5 +263,18 @@ class Event {
     /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
     String aux = generate64RandomHexChars();
     return bip340.sign(privateKey, id, aux);
+  }
+
+  /// Verify if event checks such as id, signature, non-futuristic are valid
+  /// Performances could be a reason to disable event checks
+  bool isValid() {
+    String verifyId = getEventId();
+    if (createdAt.toString().length == 10 &&
+        id == verifyId &&
+        bip340.verify(pubkey, id, sig)) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }

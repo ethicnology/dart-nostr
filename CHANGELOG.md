@@ -38,3 +38,8 @@
 - refactor: Event with optional verification
 - remove tests with encoding problem
 - improve coverage
+
+## 1.3.3
+- add comments about verify and fix typo
+- nip 002 implementation, unit tests, examples and documentation
+- Event.partial to init an empty event that you validate later, documentation
