@@ -104,18 +104,27 @@ class Event {
   /// );
   /// assert(partialEvent.isValid() == true);
   /// ```
-  Event.partial({
-    this.id = "",
-    this.pubkey = "",
-    this.createdAt = 0,
-    this.kind = 1,
-    this.tags = const [],
-    this.content = "",
-    this.sig = "",
-    this.subscriptionId,
+  factory Event.partial({
+    id = "",
+    pubkey = "",
+    createdAt = 0,
+    kind = 1,
+    tags = const <List<String>>[],
+    content = "",
+    sig = "",
+    subscriptionId,
     bool verify = false,
   }) {
-    if (verify) assert(isValid() == true);
+    return Event(
+      id,
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+      sig,
+      verify: verify,
+    );
   }
 
   /// Instantiate Event object from the minimum available data
@@ -129,19 +138,42 @@ class Event {
   ///      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   ///);
   ///```
-  Event.from({
-    this.createdAt = 0,
-    required this.kind,
-    required this.tags,
-    required this.content,
+  factory Event.from({
+    int createdAt = 0,
+    required int kind,
+    required List<List<String>> tags,
+    required String content,
     required String privkey,
-    this.subscriptionId,
+    String? subscriptionId,
+    bool verify = false,
   }) {
     if (createdAt == 0) createdAt = currentUnixTimestampSeconds();
-    assert(createdAt.toString().length == 10);
-    pubkey = bip340.getPublicKey(privkey).toLowerCase();
-    id = getEventId();
-    sig = getSignature(privkey);
+    final pubkey = bip340.getPublicKey(privkey).toLowerCase();
+
+    final id = _processEventId(
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+    );
+
+    final sig = _processSignature(
+      privkey,
+      id,
+    );
+
+    return Event(
+      id,
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+      sig,
+      subscriptionId: subscriptionId,
+      verify: verify,
+    );
   }
 
   /// Deserialize an event from a JSON
@@ -250,6 +282,24 @@ class Event {
   ///  <content, as a string>
   ///]
   String getEventId() {
+    // Included for minimum breaking changes
+    return _processEventId(
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+    );
+  }
+
+  // Support for [getEventId]
+  static String _processEventId(
+    String pubkey,
+    int createdAt,
+    int kind,
+    List<List<String>> tags,
+    String content,
+  ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
     String serializedEvent = json.encode(data);
     List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
@@ -259,6 +309,14 @@ class Event {
   /// Each user has a keypair. Signatures, public key, and encodings are done according to the Schnorr signatures standard for the curve secp256k1
   /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
   String getSignature(String privateKey) {
+    return _processSignature(privateKey, id);
+  }
+
+  // Support for [getSignature]
+  static String _processSignature(
+    String privateKey,
+    String id,
+  ) {
     /// aux must be 32-bytes random bytes, generated at signature time.
     /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
     String aux = generate64RandomHexChars();
