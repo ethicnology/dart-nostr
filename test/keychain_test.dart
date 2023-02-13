@@ -14,12 +14,12 @@ void main() {
       );
     });
 
-    test('Keychain with bugged private key', () {
-      expect(
-          () => Keychain(
-                "ea7daa0537b93aa3ae4495a274ecc05077e3dc168809d77a7afa4ec1db0fb3bd",
-              ),
-          throwsA(isA<AssertionError>()));
+    test('Keychain with invalid public key (public.length != 64)', () {
+      var hex =
+          "ea7daa0537b93aa3ae4495a274ecc05077e3dc168809d77a7afa4ec1db0fb3bd";
+
+      var keys = Keychain(hex);
+      expect(keys.public.length, 64);
     });
 
     test('Keychain with invalid private key (private.length != 64)', () {
