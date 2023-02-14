@@ -40,6 +40,13 @@
 - improve coverage
 
 ## 1.3.3
+
 - add comments about verify and fix typo
 - nip 002 implementation, unit tests, examples and documentation
 - Event.partial to init an empty event that you validate later, documentation
+
+## 1.3.4
+
+- fix: pending bip340 issue
+- test: Update test to check public key
+- refactor: Event partial and from to factories
