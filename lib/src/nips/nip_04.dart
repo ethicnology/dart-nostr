@@ -63,7 +63,6 @@ String myEncryptRaw(
 
 String addEscapeChars(String str) {
   String temp = "";
-  //temp = temp.replaceAll("\\", "\\\\");
   temp = str.replaceAll("\"", "\\\"");
   return temp.replaceAll("\n", "\\n");
 }
