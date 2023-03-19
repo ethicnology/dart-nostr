@@ -8,8 +8,7 @@ void main() async {
   // my public key : 981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b
   final String to =
       '0000a0fa65fcccd99e6fd32fc7870339af40f4a94703ea30999fc5c091daa222';
-  String msg = getNip4Message(userPrivateKey, to, 'hello world');
-
+  String msg = Nip4.getNip4Message(userPrivateKey, to, 'hello world');
   WebSocket webSocket = await WebSocket.connect(
     'wss://nostr-pub.wellorder.net', // or any nostr relay
   );

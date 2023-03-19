@@ -105,26 +105,44 @@ String getShaId(String pubkey, String createdAt, String kind, String strTags,
   return value.toString();
 }
 
-String getNip4Message(String privateKey, String toPublicKey, String message,
-    [DateTime? createdAt]) {
-  String userPublicKey = getPublicKey(privateKey);
-  String otherPubkey02 = "02$toPublicKey";
-  String encryptedMessageToSend =
-      addEscapeChars(myEncrypt(privateKey, otherPubkey02, message));
-  // String strTags = node.getTagStrForChannelReply(channel, replyTo, exename);
-  int timestamp;
-  if (createdAt != null) {
-    timestamp = createdAt.millisecondsSinceEpoch ~/ 1000;
-  } else {
-    timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  }
-  String strTags = '["p","$toPublicKey"]';
-  String replyKind = "4";
-  String id = getShaId(userPublicKey, timestamp.toString(), replyKind, strTags,
-      encryptedMessageToSend);
-  String sig = mySign(privateKey, id);
+class Nip4 {
+  /// @param {string} privateKey my private key
+  /// @param {string} toPublicKey the public key of the person to send to
+  /// @param {string} message the message to send
+  /// @param {Date} createdAt the date to send the message as
+  /// @returns {string} the encrypted message
+  static String getNip4Message(
+      String privateKey, String toPublicKey, String message,
+      [DateTime? createdAt]) {
+    String userPublicKey = getPublicKey(privateKey);
+    String otherPubkey02 = "02$toPublicKey";
+    String encryptedMessageToSend =
+        addEscapeChars(myEncrypt(privateKey, otherPubkey02, message));
+    // String strTags = node.getTagStrForChannelReply(channel, replyTo, exename);
+    int timestamp;
+    if (createdAt != null) {
+      timestamp = createdAt.millisecondsSinceEpoch ~/ 1000;
+    } else {
+      timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    }
+    String strTags = '["p","$toPublicKey"]';
+    int replyKind = 4;
+    String id = getShaId(userPublicKey, timestamp.toString(),
+        replyKind.toString(), strTags, encryptedMessageToSend);
+    String sig = mySign(privateKey, id);
 
-  String toSendMessage =
-      '["EVENT",{"id":"$id","pubkey":"$userPublicKey","created_at":$timestamp,"kind":$replyKind,"tags":[$strTags],"content":"$encryptedMessageToSend","sig":"$sig"}]';
-  return toSendMessage;
+    List toSendMessage = [
+      "EVENT",
+      {
+        "id": id,
+        "pubkey": userPublicKey,
+        "created_at": timestamp,
+        "kind": replyKind,
+        "tags": [json.decode(strTags)],
+        "content": encryptedMessageToSend,
+        "sig": sig
+      }
+    ];
+    return json.encode(toSendMessage);
+  }
 }
