@@ -15,6 +15,15 @@ class Filter {
   /// a list of pubkeys that are referenced in a "p" tag
   List<String>? p;
 
+  /// a list of hashtag names that are referenced in a "t" tag
+  List<String>? t;
+
+  /// a list of references that are referenced in a "r" tag
+  List<String>? r;
+
+  /// a list of geohashes that are referenced in a "g" tag
+  List<String>? g;
+
   /// a timestamp, events must be newer than this to pass
   int? since;
 
@@ -31,6 +40,9 @@ class Filter {
       this.kinds,
       this.e,
       this.p,
+      this.t,
+      this.r,
+      this.g,
       this.since,
       this.until,
       this.limit});
@@ -43,6 +55,9 @@ class Filter {
     kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
     e = json['#e'] == null ? null : List<String>.from(json['#e']);
     p = json['#p'] == null ? null : List<String>.from(json['#p']);
+    t = json['#t'] == null ? null : List<String>.from(json['#t']);
+    r = json['#r'] == null ? null : List<String>.from(json['#r']);
+    g = json['#g'] == null ? null : List<String>.from(json['#g']);
     since = json['since'];
     until = json['until'];
     limit = json['limit'];
@@ -65,6 +80,15 @@ class Filter {
     }
     if (p != null) {
       data['#p'] = p;
+    }
+    if (t != null) {
+      data['#t'] = t;
+    }
+    if (r != null) {
+      data['#r'] = r;
+    }
+    if (g != null) {
+      data['#g'] = g;
     }
     if (since != null) {
       data['since'] = since;
