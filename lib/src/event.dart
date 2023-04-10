@@ -1,8 +1,14 @@
-import 'dart:convert';
+import 'dart:convert' as convert;
+import 'dart:typed_data';
+import 'dart:math';
+import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
-import 'package:bip340/bip340.dart' as bip340;
+import 'package:encrypt/encrypt.dart';
+import 'package:kepler/kepler.dart';
 import 'package:nostr/src/utils.dart';
+import 'package:nostr/src/settings.dart';
+import 'package:pointycastle/export.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
 ///
@@ -44,6 +50,8 @@ class Event {
 
   /// subscription_id is a random string that should be used to represent a subscription.
   String? subscriptionId;
+
+  bool decrypted = false;
 
   /// Default constructor
   ///
@@ -215,9 +223,9 @@ class Event {
   /// - ["EVENT", subscription_id, event JSON as defined above]
   String serialize() {
     if (subscriptionId != null) {
-      return jsonEncode(["EVENT", subscriptionId, toJson()]);
+      return convert.jsonEncode(["EVENT", subscriptionId, toJson()]);
     } else {
-      return jsonEncode(["EVENT", toJson()]);
+      return convert.jsonEncode(["EVENT", toJson()]);
     }
   }
 
@@ -253,11 +261,12 @@ class Event {
       throw Exception('invalid input');
     }
 
+    json['tags'] = convert.jsonDecode(json['tags']);
     var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
-    return Event(
+    Event event = Event(
       json['id'],
       json['pubkey'],
       json['created_at'],
@@ -268,6 +277,24 @@ class Event {
       subscriptionId: subscriptionId,
       verify: verify,
     );
+    if (event.kind == 4) {
+      event.decryptContent();
+    }
+    return event;
+  }
+
+  factory Event.newEvent(
+    String content,
+    String privkey,
+  ) {
+    Event event = Event.partial();
+    event.kind = 1;
+    event.content = content;
+    event.createdAt = currentUnixTimestampSeconds();
+    event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    event.id = event.getEventId();
+    event.sig = event.getSignature(privkey);
+    return event;
   }
 
   /// To obtain the event.id, we sha256 the serialized event.
@@ -301,8 +328,8 @@ class Event {
     String content,
   ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
-    String serializedEvent = json.encode(data);
-    List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
+    String serializedEvent = convert.jsonEncode(data);
+    List<int> hash = sha256.convert(convert.utf8.encode(serializedEvent)).bytes;
     return hex.encode(hash);
   }
 
@@ -334,5 +361,225 @@ class Event {
     } else {
       return false;
     }
+  }
+
+  bool decryptContent() {
+    int ivIndex = content.indexOf("?iv=");
+    if( ivIndex <= 0) {
+      print("Invalid content for dm, could not get ivIndex: $content");
+      return false;
+    }
+    String iv = content.substring(ivIndex + "?iv=".length, content.length);
+    String encString = content.substring(0, ivIndex);
+    final String decString;
+    try {
+      content = decrypt(userPrivateKey, "02" + pubkey, encString, iv);
+      decrypted = true;
+    } catch(e) {
+      //print("Fail to decrypt: ${e}");
+    }
+    return decrypted;
+  }
+
+  // pointy castle source https://github.com/PointyCastle/pointycastle/blob/master/tutorials/aes-cbc.md
+  // https://github.com/bcgit/pc-dart/blob/master/tutorials/aes-cbc.md
+  // 3 https://github.com/Dhuliang/flutter-bsv/blob/42a2d92ec6bb9ee3231878ffe684e1b7940c7d49/lib/src/aescbc.dart
+
+  /// Decrypt data using self private key
+  String decrypt(String privateString,
+                           String publicString,
+                           String b64encoded,
+                          [String b64IV = ""]) {
+
+    Uint8List encdData = convert.base64.decode(b64encoded);
+    final rawData = decryptRaw(privateString, publicString, encdData, b64IV);
+    return convert.Utf8Decoder().convert(rawData.toList());
+  }
+
+  static Map<String, List<List<int>>> gMapByteSecret = {};
+
+  Uint8List decryptRaw(String privateString,
+                       String publicString,
+                       Uint8List cipherText,
+                       [String b64IV = ""]) {
+    List<List<int>> byteSecret = gMapByteSecret[publicString]??[];
+    if (byteSecret.isEmpty) {
+      byteSecret = Kepler.byteSecret(privateString, publicString);
+      gMapByteSecret[publicString] = byteSecret;
+    }
+    final secretIV = byteSecret;
+    final key = Uint8List.fromList(secretIV[0]);
+    final iv = b64IV.length > 6
+              ? convert.base64.decode(b64IV)
+              : Uint8List.fromList(secretIV[1]);
+
+    CipherParameters params = new PaddedBlockCipherParameters(
+        new ParametersWithIV(new KeyParameter(key), iv), null);
+
+    PaddedBlockCipherImpl cipherImpl = new PaddedBlockCipherImpl(
+        new PKCS7Padding(), new CBCBlockCipher(new AESEngine()));
+
+    cipherImpl.init(false,
+                    params as PaddedBlockCipherParameters<CipherParameters?,
+                                                          CipherParameters?>);
+    final Uint8List  finalPlainText = Uint8List(cipherText.length); // allocate space
+
+    var offset = 0;
+    while (offset < cipherText.length - 16) {
+      offset += cipherImpl.processBlock(cipherText, offset, finalPlainText, offset);
+    }
+    //remove padding
+    offset += cipherImpl.doFinal(cipherText, offset, finalPlainText, offset);
+    return finalPlainText.sublist(0, offset);
+  }
+}
+
+class EncryptedDirectMessage extends Event {
+  late String peerPubkey; 
+  late String? plaintext;
+  late String? referenceEventId;
+
+  EncryptedDirectMessage(
+    this.peerPubkey,
+    id,
+    pubkey,
+    createdAt,
+    kind,
+    tags,
+    content,
+    sig, {
+    subscriptionId,
+    bool verify = false,
+    this.plaintext,
+    this.referenceEventId,
+  }) : super(
+    id,
+    pubkey,
+    createdAt,
+    kind,
+    tags,
+    content,
+    sig,
+    subscriptionId: subscriptionId,
+    verify: verify,
+  ) {
+    kind = 4;
+    plaintext = content;
+  }
+
+  factory EncryptedDirectMessage.partial({
+    peerPubkey = "",
+    id = "",
+    pubkey = "",
+    createdAt = 0,
+    kind = 4,
+    tags = const <List<String>>[],
+    content = "",
+    sig = "",
+    plaintext,
+    referenceEventId,
+    subscriptionId,
+    bool verify = false,
+  }) {
+    return EncryptedDirectMessage(
+      peerPubkey,
+      id,
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+      sig,
+      plaintext: plaintext,
+      referenceEventId: referenceEventId,
+      subscriptionId: subscriptionId,
+      verify: verify,
+    );
+  }
+
+  factory EncryptedDirectMessage.newEvent(
+    String peerPubkey,
+    String plaintext,
+    String privkey, {
+    String? referenceEventId,
+  }) {
+    EncryptedDirectMessage event = EncryptedDirectMessage.partial();
+    event.content = encryptMessage(privkey, '02' + peerPubkey, plaintext);
+    event.kind = 4;
+    event.createdAt = currentUnixTimestampSeconds();
+    event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    event.tags = [['p', peerPubkey],];
+    event.plaintext = plaintext;
+    if (referenceEventId != null) {
+      event.tags.add(['e', referenceEventId]);
+    }
+    event.id = event.getEventId();
+    event.sig = event.getSignature(privkey);
+    return event;
+  }
+
+  String getEventId() {
+    assert(content != plaintext);
+    // Included for minimum breaking changes
+    return Event._processEventId(
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+    );
+  }
+
+  // Encrypt data using self private key in nostr format ( with trailing ?iv=)
+  static String encryptMessage( String privateString,
+                           String publicString,
+                           String plainText) {
+    print('privateString ' + privateString);
+    print('publicString ' + publicString);
+
+    Uint8List uintInputText = convert.Utf8Encoder().convert(plainText);
+    final encryptedString = encryptMessageRaw(privateString, publicString, uintInputText);
+    return encryptedString;
+  }
+
+  static String encryptMessageRaw( String privateString,
+                       String publicString,
+                       Uint8List uintInputText) {
+    final secretIV = Kepler.byteSecret(privateString, publicString);
+    final key = Uint8List.fromList(secretIV[0]);
+
+    // generate iv  https://stackoverflow.com/questions/63630661/aes-engine-not-initialised-with-pointycastle-securerandom
+    FortunaRandom fr = FortunaRandom();
+    final _sGen = Random.secure();
+    fr.seed(KeyParameter(
+                        Uint8List.fromList(List.generate(32, (_) => _sGen.nextInt(255)))));
+    final iv = fr.nextBytes(16);
+
+    CipherParameters params = new PaddedBlockCipherParameters(
+                                                              new ParametersWithIV(new KeyParameter(key), iv), null);
+
+    PaddedBlockCipherImpl cipherImpl = new PaddedBlockCipherImpl(
+                                                              new PKCS7Padding(), new CBCBlockCipher(new AESEngine()));
+
+    cipherImpl.init(true,  // means to encrypt
+                    params as PaddedBlockCipherParameters<CipherParameters?,
+                                                          CipherParameters?>);
+
+    // allocate space
+    final Uint8List  outputEncodedText = Uint8List(uintInputText.length + 16);
+
+    var offset = 0;
+    while (offset < uintInputText.length - 16) {
+      offset += cipherImpl.processBlock(uintInputText, offset, outputEncodedText, offset);
+    }
+
+    //add padding 
+    offset += cipherImpl.doFinal(uintInputText, offset, outputEncodedText, offset);
+    final Uint8List finalEncodedText = outputEncodedText.sublist(0, offset);
+
+    String stringIv = convert.base64.encode(iv);
+    String outputPlainText = convert.base64.encode(finalEncodedText);
+    outputPlainText = outputPlainText + "?iv=" + stringIv;
+    return  outputPlainText;
   }
 }
