@@ -27,6 +27,9 @@ class Message {
       case "EOSE":
         message = Eose.deserialize(data);
         break;
+      case "OK":
+        message = Ok.deserialize(data);
+        break;
       case "REQ":
         message = Request.deserialize(data);
         break;

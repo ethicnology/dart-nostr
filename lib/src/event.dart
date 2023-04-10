@@ -1,10 +1,9 @@
-import 'dart:convert' as convert;
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
-import 'package:encrypt/encrypt.dart';
 import 'package:kepler/kepler.dart';
 import 'package:nostr/src/utils.dart';
 import 'package:nostr/src/settings.dart';
@@ -223,9 +222,9 @@ class Event {
   /// - ["EVENT", subscription_id, event JSON as defined above]
   String serialize() {
     if (subscriptionId != null) {
-      return convert.jsonEncode(["EVENT", subscriptionId, toJson()]);
+      return jsonEncode(["EVENT", subscriptionId, toJson()]);
     } else {
-      return convert.jsonEncode(["EVENT", toJson()]);
+      return jsonEncode(["EVENT", toJson()]);
     }
   }
 
@@ -261,8 +260,10 @@ class Event {
       throw Exception('invalid input');
     }
 
-    json['tags'] = convert.jsonDecode(json['tags']);
-    var tags = (json['tags'] as List<dynamic>)
+    if (json['tags'] is String) {
+      json['tags'] = jsonDecode(json['tags']);
+    }
+    List<List<String>> tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
@@ -328,8 +329,8 @@ class Event {
     String content,
   ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
-    String serializedEvent = convert.jsonEncode(data);
-    List<int> hash = sha256.convert(convert.utf8.encode(serializedEvent)).bytes;
+    String serializedEvent = jsonEncode(data);
+    List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
     return hex.encode(hash);
   }
 
@@ -391,9 +392,9 @@ class Event {
                            String b64encoded,
                           [String b64IV = ""]) {
 
-    Uint8List encdData = convert.base64.decode(b64encoded);
+    Uint8List encdData = base64.decode(b64encoded);
     final rawData = decryptRaw(privateString, publicString, encdData, b64IV);
-    return convert.Utf8Decoder().convert(rawData.toList());
+    return Utf8Decoder().convert(rawData.toList());
   }
 
   static Map<String, List<List<int>>> gMapByteSecret = {};
@@ -410,14 +411,14 @@ class Event {
     final secretIV = byteSecret;
     final key = Uint8List.fromList(secretIV[0]);
     final iv = b64IV.length > 6
-              ? convert.base64.decode(b64IV)
+              ? base64.decode(b64IV)
               : Uint8List.fromList(secretIV[1]);
 
-    CipherParameters params = new PaddedBlockCipherParameters(
-        new ParametersWithIV(new KeyParameter(key), iv), null);
+    CipherParameters params = PaddedBlockCipherParameters(
+        ParametersWithIV(KeyParameter(key), iv), null);
 
-    PaddedBlockCipherImpl cipherImpl = new PaddedBlockCipherImpl(
-        new PKCS7Padding(), new CBCBlockCipher(new AESEngine()));
+    PaddedBlockCipherImpl cipherImpl = PaddedBlockCipherImpl(
+        PKCS7Padding(), CBCBlockCipher(AESEngine()));
 
     cipherImpl.init(false,
                     params as PaddedBlockCipherParameters<CipherParameters?,
@@ -537,7 +538,7 @@ class EncryptedDirectMessage extends Event {
     print('privateString ' + privateString);
     print('publicString ' + publicString);
 
-    Uint8List uintInputText = convert.Utf8Encoder().convert(plainText);
+    Uint8List uintInputText = Utf8Encoder().convert(plainText);
     final encryptedString = encryptMessageRaw(privateString, publicString, uintInputText);
     return encryptedString;
   }
@@ -555,18 +556,16 @@ class EncryptedDirectMessage extends Event {
                         Uint8List.fromList(List.generate(32, (_) => _sGen.nextInt(255)))));
     final iv = fr.nextBytes(16);
 
-    CipherParameters params = new PaddedBlockCipherParameters(
-                                                              new ParametersWithIV(new KeyParameter(key), iv), null);
+    CipherParameters params = PaddedBlockCipherParameters(ParametersWithIV(KeyParameter(key), iv), null);
 
-    PaddedBlockCipherImpl cipherImpl = new PaddedBlockCipherImpl(
-                                                              new PKCS7Padding(), new CBCBlockCipher(new AESEngine()));
+    PaddedBlockCipherImpl cipherImpl = PaddedBlockCipherImpl(PKCS7Padding(), CBCBlockCipher(AESEngine()));
 
     cipherImpl.init(true,  // means to encrypt
                     params as PaddedBlockCipherParameters<CipherParameters?,
                                                           CipherParameters?>);
 
     // allocate space
-    final Uint8List  outputEncodedText = Uint8List(uintInputText.length + 16);
+    final Uint8List outputEncodedText = Uint8List(uintInputText.length + 16);
 
     var offset = 0;
     while (offset < uintInputText.length - 16) {
@@ -577,8 +576,8 @@ class EncryptedDirectMessage extends Event {
     offset += cipherImpl.doFinal(uintInputText, offset, outputEncodedText, offset);
     final Uint8List finalEncodedText = outputEncodedText.sublist(0, offset);
 
-    String stringIv = convert.base64.encode(iv);
-    String outputPlainText = convert.base64.encode(finalEncodedText);
+    String stringIv = base64.encode(iv);
+    String outputPlainText = base64.encode(finalEncodedText);
     outputPlainText = outputPlainText + "?iv=" + stringIv;
     return  outputPlainText;
   }
