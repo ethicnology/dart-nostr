@@ -510,6 +510,7 @@ class EncryptedDirectMessage extends Event {
     event.createdAt = currentUnixTimestampSeconds();
     event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
     event.tags = [['p', peerPubkey],];
+    event.peerPubkey = peerPubkey;
     event.plaintext = plaintext;
     if (referenceEventId != null) {
       event.tags.add(['e', referenceEventId]);
@@ -519,25 +520,10 @@ class EncryptedDirectMessage extends Event {
     return event;
   }
 
-  String getEventId() {
-    assert(content != plaintext);
-    // Included for minimum breaking changes
-    return Event._processEventId(
-      pubkey,
-      createdAt,
-      kind,
-      tags,
-      content,
-    );
-  }
-
   // Encrypt data using self private key in nostr format ( with trailing ?iv=)
   static String encryptMessage( String privateString,
                            String publicString,
                            String plainText) {
-    print('privateString ' + privateString);
-    print('publicString ' + publicString);
-
     Uint8List uintInputText = Utf8Encoder().convert(plainText);
     final encryptedString = encryptMessageRaw(privateString, publicString, uintInputText);
     return encryptedString;
