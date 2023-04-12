@@ -3,6 +3,9 @@ import 'dart:typed_data';
 import 'package:pointycastle/export.dart';
 import 'operator.dart';
 
+///
+/// From archive repo: https://github.com/tjcampanella/kepler.git
+///
 
 class Kepler {
 

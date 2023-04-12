@@ -1,5 +1,9 @@
 import 'package:pointycastle/export.dart';
 
+///
+/// From archive repo: https://github.com/tjcampanella/kepler.git
+///
+
 BigInt theP = BigInt.parse(
     "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
     radix: 16);
