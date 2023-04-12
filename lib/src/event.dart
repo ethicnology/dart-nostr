@@ -5,7 +5,7 @@ import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:pointycastle/export.dart';
 
-import 'crypto/kepler.dart';
+import 'nips/nip_004/crypto.dart';
 import 'utils.dart';
 import 'settings.dart';
 
@@ -50,6 +50,9 @@ class Event {
   /// subscription_id is a random string that should be used to represent a subscription.
   String? subscriptionId;
 
+  /// Nip04: If event is of kind 4, then `decrypted` flag indicates whether `content` was
+  /// successfully decrypted. Unsuccessful decryption on a valid event is typically caused
+  /// by missing or mismatched private key.
   bool decrypted = false;
 
   /// Default constructor
@@ -279,7 +282,7 @@ class Event {
       verify: verify,
     );
     if (event.kind == 4) {
-      event.decryptContent();
+      event.nip04Decrypt();
     }
     return event;
   }
@@ -354,6 +357,14 @@ class Event {
   /// Verify if event checks such as id, signature, non-futuristic are valid
   /// Performances could be a reason to disable event checks
   bool isValid() {
+    if (decrypted) {
+      // isValid() check was already performed when the Event was created at
+      // deserialization off of the input stream. Post-decryption, id check will
+      // fail as the content has changed.
+      // Alternatively, getEventId() could compute id from a `plaintext` field
+      // when `decrypted` is true.
+      return true;
+    }
     String verifyId = getEventId();
     if (createdAt.toString().length == 10 &&
         id == verifyId &&
@@ -364,7 +375,7 @@ class Event {
     }
   }
 
-  bool decryptContent() {
+  bool nip04Decrypt() {
     int ivIndex = content.indexOf("?iv=");
     if( ivIndex <= 0) {
       print("Invalid content for dm, could not get ivIndex: $content");
@@ -372,66 +383,12 @@ class Event {
     }
     String iv = content.substring(ivIndex + "?iv=".length, content.length);
     String encString = content.substring(0, ivIndex);
-    final String decString;
     try {
-      content = decrypt(userPrivateKey, "02" + pubkey, encString, iv);
+      content = Nip04.decrypt(userPrivateKey, "02" + pubkey, encString, iv);
       decrypted = true;
     } catch(e) {
       //print("Fail to decrypt: ${e}");
     }
     return decrypted;
   }
-
-  // pointy castle source https://github.com/PointyCastle/pointycastle/blob/master/tutorials/aes-cbc.md
-  // https://github.com/bcgit/pc-dart/blob/master/tutorials/aes-cbc.md
-  // 3 https://github.com/Dhuliang/flutter-bsv/blob/42a2d92ec6bb9ee3231878ffe684e1b7940c7d49/lib/src/aescbc.dart
-
-  /// Decrypt data using self private key
-  String decrypt(String privateString,
-                           String publicString,
-                           String b64encoded,
-                          [String b64IV = ""]) {
-
-    Uint8List encdData = base64.decode(b64encoded);
-    final rawData = decryptRaw(privateString, publicString, encdData, b64IV);
-    return Utf8Decoder().convert(rawData.toList());
-  }
-
-  static Map<String, List<List<int>>> gMapByteSecret = {};
-
-  Uint8List decryptRaw(String privateString,
-                       String publicString,
-                       Uint8List cipherText,
-                       [String b64IV = ""]) {
-    List<List<int>> byteSecret = gMapByteSecret[publicString]??[];
-    if (byteSecret.isEmpty) {
-      byteSecret = Kepler.byteSecret(privateString, publicString);
-      gMapByteSecret[publicString] = byteSecret;
-    }
-    final secretIV = byteSecret;
-    final key = Uint8List.fromList(secretIV[0]);
-    final iv = b64IV.length > 6
-              ? base64.decode(b64IV)
-              : Uint8List.fromList(secretIV[1]);
-
-    CipherParameters params = PaddedBlockCipherParameters(
-        ParametersWithIV(KeyParameter(key), iv), null);
-
-    PaddedBlockCipherImpl cipherImpl = PaddedBlockCipherImpl(
-        PKCS7Padding(), CBCBlockCipher(AESEngine()));
-
-    cipherImpl.init(false,
-                    params as PaddedBlockCipherParameters<CipherParameters?,
-                                                          CipherParameters?>);
-    final Uint8List  finalPlainText = Uint8List(cipherText.length); // allocate space
-
-    var offset = 0;
-    while (offset < cipherText.length - 16) {
-      offset += cipherImpl.processBlock(cipherText, offset, finalPlainText, offset);
-    }
-    //remove padding
-    offset += cipherImpl.doFinal(cipherText, offset, finalPlainText, offset);
-    return finalPlainText.sublist(0, offset);
-  }
 }
-
