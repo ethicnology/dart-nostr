@@ -29,13 +29,13 @@ void main() {
       expect(event.subscriptionId, null);
     });
   });
-  test('Event receive', () {
+  test('Encrypted DM Receive', () {
     String bobPubKey = "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1";
     String alicePubKey = "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181";
     String bobPrivKey = "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
     String json = '["EVENT", "181555e0fec2139d27ac80a5a46801415394e61d67be7f626631760dc5997bc0", {"id": "2739cccdc3fa943ad447378e234ef1325a76f023a169b483b6fe8cab47a793e1", "pubkey": "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181", "created_at": 1680475069, "kind": 4, "tags": [["p", "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1"]], "content": "hH1HlQWY3dz7IzJlgnEgW1WNtA0KlvGgo/OC4mep/R4I6PMqJuvZ35j4OFHkMvqb?iv=jbkXPH2esn5DIP3BodpsTQ==", "sig": "ba2d80d8be4612e8438447d38373e9b014b28172d49b7b6afeff462bc25bd4edc69c6e2c145dde052de54f47f4e36d74151fad3d08d21e3cad9563edc64adcca"}]';
-    String tempPrivateKey = userPrivateKey;
-    userPrivateKey = bobPrivKey; // from settings.dart
+    String tempPrivateKey = userPrivateKey; // from settings.dart
+    userPrivateKey = bobPrivKey;
 
     Message m = Message.deserialize(json);
     Event event = m.message;
