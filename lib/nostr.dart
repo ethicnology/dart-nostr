@@ -6,8 +6,6 @@ library nostr;
 export 'src/event.dart';
 export 'src/keychain.dart';
 export 'src/request.dart';
-export 'src/eose.dart';
-export 'src/ok.dart';
 export 'src/filter.dart';
 export 'src/close.dart';
 export 'src/message.dart';

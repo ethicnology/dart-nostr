@@ -10,25 +10,13 @@ class Message {
 // nostr message deserializer
   Message.deserialize(String payload) {
     dynamic data = jsonDecode(payload);
-    List<String> messages = ["EVENT", "REQ", "CLOSE", "NOTICE", "EOSE", "OK", "AUTH"];
-    if (data == null || !messages.contains(data[0])) {
-      if (data != null) {
-        print('"${data[0]}" is an unsupported payload (or NIP)');
-      }
-      message = null;
-      return;
-    }
+    var messages = ["EVENT", "REQ", "CLOSE", "NOTICE", "EOSE", "OK", "AUTH"];
+    assert(messages.contains(data[0]), "Unsupported payload (or NIP)");
 
     type = data[0];
     switch (type) {
       case "EVENT":
         message = Event.deserialize(data);
-        break;
-      case "EOSE":
-        message = Eose.deserialize(data);
-        break;
-      case "OK":
-        message = Ok.deserialize(data);
         break;
       case "REQ":
         message = Request.deserialize(data);
