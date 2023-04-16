@@ -16,6 +16,7 @@ flutter pub add nostr
 ## [NIPS](https://github.com/nostr-protocol/nips)
 - [x] [NIP 01 Basic protocol flow description](https://github.com/nostr-protocol/nips/blob/master/01.md)
 - [x] [NIP 02 Contact List and Petnames](https://github.com/nostr-protocol/nips/blob/master/02.md)
+- [x] [NIP 04 Encrypted Direct Message](https://github.com/nostr-protocol/nips/blob/master/04.md)
 - [x] [NIP 15 End of Stored Events Notice](https://github.com/nostr-protocol/nips/blob/master/15.md)
 - [x] [NIP 20 Command Results](https://github.com/nostr-protocol/nips/blob/master/20.md)
 

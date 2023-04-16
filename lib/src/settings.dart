@@ -1,0 +1,2 @@
+String userPrivateKey = "";
+String userPublicKey  = "";
