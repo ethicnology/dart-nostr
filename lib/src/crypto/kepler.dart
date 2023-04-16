@@ -8,7 +8,6 @@ import 'operator.dart';
 ///
 
 class Kepler {
-
   /// return a Bytes data secret
   static List<List<int>> byteSecret(String privateString, String publicString) {
     final secret = rawSecret(privateString, publicString);
@@ -78,8 +77,8 @@ class Kepler {
     final param = ECCurve_secp256k1();
     if (storedkey.length < 120) {
       List<int> codeList = [];
-      for (var _idx = 0; _idx < storedkey.length - 1; _idx += 2) {
-        final hexStr = storedkey.substring(_idx, _idx + 2);
+      for (var idx = 0; idx < storedkey.length - 1; idx += 2) {
+        final hexStr = storedkey.substring(idx, idx + 2);
         codeList.add(int.parse(hexStr, radix: 16));
       }
       final Q = param.curve.decodePoint(codeList);
@@ -92,4 +91,3 @@ class Kepler {
     }
   }
 }
-

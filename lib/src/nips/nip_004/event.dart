@@ -4,9 +4,8 @@ import '../../event.dart';
 import '../../utils.dart';
 import 'crypto.dart';
 
-
 class EncryptedDirectMessage extends Event {
-  late String peerPubkey; 
+  late String peerPubkey;
   late String? plaintext;
   late String? referenceEventId;
 
@@ -24,16 +23,16 @@ class EncryptedDirectMessage extends Event {
     this.plaintext,
     this.referenceEventId,
   }) : super(
-    id,
-    pubkey,
-    createdAt,
-    kind,
-    tags,
-    content,
-    sig,
-    subscriptionId: subscriptionId,
-    verify: verify,
-  ) {
+          id,
+          pubkey,
+          createdAt,
+          kind,
+          tags,
+          content,
+          sig,
+          subscriptionId: subscriptionId,
+          verify: verify,
+        ) {
     kind = 4;
     plaintext = content;
   }
@@ -75,11 +74,13 @@ class EncryptedDirectMessage extends Event {
     String? referenceEventId,
   }) {
     EncryptedDirectMessage event = EncryptedDirectMessage.partial();
-    event.content = Nip04.encryptMessage(privkey, '02' + peerPubkey, plaintext);
+    event.content = Nip04.encryptMessage(privkey, '02$peerPubkey', plaintext);
     event.kind = 4;
     event.createdAt = currentUnixTimestampSeconds();
     event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
-    event.tags = [['p', peerPubkey],];
+    event.tags = [
+      ['p', peerPubkey],
+    ];
     event.peerPubkey = peerPubkey;
     event.plaintext = plaintext;
     if (referenceEventId != null) {

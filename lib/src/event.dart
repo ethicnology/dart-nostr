@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:math';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:pointycastle/export.dart';
@@ -333,7 +332,8 @@ class Event {
   ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
     String serializedEvent = jsonEncode(data);
-    Uint8List hash = SHA256Digest().process(Uint8List.fromList(utf8.encode(serializedEvent)));
+    Uint8List hash = SHA256Digest()
+        .process(Uint8List.fromList(utf8.encode(serializedEvent)));
     return hex.encode(hash);
   }
 
@@ -377,16 +377,16 @@ class Event {
 
   bool nip04Decrypt() {
     int ivIndex = content.indexOf("?iv=");
-    if( ivIndex <= 0) {
+    if (ivIndex <= 0) {
       print("Invalid content for dm, could not get ivIndex: $content");
       return false;
     }
     String iv = content.substring(ivIndex + "?iv=".length, content.length);
     String encString = content.substring(0, ivIndex);
     try {
-      content = Nip04.decrypt(userPrivateKey, "02" + pubkey, encString, iv);
+      content = Nip04.decrypt(userPrivateKey, "02$pubkey", encString, iv);
       decrypted = true;
-    } catch(e) {
+    } catch (e) {
       //print("Fail to decrypt: ${e}");
     }
     return decrypted;
