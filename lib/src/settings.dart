@@ -1,2 +1,0 @@
-String userPrivateKey = "";
-String userPublicKey  = "";

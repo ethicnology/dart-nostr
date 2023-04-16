@@ -11,4 +11,3 @@ export 'src/close.dart';
 export 'src/message.dart';
 export 'src/utils.dart';
 export 'src/nips/nip_002.dart';
-export 'src/nips/nip_004/event.dart';

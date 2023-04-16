@@ -1,13 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:math';
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
-import 'package:pointycastle/export.dart';
-
-import 'nips/nip_004/crypto.dart';
-import 'utils.dart';
-import 'settings.dart';
+import 'package:crypto/crypto.dart';
+import 'package:bip340/bip340.dart' as bip340;
+import 'package:nostr/src/utils.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
 ///
@@ -49,11 +44,6 @@ class Event {
 
   /// subscription_id is a random string that should be used to represent a subscription.
   String? subscriptionId;
-
-  /// Nip04: If event is of kind 4, then `decrypted` flag indicates whether `content` was
-  /// successfully decrypted. Unsuccessful decryption on a valid event is typically caused
-  /// by missing or mismatched private key.
-  bool decrypted = false;
 
   /// Default constructor
   ///
@@ -263,14 +253,11 @@ class Event {
       throw Exception('invalid input');
     }
 
-    if (json['tags'] is String) {
-      json['tags'] = jsonDecode(json['tags']);
-    }
-    List<List<String>> tags = (json['tags'] as List<dynamic>)
+    var tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
-    Event event = Event(
+    return Event(
       json['id'],
       json['pubkey'],
       json['created_at'],
@@ -281,24 +268,6 @@ class Event {
       subscriptionId: subscriptionId,
       verify: verify,
     );
-    if (event.kind == 4) {
-      event.nip04Decrypt();
-    }
-    return event;
-  }
-
-  factory Event.newEvent(
-    String content,
-    String privkey,
-  ) {
-    Event event = Event.partial();
-    event.kind = 1;
-    event.content = content;
-    event.createdAt = currentUnixTimestampSeconds();
-    event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
-    event.id = event.getEventId();
-    event.sig = event.getSignature(privkey);
-    return event;
   }
 
   /// To obtain the event.id, we sha256 the serialized event.
@@ -332,8 +301,8 @@ class Event {
     String content,
   ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
-    String serializedEvent = jsonEncode(data);
-    Uint8List hash = SHA256Digest().process(Uint8List.fromList(utf8.encode(serializedEvent)));
+    String serializedEvent = json.encode(data);
+    List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
     return hex.encode(hash);
   }
 
@@ -357,14 +326,6 @@ class Event {
   /// Verify if event checks such as id, signature, non-futuristic are valid
   /// Performances could be a reason to disable event checks
   bool isValid() {
-    if (decrypted) {
-      // isValid() check was already performed when the Event was created at
-      // deserialization off of the input stream. Post-decryption, id check will
-      // fail as the content has changed.
-      // Alternatively, getEventId() could compute id from a `plaintext` field
-      // when `decrypted` is true.
-      return true;
-    }
     String verifyId = getEventId();
     if (createdAt.toString().length == 10 &&
         id == verifyId &&
@@ -373,22 +334,5 @@ class Event {
     } else {
       return false;
     }
-  }
-
-  bool nip04Decrypt() {
-    int ivIndex = content.indexOf("?iv=");
-    if( ivIndex <= 0) {
-      print("Invalid content for dm, could not get ivIndex: $content");
-      return false;
-    }
-    String iv = content.substring(ivIndex + "?iv=".length, content.length);
-    String encString = content.substring(0, ivIndex);
-    try {
-      content = Nip04.decrypt(userPrivateKey, "02" + pubkey, encString, iv);
-      decrypted = true;
-    } catch(e) {
-      //print("Fail to decrypt: ${e}");
-    }
-    return decrypted;
   }
 }
