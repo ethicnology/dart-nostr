@@ -5,22 +5,23 @@ import 'package:pointycastle/export.dart';
 
 import '../../crypto/kepler.dart';
 
-class Nip04 {
+class Nip4 {
   static Map<String, List<List<int>>> gMapByteSecret = {};
+  // pointy castle source https://github.com/PointyCastle/pointycastle/blob/master/tutorials/aes-cbc.md
+  // https://github.com/bcgit/pc-dart/blob/master/tutorials/aes-cbc.md
+  // 3 https://github.com/Dhuliang/flutter-bsv/blob/42a2d92ec6bb9ee3231878ffe684e1b7940c7d49/lib/src/aescbc.dart
 
   // Encrypt data using self private key in nostr format ( with trailing ?iv=)
-  static String encryptMessage(
-      String privateString, String publicString, String plainText) {
-    Uint8List uintInputText = Utf8Encoder().convert(plainText);
-    final encryptedString =
-        encryptMessageRaw(privateString, publicString, uintInputText);
-    return encryptedString;
-  }
-
-  static String encryptMessageRaw(
-      String privateString, String publicString, Uint8List uintInputText) {
-    final secretIV = Kepler.byteSecret(privateString, publicString);
-    final key = Uint8List.fromList(secretIV[0]);
+  static String cipher(
+    String privkey,
+    String pubkey,
+    String plaintext,
+  ) {
+    Uint8List uintInputText = Utf8Encoder().convert(plaintext);
+    final secretIV = Kepler.byteSecret(privkey, pubkey);
+    final key = Uint8List.fromList(
+      secretIV[0],
+    );
 
     // generate iv  https://stackoverflow.com/questions/63630661/aes-engine-not-initialised-with-pointycastle-securerandom
     FortunaRandom fr = FortunaRandom();
@@ -60,31 +61,23 @@ class Nip04 {
     return outputPlainText;
   }
 
-  // pointy castle source https://github.com/PointyCastle/pointycastle/blob/master/tutorials/aes-cbc.md
-  // https://github.com/bcgit/pc-dart/blob/master/tutorials/aes-cbc.md
-  // 3 https://github.com/Dhuliang/flutter-bsv/blob/42a2d92ec6bb9ee3231878ffe684e1b7940c7d49/lib/src/aescbc.dart
-
-  /// Decrypt data using self private key
-  static String decrypt(
-      String privateString, String publicString, String b64encoded,
-      [String b64IV = ""]) {
-    Uint8List encdData = base64.decode(b64encoded);
-    final rawData = decryptRaw(privateString, publicString, encdData, b64IV);
-    return Utf8Decoder().convert(rawData.toList());
-  }
-
-  static Uint8List decryptRaw(
-      String privateString, String publicString, Uint8List cipherText,
-      [String b64IV = ""]) {
-    List<List<int>> byteSecret = gMapByteSecret[publicString] ?? [];
+  // Decrypt data using self private key
+  static String decipher(
+    String privkey,
+    String pubkey,
+    String ciphertext, [
+    String nonce = "",
+  ]) {
+    Uint8List cipherText = base64.decode(ciphertext);
+    List<List<int>> byteSecret = gMapByteSecret[pubkey] ?? [];
     if (byteSecret.isEmpty) {
-      byteSecret = Kepler.byteSecret(privateString, publicString);
-      gMapByteSecret[publicString] = byteSecret;
+      byteSecret = Kepler.byteSecret(privkey, pubkey);
+      gMapByteSecret[pubkey] = byteSecret;
     }
     final secretIV = byteSecret;
     final key = Uint8List.fromList(secretIV[0]);
-    final iv = b64IV.length > 6
-        ? base64.decode(b64IV)
+    final iv = nonce.length > 6
+        ? base64.decode(nonce)
         : Uint8List.fromList(secretIV[1]);
 
     CipherParameters params = PaddedBlockCipherParameters(
@@ -107,6 +100,7 @@ class Nip04 {
     }
     //remove padding
     offset += cipherImpl.doFinal(cipherText, offset, finalPlainText, offset);
-    return finalPlainText.sublist(0, offset);
+    Uint8List result = finalPlainText.sublist(0, offset);
+    return Utf8Decoder().convert(result.toList());
   }
 }
