@@ -1,93 +1,59 @@
 import 'package:bip340/bip340.dart' as bip340;
-
-import '../../event.dart';
-import '../../utils.dart';
-import 'crypto.dart';
+import 'package:nostr/src/event.dart';
+import 'package:nostr/src/nips/nip_004/crypto.dart';
+import 'package:nostr/src/utils.dart';
 
 class EncryptedDirectMessage extends Event {
-  late String peerPubkey;
-  late String? plaintext;
-  late String? referenceEventId;
+  static Map<String, List<List<int>>> gMapByteSecret = {};
 
-  EncryptedDirectMessage(
-    this.peerPubkey,
-    id,
-    pubkey,
-    createdAt,
-    kind,
-    tags,
-    content,
-    sig, {
-    subscriptionId,
-    bool verify = false,
-    this.plaintext,
-    this.referenceEventId,
-  }) : super(
-          id,
-          pubkey,
-          createdAt,
-          kind,
-          tags,
-          content,
-          sig,
-          subscriptionId: subscriptionId,
-          verify: verify,
-        ) {
-    kind = 4;
-    plaintext = content;
-  }
+  EncryptedDirectMessage(Event event)
+      : super(
+          event.id,
+          event.pubkey,
+          event.createdAt,
+          4,
+          event.tags,
+          event.content,
+          event.sig,
+          subscriptionId: event.subscriptionId,
+          verify: true,
+        );
 
-  factory EncryptedDirectMessage.partial({
-    peerPubkey = "",
-    id = "",
-    pubkey = "",
-    createdAt = 0,
-    kind = 4,
-    tags = const <List<String>>[],
-    content = "",
-    sig = "",
-    plaintext,
-    referenceEventId,
-    subscriptionId,
-    bool verify = false,
-  }) {
-    return EncryptedDirectMessage(
-      peerPubkey,
-      id,
-      pubkey,
-      createdAt,
-      kind,
-      tags,
-      content,
-      sig,
-      plaintext: plaintext,
-      referenceEventId: referenceEventId,
-      subscriptionId: subscriptionId,
-      verify: verify,
-    );
-  }
-
-  factory EncryptedDirectMessage.newEvent(
-    String peerPubkey,
-    String plaintext,
-    String privkey, {
-    String? referenceEventId,
-  }) {
-    EncryptedDirectMessage event = EncryptedDirectMessage.partial();
-    event.content = Nip04.encryptMessage(privkey, '02$peerPubkey', plaintext);
-    event.kind = 4;
+  factory EncryptedDirectMessage.quick(
+    String senderPrivkey,
+    String receiverPubkey,
+    String message,
+  ) {
+    var event = Event.partial();
+    event.pubkey = bip340.getPublicKey(senderPrivkey).toLowerCase();
     event.createdAt = currentUnixTimestampSeconds();
-    event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    event.kind = 4;
     event.tags = [
-      ['p', peerPubkey],
+      ['p', receiverPubkey]
     ];
-    event.peerPubkey = peerPubkey;
-    event.plaintext = plaintext;
-    if (referenceEventId != null) {
-      event.tags.add(['e', referenceEventId]);
-    }
+    event.content = Nip4.cipher(senderPrivkey, '02$receiverPubkey', message);
     event.id = event.getEventId();
-    event.sig = event.getSignature(privkey);
-    return event;
+    event.sig = event.getSignature(senderPrivkey);
+    return EncryptedDirectMessage(event);
+  }
+
+  String? get receiverPubkey => findPubkey();
+
+  String getCiphertext(String senderPrivkey, String receiverPubkey) {
+    String ciphertext =
+        Nip4.cipher(senderPrivkey, '02$receiverPubkey', content);
+    return ciphertext;
+  }
+
+  String getPlaintext(String receiverPrivkey, String senderPubkey) {
+    return Nip4.decipher(receiverPrivkey, senderPubkey, content);
+  }
+
+  String? findPubkey() {
+    String prefix = "p";
+    for (List<String> tag in tags) {
+      if (tag.isNotEmpty && tag[0] == prefix && tag.length > 1) return tag[1];
+    }
+    return null;
   }
 }

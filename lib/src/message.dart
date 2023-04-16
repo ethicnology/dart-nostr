@@ -17,6 +17,7 @@ class Message {
     switch (type) {
       case "EVENT":
         message = Event.deserialize(data);
+        if (message.kind == 4) message = EncryptedDirectMessage(message);
         break;
       case "REQ":
         message = Request.deserialize(data);
