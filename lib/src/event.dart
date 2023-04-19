@@ -254,7 +254,7 @@ class Event {
       throw Exception('invalid input');
     }
 
-    var tags = (json['tags'] as List<dynamic>)
+    List<List<String>> tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
@@ -269,6 +269,20 @@ class Event {
       subscriptionId: subscriptionId,
       verify: verify,
     );
+  }
+
+  factory Event.quick(
+    String content,
+    String privkey,
+  ) {
+    Event event = Event.partial();
+    event.kind = 1;
+    event.content = content;
+    event.createdAt = currentUnixTimestampSeconds();
+    event.pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    event.id = event.getEventId();
+    event.sig = event.getSignature(privkey);
+    return event;
   }
 
   /// To obtain the event.id, we sha256 the serialized event.
