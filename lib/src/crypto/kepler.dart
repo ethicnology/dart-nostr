@@ -1,11 +1,9 @@
+// credit: https://github.com/tjcampanella/kepler/blob/master/lib/src/kepler.dart
+
 import 'package:convert/convert.dart';
 import 'dart:typed_data';
 import 'package:pointycastle/export.dart';
 import 'operator.dart';
-
-///
-/// From archive repo: https://github.com/tjcampanella/kepler.git
-///
 
 class Kepler {
   /// return a Bytes data secret
@@ -17,11 +15,7 @@ class Kepler {
     final hexX = leftPadding(xs, 64);
     final hexY = leftPadding(ys, 64);
     final secretBytes = Uint8List.fromList(hex.decode('$hexX$hexY'));
-    final pair = [
-      secretBytes.sublist(0, 32),
-      secretBytes.sublist(32, 40),
-    ];
-    return pair;
+    return [secretBytes.sublist(0, 32), secretBytes.sublist(32, 40)];
   }
 
   /// return a ECPoint data secret
@@ -29,11 +23,7 @@ class Kepler {
     final privateKey = loadPrivateKey(privateString);
     final publicKey = loadPublicKey(publicString);
     assert(privateKey.d != null && publicKey.Q != null);
-    final secret = scalarMultiple(
-      privateKey.d!,
-      publicKey.Q!,
-    );
-    return secret;
+    return scalarMultiple(privateKey.d!, publicKey.Q!);
   }
 
   static String leftPadding(String s, int width) {
@@ -43,26 +33,6 @@ class Kepler {
       return s;
     }
     return "${paddingData.substring(0, paddingWidth)}$s";
-  }
-
-  static ECPoint scalarMultiple(BigInt k, ECPoint point) {
-    assert(isOnCurve(point));
-    assert((k % theN).compareTo(BigInt.zero) != 0);
-    assert(point.x != null && point.y != null);
-    if (k < BigInt.from(0)) {
-      return scalarMultiple(-k, pointNeg(point));
-    }
-    ECPoint? result;
-    ECPoint addend = point;
-    while (k > BigInt.from(0)) {
-      if (k & BigInt.from(1) > BigInt.from(0)) {
-        result = pointAdd(result, addend);
-      }
-      addend = pointAdd(addend, addend);
-      k >>= 1;
-    }
-    assert(isOnCurve(result!));
-    return result!;
   }
 
   /// return a privateKey from hex string
