@@ -5,7 +5,7 @@ import 'package:nostr/src/crypto/kepler.dart';
 import 'package:pointycastle/export.dart';
 
 /// NIP4 cipher
-String cipher(
+String nip4cipher(
   String privkey,
   String pubkey,
   String payload,
