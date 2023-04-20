@@ -45,8 +45,24 @@ class EncryptedDirectMessage extends Event {
     return ciphertext;
   }
 
-  String getPlaintext(String receiverPrivkey, String senderPubkey) {
-    return Nip4.decipher(receiverPrivkey, senderPubkey, content);
+  String getPlaintext(String receiverPrivkey, [String senderPubkey=""]) {
+    if (senderPubkey.length == 0) {
+      senderPubkey = pubkey;
+    }
+    String plaintext = "";
+    int ivIndex = content.indexOf("?iv=");
+    if( ivIndex <= 0) {
+      print("Invalid content for dm, could not get ivIndex: $content");
+      return plaintext;
+    }
+    String iv = content.substring(ivIndex + "?iv=".length, content.length);
+    String ciphertext = content.substring(0, ivIndex);
+    try {
+      plaintext = Nip4.decipher(receiverPrivkey, "02$senderPubkey", ciphertext, iv);
+    } catch(e) {
+      print("Fail to decrypt: ${e}");
+    }
+    return plaintext;
   }
 
   String? findPubkey() {
