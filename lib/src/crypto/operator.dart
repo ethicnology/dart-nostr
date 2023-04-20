@@ -1,8 +1,6 @@
-import 'package:pointycastle/export.dart';
+// credit: https://github.com/tjcampanella/kepler/blob/master/lib/src/operator.dart
 
-///
-/// From archive repo: https://github.com/tjcampanella/kepler.git
-///
+import 'package:pointycastle/export.dart';
 
 BigInt theP = BigInt.parse(
     "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
@@ -80,10 +78,6 @@ ECPoint pointAdd(ECPoint? point1, ECPoint? point2) {
   final x2 = point2.x!.toBigInteger();
   final y2 = point2.y!.toBigInteger();
 
-  // assert(x1 != x2 && y1 == y2);
-  // if (x1 == x2 && y1 != y2) {
-  //   return null;
-  // }
   BigInt m;
   if (x1 == x2) {
     m = (BigInt.from(3) * x1! * x1 + point1.curve.a!.toBigInteger()!) *
