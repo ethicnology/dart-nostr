@@ -61,7 +61,6 @@ class Nip4 {
     return outputPlainText;
   }
 
-  // Decrypt data using self private key
   static String decipher(
     String privkey,
     String pubkey,
@@ -101,6 +100,6 @@ class Nip4 {
     //remove padding
     offset += cipherImpl.doFinal(cipherText, offset, finalPlainText, offset);
     Uint8List result = finalPlainText.sublist(0, offset);
-    return Utf8Decoder().convert(result.toList());
+    return Utf8Decoder().convert(result);
   }
 }
