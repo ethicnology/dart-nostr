@@ -11,7 +11,9 @@ class Message {
   Message.deserialize(String payload) {
     dynamic data = jsonDecode(payload);
     var messages = ["EVENT", "REQ", "CLOSE", "NOTICE", "EOSE", "OK", "AUTH"];
-    assert(messages.contains(data[0]), "Unsupported payload (or NIP)");
+    if (messages.contains(data[0]) == false) {
+      throw 'Unsupported payload (or NIP)';
+    }
 
     type = data[0];
     switch (type) {
