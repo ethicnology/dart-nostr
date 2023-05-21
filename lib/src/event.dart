@@ -86,7 +86,9 @@ class Event {
     bool verify = true,
   }) {
     pubkey = pubkey.toLowerCase();
-    if (verify) assert(isValid() == true);
+    if (verify && isValid() == false) {
+      throw 'Invalid event';
+    }
   }
 
   /// Partial constructor, you have to fill the fields yourself
