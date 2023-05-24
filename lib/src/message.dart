@@ -19,6 +19,9 @@ class Message {
         message = Event.deserialize(data);
         if (message.kind == 4) message = EncryptedDirectMessage(message);
         break;
+      case "OK":
+        message = Nip20.deserialize(data);
+        break;
       case "REQ":
         message = Request.deserialize(data);
         break;
