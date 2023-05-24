@@ -16,7 +16,6 @@ void main() {
           },
           privkey);
       Channel channel = Nip28.getChannelCreation(event);
-      print(event.serialize());
       expect(channel.picture, 'http://image.jpg');
       expect(channel.additional['badges'],
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');

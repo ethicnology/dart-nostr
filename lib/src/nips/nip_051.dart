@@ -59,7 +59,7 @@ class Nip51 {
     List<String> bookmarks = [];
     int ivIndex = content.indexOf("?iv=");
     if (ivIndex <= 0) {
-      print("Invalid content, could not get ivIndex: $content");
+      throw Exception("Invalid content, could not get ivIndex: $content");
     }
     String iv = content.substring(ivIndex + "?iv=".length, content.length);
     String encString = content.substring(0, ivIndex);

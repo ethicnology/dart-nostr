@@ -12,7 +12,6 @@ void main() {
         'wss://relay2.example.com'
       ];
       Event event = Nip5.encode('name', 'example.com', relays, user.private);
-      print(event.serialize());
       expect(event.kind, 0);
 
       expect(() => Nip5.encode('name', 'example', relays, user.private),

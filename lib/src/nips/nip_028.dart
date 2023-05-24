@@ -116,10 +116,12 @@ class Nip28 {
       'picture': picture,
     };
     map.addAll(additional);
-    String content = jsonEncode(map);
-    Event event =
-        Event.from(kind: 40, tags: [], content: content, privkey: privkey);
-    return event;
+    return Event.from(
+      kind: 40,
+      tags: [],
+      content: jsonEncode(map),
+      privkey: privkey,
+    );
   }
 
   static Event setChannelMetaData(
@@ -133,52 +135,54 @@ class Nip28 {
     Map<String, dynamic> map = {
       'name': name,
       'about': about,
-      'picture': picture,
+      'picture': picture
     };
     map.addAll(additional);
-    String content = jsonEncode(map);
-    List<List<String>> tags = [];
-    tags.add(["e", channelId, relayURL]);
-    Event event =
-        Event.from(kind: 41, tags: tags, content: content, privkey: privkey);
-    return event;
+    return Event.from(
+      kind: 41,
+      tags: [
+        ["e", channelId, relayURL]
+      ],
+      content: jsonEncode(map),
+      privkey: privkey,
+    );
   }
 
   static Event sendChannelMessage(
       String channelId, String content, String privkey,
       {String? relay, List<ETag>? etags, List<PTag>? ptags}) {
-    List<List<String>> tags = [];
-    Thread t =
+    Thread thread =
         Thread(Nip10.rootTag(channelId, relay ?? ''), etags ?? [], ptags ?? []);
-    tags = Nip10.toTags(t);
-    Event event =
-        Event.from(kind: 42, tags: tags, content: content, privkey: privkey);
-    return event;
+    return Event.from(
+      kind: 42,
+      tags: Nip10.toTags(thread),
+      content: content,
+      privkey: privkey,
+    );
   }
 
   static Event hideChannelMessage(
       String messageId, String reason, String privkey) {
-    Map<String, dynamic> map = {
-      'reason': reason,
-    };
-    String content = jsonEncode(map);
-    List<List<String>> tags = [];
-    tags.add(["e", messageId]);
-    Event event =
-        Event.from(kind: 43, tags: tags, content: content, privkey: privkey);
-    return event;
+    Map<String, dynamic> map = {'reason': reason};
+    return Event.from(
+      kind: 43,
+      tags: [
+        ["e", messageId]
+      ],
+      content: jsonEncode(map),
+      privkey: privkey,
+    );
   }
 
   static Event muteUser(String pubkey, String reason, String privkey) {
-    Map<String, dynamic> map = {
-      'reason': reason,
-    };
-    String content = jsonEncode(map);
-    List<List<String>> tags = [];
-    tags.add(["p", pubkey]);
-    Event event =
-        Event.from(kind: 44, tags: tags, content: content, privkey: privkey);
-    return event;
+    Map<String, dynamic> map = {'reason': reason};
+    return Event.from(
+        kind: 44,
+        tags: [
+          ["p", pubkey]
+        ],
+        content: jsonEncode(map),
+        privkey: privkey);
   }
 }
 
