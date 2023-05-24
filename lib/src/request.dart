@@ -23,9 +23,7 @@ class Request {
   /// Deserialize a nostr request message
   /// - ["REQ", subscription_id, filter JSON, filter JSON, ...]
   Request.deserialize(input) {
-    if (input.length < 3) {
-      throw 'Message too short';
-    }
+    if (input.length < 3) throw 'Message too short';
     subscriptionId = input[1];
     filters = [];
     for (var i = 2; i < input.length; i++) {
