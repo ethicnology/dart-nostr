@@ -5,10 +5,10 @@ void main() {
   group('nip010', () {
     test('fromTags', () {
       List<List<String>> tags = [
-              ["e", '91cf9..4e5ca', 'wss://alicerelay.com', "root"],
-              ["e", '14aeb..8dad4', 'wss://bobrelay.com/nostr', "reply"],
-              ["p", '612ae..e610f', 'ws://carolrelay.com/ws'],
-          ];
+        ["e", '91cf9..4e5ca', 'wss://alicerelay.com', "root"],
+        ["e", '14aeb..8dad4', 'wss://bobrelay.com/nostr', "reply"],
+        ["p", '612ae..e610f', 'ws://carolrelay.com/ws'],
+      ];
       Thread thread = Nip10.fromTags(tags);
       expect(thread.root.eventId, '91cf9..4e5ca');
       expect(thread.root.relayURL, 'wss://alicerelay.com');

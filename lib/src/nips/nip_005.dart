@@ -19,7 +19,8 @@ class Nip5 {
           List<dynamic> parts = dns.split('@');
           String name = parts[0];
           String domain = parts[1];
-          return DNS(name, domain, event.pubkey, relays.map((e) => e.toString()).toList());
+          return DNS(name, domain, event.pubkey,
+              relays.map((e) => e.toString()).toList());
         }
       } catch (e) {
         throw Exception(e.toString());
