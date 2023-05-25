@@ -34,7 +34,7 @@ class Nip5 {
       String name, String domain, List<String> relays, String privkey) {
     if (isValidName(name) && isValidDomain(domain)) {
       String content = generateContent(name, domain, relays);
-      return Nip1.setMetadata(content, privkey);
+      return Event.from(kind: 0, tags: [], content: content, privkey: privkey);
     } else {
       throw Exception("not a valid name or domain!");
     }
