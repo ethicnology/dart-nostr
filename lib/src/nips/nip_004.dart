@@ -14,6 +14,15 @@ import 'package:nostr/src/utils.dart';
 /// tags MAY contain an entry identifying the previous message in a conversation or a message we are explicitly replying to (such that contextual, more organized conversations may happen), in the form ["e", "event_id"].
 ///
 /// Note: By default in the libsecp256k1 ECDH implementation, the secret is the SHA256 hash of the shared point (both X and Y coordinates). In Nostr, only the X coordinate of the shared point is used as the secret and it is NOT hashed. If using libsecp256k1, a custom function that copies the X coordinate must be passed as the hashfp argument in secp256k1_ecdh.
+///
+/// NIP-04 considered harmful, READ: https://github.com/ethicnology/dart-nostr/issues/15 and https://github.com/nostr-protocol/nips/issues/107
+@Deprecated(
+  """
+    NIP-04 a.k.a EncryptedDirectMessage is controversial, please READ: 
+    - https://github.com/ethicnology/dart-nostr/issues/15
+    - https://github.com/nostr-protocol/nips/issues/107
+  """,
+)
 class EncryptedDirectMessage extends Event {
   /// Default constructor
   EncryptedDirectMessage(Event event, {verify = true})

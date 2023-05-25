@@ -19,6 +19,7 @@ class Message {
     switch (type) {
       case "EVENT":
         message = Event.deserialize(data);
+        // ignore: deprecated_member_use_from_same_package
         if (message.kind == 4) message = EncryptedDirectMessage(message);
         break;
       case "OK":
