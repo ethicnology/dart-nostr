@@ -2,7 +2,7 @@ import 'package:nostr/nostr.dart';
 
 void main() async {
   var eventPayload =
-      '["EVENT","3979053091133091",{"id":"a60679692533b308f1d862c2a5ca5c08a304e5157b1df5cde0ff0454b9920605","pubkey":"7c579328cf9028a4548d5117afa4f8448fb510ca9023f576b7bc90fc5be6ce7e","created_at":1674405882,"kind":1,"tags":[],"content":"GM gm gm! Currently bathing my brain in coffee âï¸  hahaha. How many other nostrinos love coffee? ð¤ªð¤","sig":"10262aa6a83e0b744cda2097f06f7354357512b82846f6ef23ef7d997136b64815c343b613a0635a27da7e628c96ac2475f66dd72513c1fb8ce6560824eb25b8"}]';
+      '["EVENT","5ce1758166673a70e391303fb7cfeb0f5d47ec38a9342a27858950d13424d59b",{"content":"No quotes from the Bible? My global feed is full of religious nutcases","created_at":1685026912,"id":"e695c81fa5099b9f3ef0d868d8143eae481954114681bbe4432b50e44e199927","kind":1,"pubkey":"ab4103fc8cd4e1d8d31a99d079ed8293bdc26b11ec1ec61d95c13e43d7e048ff","sig":"0d17d6197ad12ab5ad77eb51231ae12c2ce1e639218bb6e3a01cce78aa092f3e77fb1f914b690675a425dcfd5b4dfa7be72c2cb608568798361781d75e354b32","tags":[["e","7804acd35bb9727d0374545a99bb4f30f901289aebaf3cf330dda28c235cd7ad"],["p","1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411"]]}]';
   var event = Message.deserialize(eventPayload);
   assert(event.type == "EVENT");
   assert(event.message.id ==
