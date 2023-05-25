@@ -50,3 +50,14 @@
 - fix: pending bip340 issue
 - test: Update test to check public key
 - refactor: Event partial and from to factories
+
+## 1.4.0
+
+- NIP 04 Encrypted Direct Message
+- NIP 05 Mapping Nostr keys to DNS-based internet identifiers
+- NIP 10 Conventions for clients' use of e and p tags in text events
+- NIP 15 End of Stored Events Notice
+- NIP 19 bech32-encoded entities
+- NIP 20 Command Results
+- NIP 28 Public Chat
+- NIP 51 Lists
