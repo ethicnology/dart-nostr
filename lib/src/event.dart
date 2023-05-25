@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:convert/convert.dart';
-import 'package:crypto/crypto.dart';
+import 'package:pointycastle/export.dart';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/src/utils.dart';
 
@@ -85,7 +86,7 @@ class Event {
     bool verify = true,
   }) {
     pubkey = pubkey.toLowerCase();
-    if (verify) assert(isValid() == true);
+    if (verify && isValid() == false) throw 'Invalid event';
   }
 
   /// Partial constructor, you have to fill the fields yourself
@@ -127,27 +128,26 @@ class Event {
     );
   }
 
-  /// Instantiate Event object from the minimum available data
+  /// Instantiate Event object from the minimum needed data
   ///
   /// ```dart
   ///Event event = Event.from(
   ///  kind: 1,
-  ///  tags: [],
   ///  content: "",
   ///  privkey:
   ///      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   ///);
   ///```
   factory Event.from({
-    int createdAt = 0,
+    int? createdAt,
     required int kind,
-    required List<List<String>> tags,
+    List<List<String>> tags = const [],
     required String content,
     required String privkey,
     String? subscriptionId,
     bool verify = false,
   }) {
-    if (createdAt == 0) createdAt = currentUnixTimestampSeconds();
+    createdAt ??= currentUnixTimestampSeconds();
     final pubkey = bip340.getPublicKey(privkey).toLowerCase();
 
     final id = _processEventId(
@@ -253,7 +253,7 @@ class Event {
       throw Exception('invalid input');
     }
 
-    var tags = (json['tags'] as List<dynamic>)
+    List<List<String>> tags = (json['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
@@ -302,7 +302,8 @@ class Event {
   ) {
     List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
     String serializedEvent = json.encode(data);
-    List<int> hash = sha256.convert(utf8.encode(serializedEvent)).bytes;
+    Uint8List hash = SHA256Digest()
+        .process(Uint8List.fromList(utf8.encode(serializedEvent)));
     return hex.encode(hash);
   }
 

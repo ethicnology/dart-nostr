@@ -1,6 +1,9 @@
 # Files and directories created by pub.
 .dart_tool/
 .packages
+*.swp
+x
+tags
 
 # Conventional directory for build outputs.
 build/

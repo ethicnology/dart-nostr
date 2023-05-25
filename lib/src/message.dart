@@ -11,12 +11,19 @@ class Message {
   Message.deserialize(String payload) {
     dynamic data = jsonDecode(payload);
     var messages = ["EVENT", "REQ", "CLOSE", "NOTICE", "EOSE", "OK", "AUTH"];
-    assert(messages.contains(data[0]), "Unsupported payload (or NIP)");
+    if (messages.contains(data[0]) == false) {
+      throw 'Unsupported payload (or NIP)';
+    }
 
     type = data[0];
     switch (type) {
       case "EVENT":
         message = Event.deserialize(data);
+        // ignore: deprecated_member_use_from_same_package
+        if (message.kind == 4) message = EncryptedDirectMessage(message);
+        break;
+      case "OK":
+        message = Nip20.deserialize(data);
         break;
       case "REQ":
         message = Request.deserialize(data);
