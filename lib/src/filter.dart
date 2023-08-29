@@ -69,7 +69,7 @@ class Filter {
       data['#e'] = e;
     }
     if (a != null) {
-      data['#a'] = e;
+      data['#a'] = a;
     }
     if (p != null) {
       data['#p'] = p;
