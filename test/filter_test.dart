@@ -34,7 +34,7 @@ void main() {
       expect(filter.authors, authors);
       expect(filter.kinds, kinds);
       expect(filter.e, e);
-      expect(filter.e, e);
+      expect(filter.a, a);
       expect(filter.p, p);
       expect(filter.since, since);
       expect(filter.until, until);
@@ -63,6 +63,7 @@ void main() {
       expect(filter.authors, json['authors']);
       expect(filter.kinds, json['kinds']);
       expect(filter.e, json['#e']);
+      expect(filter.a, json['#a']);
       expect(filter.p, json['#p']);
       expect(filter.since, json['since']);
       expect(filter.until, json['until']);
