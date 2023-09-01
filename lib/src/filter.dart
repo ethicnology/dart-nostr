@@ -12,6 +12,9 @@ class Filter {
   /// a list of event ids that are referenced in an "e" tag
   List<String>? e;
 
+  /// a list of event ids that are referenced in an "a" tag
+  List<String>? a;
+
   /// a list of pubkeys that are referenced in a "p" tag
   List<String>? p;
 
@@ -30,6 +33,7 @@ class Filter {
       this.authors,
       this.kinds,
       this.e,
+      this.a,
       this.p,
       this.since,
       this.until,
@@ -42,6 +46,7 @@ class Filter {
         json['authors'] == null ? null : List<String>.from(json['authors']);
     kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
     e = json['#e'] == null ? null : List<String>.from(json['#e']);
+    a = json['#a'] == null ? null : List<String>.from(json['#a']);
     p = json['#p'] == null ? null : List<String>.from(json['#p']);
     since = json['since'];
     until = json['until'];
@@ -51,30 +56,15 @@ class Filter {
   /// Serialize a filter in JSON
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    if (ids != null) {
-      data['ids'] = ids;
-    }
-    if (authors != null) {
-      data['authors'] = authors;
-    }
-    if (kinds != null) {
-      data['kinds'] = kinds;
-    }
-    if (e != null) {
-      data['#e'] = e;
-    }
-    if (p != null) {
-      data['#p'] = p;
-    }
-    if (since != null) {
-      data['since'] = since;
-    }
-    if (until != null) {
-      data['until'] = until;
-    }
-    if (limit != null) {
-      data['limit'] = limit;
-    }
+    if (ids != null) data['ids'] = ids;
+    if (authors != null) data['authors'] = authors;
+    if (kinds != null) data['kinds'] = kinds;
+    if (e != null) data['#e'] = e;
+    if (a != null) data['#a'] = a;
+    if (p != null) data['#p'] = p;
+    if (since != null) data['since'] = since;
+    if (until != null) data['until'] = until;
+    if (limit != null) data['limit'] = limit;
     return data;
   }
 }

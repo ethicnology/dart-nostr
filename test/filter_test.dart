@@ -12,6 +12,7 @@ void main() {
       ];
       List<int> kinds = [0, 1, 2, 7];
       List<String> e = [];
+      List<String> a = [];
       List<String> p = [];
       int since = 1672477960;
       int until = 1674063680;
@@ -22,6 +23,7 @@ void main() {
         authors: authors,
         kinds: kinds,
         e: e,
+        a: a,
         p: p,
         since: since,
         until: until,
@@ -32,6 +34,7 @@ void main() {
       expect(filter.authors, authors);
       expect(filter.kinds, kinds);
       expect(filter.e, e);
+      expect(filter.a, a);
       expect(filter.p, p);
       expect(filter.since, since);
       expect(filter.until, until);
@@ -48,6 +51,7 @@ void main() {
         ],
         "kinds": [0, 1, 2, 7],
         "#e": [],
+        "#a": [],
         "#p": [],
         "since": 1672477960,
         "until": 1674063680,
@@ -59,6 +63,7 @@ void main() {
       expect(filter.authors, json['authors']);
       expect(filter.kinds, json['kinds']);
       expect(filter.e, json['#e']);
+      expect(filter.a, json['#a']);
       expect(filter.p, json['#p']);
       expect(filter.since, json['since']);
       expect(filter.until, json['until']);
