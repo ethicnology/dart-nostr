@@ -61,3 +61,8 @@
 - NIP 20 Command Results
 - NIP 28 Public Chat
 - NIP 51 Lists
+
+## 1.4.1
+
+- [new **a** filter](https://github.com/nostr-protocol/nips/commit/e50bf508d9014cfb19bfa8a5c4ec88dc4788d490)
+- Upgrade bip340 dependency
