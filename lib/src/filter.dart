@@ -12,6 +12,9 @@ class Filter {
   /// a list of event ids that are referenced in an "e" tag
   List<String>? e;
 
+  /// a list of event ids that are referenced in an "a" tag
+  List<String>? a;
+
   /// a list of pubkeys that are referenced in a "p" tag
   List<String>? p;
 
@@ -30,6 +33,7 @@ class Filter {
       this.authors,
       this.kinds,
       this.e,
+      this.a,
       this.p,
       this.since,
       this.until,
@@ -42,6 +46,7 @@ class Filter {
         json['authors'] == null ? null : List<String>.from(json['authors']);
     kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
     e = json['#e'] == null ? null : List<String>.from(json['#e']);
+    a = json['#a'] == null ? null : List<String>.from(json['#a']);
     p = json['#p'] == null ? null : List<String>.from(json['#p']);
     since = json['since'];
     until = json['until'];
@@ -62,6 +67,9 @@ class Filter {
     }
     if (e != null) {
       data['#e'] = e;
+    }
+    if (a != null) {
+      data['#a'] = a;
     }
     if (p != null) {
       data['#p'] = p;
