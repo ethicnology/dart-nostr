@@ -56,33 +56,15 @@ class Filter {
   /// Serialize a filter in JSON
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    if (ids != null) {
-      data['ids'] = ids;
-    }
-    if (authors != null) {
-      data['authors'] = authors;
-    }
-    if (kinds != null) {
-      data['kinds'] = kinds;
-    }
-    if (e != null) {
-      data['#e'] = e;
-    }
-    if (a != null) {
-      data['#a'] = a;
-    }
-    if (p != null) {
-      data['#p'] = p;
-    }
-    if (since != null) {
-      data['since'] = since;
-    }
-    if (until != null) {
-      data['until'] = until;
-    }
-    if (limit != null) {
-      data['limit'] = limit;
-    }
+    if (ids != null) data['ids'] = ids;
+    if (authors != null) data['authors'] = authors;
+    if (kinds != null) data['kinds'] = kinds;
+    if (e != null) data['#e'] = e;
+    if (a != null) data['#a'] = a;
+    if (p != null) data['#p'] = p;
+    if (since != null) data['since'] = since;
+    if (until != null) data['until'] = until;
+    if (limit != null) data['limit'] = limit;
     return data;
   }
 }
