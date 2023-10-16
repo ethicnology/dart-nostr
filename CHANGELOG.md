@@ -66,3 +66,7 @@
 
 - [new **a** filter](https://github.com/nostr-protocol/nips/commit/e50bf508d9014cfb19bfa8a5c4ec88dc4788d490)
 - Upgrade bip340 dependency
+
+## 1.4.2
+
+- NIP50: search filter
