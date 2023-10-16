@@ -17,6 +17,7 @@ void main() {
       int since = 1672477960;
       int until = 1674063680;
       int limit = 450;
+      String search = "term";
 
       Filter filter = Filter(
         ids: ids,
@@ -28,6 +29,7 @@ void main() {
         since: since,
         until: until,
         limit: limit,
+        search: search,
       );
 
       expect(filter.ids, ids);
@@ -39,6 +41,7 @@ void main() {
       expect(filter.since, since);
       expect(filter.until, until);
       expect(filter.limit, limit);
+      expect(filter.search, search);
     });
 
     test('Constructor.fromJson', () {
@@ -55,7 +58,8 @@ void main() {
         "#p": [],
         "since": 1672477960,
         "until": 1674063680,
-        "limit": 450
+        "limit": 450,
+        "search": "test",
       };
 
       Filter filter = Filter.fromJson(json);
@@ -68,6 +72,7 @@ void main() {
       expect(filter.since, json['since']);
       expect(filter.until, json['until']);
       expect(filter.limit, json['limit']);
+      expect(filter.search, json['search']);
     });
   });
 }

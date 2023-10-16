@@ -19,6 +19,7 @@ void main() {
         since: 1672477960,
         until: 1674063680,
         limit: 450,
+        search: "term",
       );
 
       Request req = Request("733209259899167", [myFilter]);
@@ -34,11 +35,12 @@ void main() {
       expect(req.filters[0].since, myFilter.since);
       expect(req.filters[0].until, myFilter.until);
       expect(req.filters[0].limit, myFilter.limit);
+      expect(req.filters[0].search, myFilter.search);
     });
 
     test('Request.serialize', () {
       String serialized =
-          '["REQ","733209259899167",{"ids":["047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"],"authors":["0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db"],"kinds":[0,1,2,7],"#e":[],"#a":[],"#p":[],"since":1672477960,"until":1674063680,"limit":450},{"kinds":[0,1,2,7],"since":1673980547,"limit":450}]';
+          '["REQ","733209259899167",{"ids":["047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"],"authors":["0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db"],"kinds":[0,1,2,7],"#e":[],"#a":[],"#p":[],"since":1672477960,"until":1674063680,"limit":450,"search":"term"},{"kinds":[0,1,2,7],"since":1673980547,"limit":450}]';
       var json = [
         "REQ",
         "733209259899167",
@@ -55,7 +57,8 @@ void main() {
           "#p": [],
           "since": 1672477960,
           "until": 1674063680,
-          "limit": 450
+          "limit": 450,
+          "search": "term",
         },
         {
           "kinds": [0, 1, 2, 7],
@@ -84,7 +87,8 @@ void main() {
           "#p": [],
           "since": 1672477960,
           "until": 1674063680,
-          "limit": 450
+          "limit": 450,
+          "search": "term",
         },
         {
           "kinds": [0, 1, 2, 7],
@@ -105,6 +109,7 @@ void main() {
       expect(req.filters[0].since, 1672477960);
       expect(req.filters[0].until, 1674063680);
       expect(req.filters[0].limit, 450);
+      expect(req.filters[0].search, "term");
       expect(req.filters[1].kinds, [0, 1, 2, 7]);
       expect(req.filters[1].since, 1673980547);
       expect(req.filters[1].limit, 450);
