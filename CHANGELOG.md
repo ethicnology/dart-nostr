@@ -70,3 +70,7 @@
 ## 1.4.2
 
 - NIP50: search filter
+
+## 1.4.3
+
+- refactor: Message.type is made of an MessageType enum instead of a String
