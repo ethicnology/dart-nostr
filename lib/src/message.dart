@@ -4,21 +4,20 @@ import 'package:nostr/nostr.dart';
 
 // Used to deserialize any kind of message that a nostr client or relay can transmit.
 class Message {
-  late String type;
-  late MessageType concreteType;
   late dynamic message;
+  late MessageType messageType;
+
+  String get type => messageType.name;
 
 // nostr message deserializer
   Message.deserialize(String payload) {
     dynamic data = jsonDecode(payload);
-    if (MessageType.values.map<String>((e) => e.rawType).contains(data[0]) ==
-        false) {
+    if (!MessageType.values.map((e) => e.name).contains(data[0])) {
       throw 'Unsupported payload (or NIP)';
     }
 
-    type = data[0];
-    concreteType = MessageType.byRawType(data[0]);
-    switch (concreteType) {
+    messageType = MessageType.fromName(data[0]);
+    switch (messageType) {
       case MessageType.event:
         message = Event.deserialize(data);
         // ignore: deprecated_member_use_from_same_package
@@ -49,9 +48,8 @@ enum MessageType {
   ok("OK"),
   auth("AUTH");
 
-  const MessageType(this.rawType);
-  final String rawType;
-  static MessageType byRawType(String name) {
-    return MessageType.values.byName(name.toLowerCase());
-  }
+  final String name;
+  const MessageType(this.name);
+
+  static fromName(String name) => MessageType.values.byName(name.toLowerCase());
 }
