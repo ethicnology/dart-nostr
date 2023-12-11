@@ -4,6 +4,7 @@
 library nostr;
 
 export 'src/event.dart';
+export 'src/eose.dart';
 export 'src/keychain.dart';
 export 'src/request.dart';
 export 'src/filter.dart';

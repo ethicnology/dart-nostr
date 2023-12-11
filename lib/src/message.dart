@@ -32,6 +32,9 @@ class Message {
       case MessageType.close:
         message = Close.deserialize(data);
         break;
+      case MessageType.eose:
+        message = Eose.deserialize(data);
+        break;
       default:
         message = jsonEncode(data.sublist(1));
         break;

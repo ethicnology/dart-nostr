@@ -35,6 +35,7 @@ void main() {
       String payload = '["EOSE", "random"]';
       var msg = Message.deserialize(payload);
       expect(msg.type, "EOSE");
+      expect(msg.message.subscriptionId, "random");
     });
 
     test('OK', () {
