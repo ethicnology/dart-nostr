@@ -74,3 +74,7 @@
 ## 1.4.3
 
 - refactor: Message.type is made of an MessageType enum instead of a String
+
+## 1.5.0
+
+- feat: add EOSE class to obtain subscriptionId (#41)
