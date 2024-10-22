@@ -78,3 +78,7 @@
 ## 1.5.0
 
 - feat: add EOSE class to obtain subscriptionId (#41)
+
+## 2.0.0
+
+- Rewriting the library to link to `rust-nostr` using `flutter_rust_bridge`
