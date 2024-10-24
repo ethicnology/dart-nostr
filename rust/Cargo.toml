@@ -1,5 +1,5 @@
 [package]
-name = "nostr"
+name = "nostr-flutter-bindings"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-flutter_rust_bridge = "=2.5.0"
+flutter_rust_bridge = "=2.5.1"
+nostr-sdk = { version = "0.35", default-features = false, features = [
+    "all-nips",
+] }
