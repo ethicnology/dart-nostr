@@ -32,7 +32,7 @@ class Keychain {
 
   /// Encapsulate dart-bip340 verify() so you don't need to add bip340 as a dependency
   static bool verify(
-    String? pubkey,
+    String pubkey,
     String message,
     String signature,
   ) {
