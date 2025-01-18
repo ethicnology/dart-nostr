@@ -1,7 +1,6 @@
-///This NIP describes how to use "e" and "p" tags in text events,
-///especially those that are replies to other text events.
-///It helps clients thread the replies into a tree rooted at the original event.
-
+/// This NIP describes how to use "e" and "p" tags in text events,
+/// especially those that are replies to other text events.
+/// It helps clients thread the replies into a tree rooted at the original event.
 class Nip10 {
   ///{
   ///     "tags": [
