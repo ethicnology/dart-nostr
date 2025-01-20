@@ -106,14 +106,14 @@ class Event {
   /// assert(partialEvent.isValid() == true);
   /// ```
   factory Event.partial({
-    id = "",
-    pubkey = "",
-    createdAt = 0,
-    kind = 1,
-    tags = const <List<String>>[],
-    content = "",
-    sig = "",
-    subscriptionId,
+    String id = "",
+    String pubkey = "",
+    int createdAt = 0,
+    int kind = 1,
+    List<List<String>> tags = const <List<String>>[],
+    String content = "",
+    String sig = "",
+    String? subscriptionId,
     bool verify = false,
   }) {
     return Event(
@@ -144,11 +144,12 @@ class Event {
     List<List<String>> tags = const [],
     required String content,
     required String privkey,
+    String? pubkey,
     String? subscriptionId,
     bool verify = false,
   }) {
     createdAt ??= currentUnixTimestampSeconds();
-    final pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    pubkey ??= bip340.getPublicKey(privkey).toLowerCase();
 
     final id = _processEventId(
       pubkey,
