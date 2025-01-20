@@ -20,6 +20,7 @@ flutter pub add nostr
 - [x] [NIP 05 Mapping Nostr keys to DNS-based internet identifiers](https://github.com/nostr-protocol/nips/blob/master/05.md)
 - [x] [NIP 09 Event Deletion Request](https://github.com/nostr-protocol/nips/blob/master/09.md)
 - [x] [NIP 10 Conventions for clients' use of e and p tags in text events](https://github.com/nostr-protocol/nips/blob/master/10.md)
+- [x] [NIP 13 Proof of Work](https://github.com/nostr-protocol/nips/blob/master/13.md)
 - [x] [NIP 15 End of Stored Events Notice](https://github.com/nostr-protocol/nips/blob/master/15.md)
 - [x] [NIP 19 bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [x] [NIP 20 Command Results](https://github.com/nostr-protocol/nips/blob/master/20.md)
