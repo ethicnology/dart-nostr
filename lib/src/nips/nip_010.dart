@@ -28,6 +28,18 @@ class Nip10 {
     return Thread(root, etags, ptags);
   }
 
+  static ETag replyTag(String eventId, String relay) {
+    return ETag(eventId, relay, 'reply');
+  }
+
+  static List<PTag> pTags(List<String> pubkeys, List<String> relays) {
+    List<PTag> result = [];
+    for (int i = 0; i < pubkeys.length; ++i) {
+      result.add(PTag(pubkeys[i], relays.length > i ? relays[i] : ''));
+    }
+    return result;
+  }
+
   static ETag rootTag(String eventId, String relay) {
     return ETag(eventId, relay, 'root');
   }
