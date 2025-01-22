@@ -56,13 +56,13 @@ class Nip9 {
     );
   }
 
-  /// Converts an Event to a DeleteEvent instance.
+  /// Converts an Event to a Nip9DeletionRequest instance.
   ///
   /// ```dart
-  /// DeleteEvent deleteEvent = Nip9.toDeleteEvent(event);
+  /// Nip9DeletionRequest deleteEvent = Nip9.toDeleteEvent(event);
   /// ```
-  static DeleteEvent toDeleteEvent(Event event) {
-    return DeleteEvent(
+  static Nip9DeletionRequest toDeleteEvent(Event event) {
+    return Nip9DeletionRequest(
       event.pubkey,
       tagsToList(event.tags),
       event.content,
@@ -84,19 +84,19 @@ class Nip9 {
     return deleteEvents;
   }
 
-  /// Decodes a deletion request event into a DeleteEvent.
+  /// Decodes a deletion request event into a Nip9DeletionRequest.
   ///
   /// ```dart
-  /// DeleteEvent deleteEvent = Nip9.decode(event);
+  /// Nip9DeletionRequest deleteEvent = Nip9.decode(event);
   /// ```
-  static DeleteEvent decode(Event event) {
+  static Nip9DeletionRequest decode(Event event) {
     if (event.kind == 5) return toDeleteEvent(event);
     throw Exception("${event.kind} is not nip9 compatible");
   }
 }
 
 /// Represents a deletion request event.
-class DeleteEvent {
+class Nip9DeletionRequest {
   /// Public key of the deletion request author.
   String pubkey;
 
@@ -109,6 +109,7 @@ class DeleteEvent {
   /// Timestamp of the deletion request.
   int deleteTime;
 
-  /// Constructor for DeleteEvent.
-  DeleteEvent(this.pubkey, this.deleteEvents, this.reason, this.deleteTime);
+  /// Constructor for Nip9DeletionRequest.
+  Nip9DeletionRequest(
+      this.pubkey, this.deleteEvents, this.reason, this.deleteTime);
 }

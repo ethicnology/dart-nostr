@@ -1,6 +1,6 @@
 /// A utility class to handle Nostr URIs according to NIP-21 specification.
 /// Provides encode, decode functionalities for Nostr URIs.
-class NIP21 {
+class Nip21 {
   static const String _prefix = 'nostr:';
 
   /// Parses a `nostr:` URI and extracts the identifier.

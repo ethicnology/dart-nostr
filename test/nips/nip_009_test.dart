@@ -53,7 +53,7 @@ void main() {
       pubkey: pubkey,
       privkey: privkey,
     );
-    DeleteEvent deleteEvent = Nip9.decode(event);
+    Nip9DeletionRequest deleteEvent = Nip9.decode(event);
     expect(deleteEvent.pubkey, equals(pubkey));
     expect(deleteEvent.deleteEvents, equals(["event1", "event2"]));
     expect(deleteEvent.reason, equals("Reason"));
