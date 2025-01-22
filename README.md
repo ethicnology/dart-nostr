@@ -25,6 +25,7 @@ flutter pub add nostr
 - [x] [NIP 19 bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [x] [NIP 20 Command Results](https://github.com/nostr-protocol/nips/blob/master/20.md)
 - [x] [NIP 21 nostr: URI scheme](https://github.com/nostr-protocol/nips/blob/master/21.md)
+- [x] [NIP 23 Long-form Content](https://github.com/nostr-protocol/nips/blob/master/23.md)
 - [x] [NIP 28 Public Chat](https://github.com/nostr-protocol/nips/blob/master/28.md)
 - [x] [NIP 50 Search Capability](https://github.com/nostr-protocol/nips/blob/master/50.md)
 - [x] [NIP 51 Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
