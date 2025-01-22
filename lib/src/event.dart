@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:convert/convert.dart';
-import 'package:pointycastle/export.dart';
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/src/utils.dart';
 
@@ -177,11 +175,11 @@ class Event {
   /// Throws an [Exception] if any required field is missing.
   factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
     final id = getRequiredField<String>(json, 'id');
+    final sig = getRequiredField<String>(json, 'sig');
     final pubkey = getRequiredField<String>(json, 'pubkey');
     final createdAt = getRequiredField<int>(json, 'created_at');
     final kind = getRequiredField<int>(json, 'kind');
     final content = getRequiredField<String>(json, 'content');
-    final sig = getRequiredField<String>(json, 'sig');
     final rawTags = getRequiredField<List>(json, 'tags');
 
     var tags = [<String>[]];
@@ -306,10 +304,9 @@ class Event {
     List<List<String>> tags,
     String content,
   ) {
-    List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
-    String serializedEvent = json.encode(data);
-    Uint8List hash = SHA256Digest()
-        .process(Uint8List.fromList(utf8.encode(serializedEvent)));
+    final data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
+    final serializedEvent = json.encode(data);
+    final hash = sha256(utf8.encode(serializedEvent));
     return hex.encode(hash);
   }
 
