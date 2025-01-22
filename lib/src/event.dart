@@ -151,18 +151,9 @@ class Event {
     createdAt ??= currentUnixTimestampSeconds();
     pubkey ??= bip340.getPublicKey(privkey).toLowerCase();
 
-    final id = _processEventId(
-      pubkey,
-      createdAt,
-      kind,
-      tags,
-      content,
-    );
+    final id = _processEventId(pubkey, createdAt, kind, tags, content);
 
-    final sig = _processSignature(
-      privkey,
-      id,
-    );
+    final sig = _processSignature(privkey, id);
 
     return Event(
       id,
@@ -179,23 +170,37 @@ class Event {
 
   /// Deserialize an event from a JSON
   ///
-  /// verify: enable/disable events checks
+  /// `verify`: ensure the signature is valid, `true` by default.
   ///
-  /// This option adds event checks such as id, signature, non-futuristic event: default=True
+  /// `verify` to `false` deserialize faster.
   ///
-  /// Performances could be a reason to disable event checks
+  /// Throws an [Exception] if any required field is missing.
   factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
-    var tags = (json['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
+    final id = getRequiredField<String>(json, 'id');
+    final pubkey = getRequiredField<String>(json, 'pubkey');
+    final createdAt = getRequiredField<int>(json, 'created_at');
+    final kind = getRequiredField<int>(json, 'kind');
+    final content = getRequiredField<String>(json, 'content');
+    final sig = getRequiredField<String>(json, 'sig');
+    final rawTags = getRequiredField<List>(json, 'tags');
+
+    var tags = [<String>[]];
+    try {
+      tags = rawTags
+          .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
+          .toList();
+    } catch (e) {
+      throw Exception("Invalid 'tags' format: ${e.toString()}");
+    }
+
     return Event(
-      json['id'],
-      json['pubkey'],
-      json['created_at'],
-      json['kind'],
+      id,
+      pubkey,
+      createdAt,
+      kind,
       tags,
-      json['content'],
-      json['sig'],
+      content,
+      sig,
       verify: verify,
     );
   }

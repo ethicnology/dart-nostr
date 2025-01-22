@@ -18,3 +18,13 @@ List<int> generateRandomBytes(int quantity) {
   final random = Random.secure();
   return List<int>.generate(quantity, (i) => random.nextInt(256));
 }
+
+T getRequiredField<T>(Map<String, dynamic> map, String field) {
+  if (!map.containsKey(field) || map[field] == null) {
+    throw Exception("Missing required field '$field'.");
+  }
+  if (map[field] is! T) {
+    throw Exception("Field '$field' should be of type ${T.toString()}.");
+  }
+  return map[field] as T;
+}
