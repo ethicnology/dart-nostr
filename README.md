@@ -27,6 +27,7 @@ flutter pub add nostr
 - [x] [NIP 21 nostr: URI scheme](https://github.com/nostr-protocol/nips/blob/master/21.md)
 - [x] [NIP 23 Long-form Content](https://github.com/nostr-protocol/nips/blob/master/23.md)
 - [x] [NIP 28 Public Chat](https://github.com/nostr-protocol/nips/blob/master/28.md)
+- [x] [NIP 44 Encrypted Payloads (Versioned)](https://github.com/nostr-protocol/nips/blob/master/44.md)
 - [x] [NIP 50 Search Capability](https://github.com/nostr-protocol/nips/blob/master/50.md)
 - [x] [NIP 51 Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
 

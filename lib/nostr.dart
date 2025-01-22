@@ -23,4 +23,6 @@ export 'src/nips/nip_020.dart';
 export 'src/nips/nip_021.dart';
 export 'src/nips/nip_023.dart';
 export 'src/nips/nip_028.dart';
+export 'src/nips/nip_044.dart';
+export 'src/nips/nip_044_utils.dart';
 export 'src/nips/nip_051.dart';

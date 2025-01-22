@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:collection/collection.dart';
-import 'package:cryptography/cryptography.dart';
-import 'package:crypto/crypto.dart' as crypto;
+import 'package:cryptography/cryptography.dart' as crypto;
+import 'package:pointycastle/export.dart';
 
-Map<String, Uint8List> deriveMessageKeys(
-    Uint8List conversationKey, Uint8List nonce) {
+// ignore: non_constant_identifier_names
+final HMAC_SHA256_64 = HMac(SHA256Digest(), 64);
+
+Map<String, List<int>> deriveMessageKeys(
+  List<int> conversationKey,
+  List<int> nonce,
+) {
   if (conversationKey.length != 32) {
     throw FormatException('Invalid conversation key length');
   }
@@ -26,14 +31,14 @@ Map<String, Uint8List> deriveMessageKeys(
   };
 }
 
-Uint8List pad(Uint8List plaintext) {
-  int unpaddedLen = plaintext.length;
+List<int> pad(List<int> plaintext) {
+  final unpaddedLen = plaintext.length;
   if (unpaddedLen < 1 || unpaddedLen > 65535) {
     throw Exception('Invalid plaintext length');
   }
 
-  int paddedLen = calcPaddedLen(unpaddedLen);
-  Uint8List padded = Uint8List(paddedLen + 2);
+  final paddedLen = calcPaddedLen(unpaddedLen);
+  final padded = Uint8List(paddedLen + 2);
 
   // First two bytes are the length in big-endian
   padded[0] = (unpaddedLen >> 8) & 0xFF;
@@ -46,8 +51,8 @@ Uint8List pad(Uint8List plaintext) {
 }
 
 int calcPaddedLen(int unpaddedLen) {
-  int nextPower = 1 << ((unpaddedLen - 1).bitLength);
-  int chunk = nextPower <= 256 ? 32 : nextPower ~/ 8;
+  final nextPower = 1 << ((unpaddedLen - 1).bitLength);
+  final chunk = nextPower <= 256 ? 32 : nextPower ~/ 8;
   if (unpaddedLen <= 32) {
     return 32;
   } else {
@@ -55,27 +60,33 @@ int calcPaddedLen(int unpaddedLen) {
   }
 }
 
-Future<Uint8List> encryptChaCha20(
-    Uint8List key, Uint8List nonce, Uint8List data) async {
-  final algorithm = Chacha20(macAlgorithm: MacAlgorithm.empty);
-  final skey = SecretKey(key);
+Future<List<int>> encryptChaCha20(
+  List<int> key,
+  List<int> nonce,
+  List<int> data,
+) async {
+  final algorithm = crypto.Chacha20(macAlgorithm: crypto.MacAlgorithm.empty);
+  final skey = crypto.SecretKey(key);
   final secretBox = await algorithm.encrypt(
     data,
     secretKey: skey,
     nonce: nonce,
   );
 
-  return Uint8List.fromList(secretBox.cipherText);
+  return secretBox.cipherText;
 }
 
-Future<Uint8List> decryptChaCha20(
-    Uint8List key, Uint8List nonce, Uint8List ciphertext) async {
-  final algorithm = Chacha20(macAlgorithm: MacAlgorithm.empty);
-  final skey = SecretKey(key);
-  final secretBox = SecretBox(
+Future<List<int>> decryptChaCha20(
+  List<int> key,
+  List<int> nonce,
+  List<int> ciphertext,
+) async {
+  final algorithm = crypto.Chacha20(macAlgorithm: crypto.MacAlgorithm.empty);
+  final skey = crypto.SecretKey(key);
+  final secretBox = crypto.SecretBox(
     ciphertext,
     nonce: nonce,
-    mac: Mac.empty,
+    mac: crypto.Mac.empty,
   );
 
   final plaintext = await algorithm.decrypt(
@@ -83,49 +94,51 @@ Future<Uint8List> decryptChaCha20(
     secretKey: skey,
   );
 
-  return Uint8List.fromList(plaintext);
+  return plaintext;
 }
 
-String constructPayload(Uint8List nonce, Uint8List ciphertext, Uint8List mac) {
-  Uint8List payloadBytes = Uint8List.fromList([
+String constructPayload(List<int> nonce, List<int> ciphertext, List<int> mac) {
+  List<int> payloadBytes = [
     0x02, // Version
     ...nonce,
     ...ciphertext,
     ...mac,
-  ]);
+  ];
   return base64.encode(payloadBytes);
 }
 
-Uint8List hkdfExtract({required Uint8List ikm, required Uint8List salt}) {
-  var hmacSha256 = crypto.Hmac(crypto.sha256, salt);
-  var prk = hmacSha256.convert(ikm).bytes;
-  return Uint8List.fromList(prk);
+List<int> hkdfExtract({required List<int> ikm, required List<int> salt}) {
+  final u8salt = Uint8List.fromList(salt);
+  final u8ikm = Uint8List.fromList(ikm);
+  final hmacSha256 = HMAC_SHA256_64..init(KeyParameter(u8salt));
+  return hmacSha256.process(u8ikm);
 }
 
-Uint8List hkdfExpand({
-  required Uint8List prk,
-  required Uint8List info,
+List<int> hkdfExpand({
+  required List<int> prk,
+  required List<int> info,
   required int length,
 }) {
   var hashLen = 32;
   int n = (length + hashLen - 1) ~/ hashLen;
   var okm = <int>[];
   var previous = <int>[];
+  final u8prk = Uint8List.fromList(prk);
 
   for (var i = 1; i <= n; i++) {
-    var hmacSha256 = crypto.Hmac(crypto.sha256, prk);
-    var data = <int>[
+    final hmacSha256 = HMAC_SHA256_64..init(KeyParameter(u8prk));
+    var data = Uint8List.fromList([
       ...previous,
       ...info,
       i,
-    ];
-    previous = hmacSha256.convert(data).bytes;
+    ]);
+    previous = hmacSha256.process(data);
     okm.addAll(previous);
   }
   return Uint8List.fromList(okm.sublist(0, length));
 }
 
-Uint8List unpad(Uint8List padded) {
+List<int> unpad(List<int> padded) {
   int unpaddedLen = (padded[0] << 8) + padded[1];
   if (unpaddedLen == 0 || unpaddedLen > padded.length - 2) {
     throw Exception('Invalid padding');
@@ -133,10 +146,10 @@ Uint8List unpad(Uint8List padded) {
   return padded.sublist(2, 2 + unpaddedLen);
 }
 
-Uint8List calculateMac(Uint8List key, Uint8List nonce, Uint8List ciphertext) {
-  var hmacSha256 = crypto.Hmac(crypto.sha256, key);
-  var mac = hmacSha256.convert([...nonce, ...ciphertext]).bytes;
-  return Uint8List.fromList(mac);
+List<int> calculateMac(List<int> key, List<int> nonce, List<int> ciphertext) {
+  final u8key = Uint8List.fromList(key);
+  final hmacSha256 = HMAC_SHA256_64..init(KeyParameter(u8key));
+  return hmacSha256.process(Uint8List.fromList([...nonce, ...ciphertext]));
 }
 
 Map<String, dynamic> parsePayload(String payload) {
@@ -148,15 +161,15 @@ Map<String, dynamic> parsePayload(String payload) {
     throw Exception('Invalid payload size');
   }
 
-  Uint8List data = base64.decode(payload);
+  final data = base64.decode(payload);
 
   if (data[0] != 0x02) {
     throw Exception('Unsupported version');
   }
 
-  Uint8List nonce = data.sublist(1, 33);
-  Uint8List mac = data.sublist(data.length - 32);
-  Uint8List ciphertext = data.sublist(33, data.length - 32);
+  final nonce = data.sublist(1, 33);
+  final mac = data.sublist(data.length - 32);
+  final ciphertext = data.sublist(33, data.length - 32);
 
   return {
     'nonce': nonce,
@@ -166,8 +179,12 @@ Map<String, dynamic> parsePayload(String payload) {
 }
 
 void verifyMac(
-    Uint8List hmacKey, Uint8List nonce, Uint8List ciphertext, Uint8List mac) {
-  Uint8List calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
+  List<int> hmacKey,
+  List<int> nonce,
+  List<int> ciphertext,
+  List<int> mac,
+) {
+  final calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
   if (!const ListEquality().equals(calculatedMac, mac)) {
     throw Exception('Invalid MAC');
   }

@@ -3,27 +3,29 @@ import 'dart:typed_data';
 import 'package:elliptic/ecdh.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:nostr/nostr.dart';
-import 'package:nostr/src/nips/nip_044_utils.dart';
 
-/// NIP-44 encryption and decryption functions.
+/// The NIP introduces a new data format for keypair-based encryption. This NIP is versioned to allow multiple algorithm choices to exist simultaneously. This format may be used for many things, but MUST be used in the context of a signed event as described in NIP-01.
 class Nip44 {
-  static Future<String> encryptMessage(
-    String plaintext,
-    String senderPrivateKey,
-    String recipientPublicKey, {
-    Uint8List? customNonce,
-    Uint8List? customConversationKey,
+  static Future<String> encrypt({
+    required String plaintext,
+    required String senderPrivateKey,
+    required String recipientPublicKey,
+    List<int>? customNonce,
+    List<int>? customConversationKey,
   }) async {
     // Step 1: Compute Shared Secret
     final sharedSecret = customConversationKey ??
-        computeSharedSecret(senderPrivateKey, recipientPublicKey);
+        computeSharedSecret(
+          privateKeyHex: senderPrivateKey,
+          publicKeyHex: recipientPublicKey,
+        );
 
     // Step 2: Derive Conversation Key
-    final conversationKey =
-        customConversationKey ?? deriveConversationKey(sharedSecret);
+    final conversationKey = customConversationKey ??
+        deriveConversationKey(sharedSecret: sharedSecret);
 
     // Step 3: Generate or Use Custom Nonce
-    final nonce = customNonce ?? generateRandomBytes(32);
+    final nonce = customNonce ?? Uint8List.fromList(generateRandomBytes(32));
 
     // Step 4: Derive Message Keys
     final keys = deriveMessageKeys(conversationKey, nonce);
@@ -45,19 +47,22 @@ class Nip44 {
     return constructPayload(nonce, ciphertext, mac);
   }
 
-  static Future<String> decryptMessage(
-    String payload,
-    String recipientPrivateKey,
-    String senderPublicKey, {
-    Uint8List? customConversationKey,
+  static Future<String> decrypt({
+    required String payload,
+    required String recipientPrivateKey,
+    required String senderPublicKey,
+    List<int>? customConversationKey,
   }) async {
     // Step 1: Compute Shared Secret
     final sharedSecret = customConversationKey ??
-        computeSharedSecret(recipientPrivateKey, senderPublicKey);
+        computeSharedSecret(
+          privateKeyHex: recipientPrivateKey,
+          publicKeyHex: senderPublicKey,
+        );
 
     // Step 2: Derive Conversation Key
-    final conversationKey =
-        customConversationKey ?? deriveConversationKey(sharedSecret);
+    final conversationKey = customConversationKey ??
+        deriveConversationKey(sharedSecret: sharedSecret);
 
     // Step 3: Parse Payload
     final parsed = parsePayload(payload);
@@ -84,18 +89,18 @@ class Nip44 {
     return utf8.decode(plaintextBytes);
   }
 
-  static Uint8List computeSharedSecret(
-    String privateKeyHex,
-    String publicKeyHex,
-  ) {
+  static List<int> computeSharedSecret({
+    required String privateKeyHex,
+    required String publicKeyHex,
+  }) {
     final ec = getS256();
     final privateKey = PrivateKey.fromHex(ec, privateKeyHex);
     final publicKey = PublicKey.fromHex(ec, checkPublicKey(publicKeyHex));
     final sec = computeSecret(privateKey, publicKey);
-    return Uint8List.fromList(sec);
+    return sec;
   }
 
-  static Uint8List deriveConversationKey(Uint8List sharedSecret) {
+  static List<int> deriveConversationKey({required List<int> sharedSecret}) {
     final salt = utf8.encode('nip44-v2');
 
     final conversationKey = hkdfExtract(

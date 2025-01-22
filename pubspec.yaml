@@ -14,5 +14,6 @@ dependencies:
   convert: ^3.1.1
   pointycastle: ^3.7.3
   bech32: ^0.2.2
-
-  
+  elliptic: ^0.3.11
+  collection: ^1.19.1
+  cryptography: ^2.7.0 # TODO: Unmaintained replace by pointycastle
