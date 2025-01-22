@@ -30,6 +30,7 @@ flutter pub add nostr
 - [x] [NIP 44 Encrypted Payloads (Versioned)](https://github.com/nostr-protocol/nips/blob/master/44.md)
 - [x] [NIP 50 Search Capability](https://github.com/nostr-protocol/nips/blob/master/50.md)
 - [x] [NIP 51 Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
+- [x] [NIP 59 Gift Wrap](https://github.com/nostr-protocol/nips/blob/master/59.md)
 
 
 ## Usage
