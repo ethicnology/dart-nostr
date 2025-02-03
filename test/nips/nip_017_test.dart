@@ -1,4 +1,3 @@
-import 'package:nostr/src/nips/nip_017.dart';
 import 'package:test/test.dart';
 import 'package:nostr/nostr.dart';
 

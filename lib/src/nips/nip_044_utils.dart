@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:collection/collection.dart';
+import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:pointycastle/export.dart';
 
@@ -185,7 +185,7 @@ void verifyMac(
   List<int> mac,
 ) {
   final calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
-  if (!const ListEquality().equals(calculatedMac, mac)) {
+  if (hex.encode(calculatedMac) != hex.encode(mac)) {
     throw Exception('Invalid MAC');
   }
 }
