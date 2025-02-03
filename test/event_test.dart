@@ -82,7 +82,7 @@ void main() {
       expect(event.createdAt != 0, isTrue);
     });
 
-    test('Constructor.fromJson', () {
+    test('Constructor.fromMap', () {
       var json = {
         "kind": 1,
         "pubkey":
@@ -94,7 +94,7 @@ void main() {
             "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
         "id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"
       };
-      Event event = Event.fromJson(json);
+      final event = Event.fromMap(json);
       expect(event.id, json['id']);
       expect(event.pubkey, json['pubkey']);
       expect(event.createdAt, json['created_at']);
@@ -104,12 +104,11 @@ void main() {
       expect(event.sig, json['sig']);
     });
 
-    test('Constructor.toJson', () {
-      Map<String, dynamic> json = jsonDecode(
-          '{"id":"f9b8c5b7a8692b0f5b8ca9f2c29ff84d6baa5a60d14cbf1c54bd2bb77ee8b41f","kind":1,"pubkey":"891b945271cd3c65dc22cb9e77ba08f5cd165ad8d9fba370b740f7db95f98b10","created_at":1675015139,"content":"Authorize just this time...I have commitment issues.","tags":[["e","343ed9c6ca7a0a8f33f8cfed04b6cea4a4dda50a649daffaf85d6410507c5c7c","wss://relay.damus.io","reply"],["p","7b6461d02c6f0be1cacdcf968c4246105a2db51c7770993bf8bb25e59cedffa7"]],"sig":"bd63b762379bd06e536ccb943f909f075bd512315fbf2407be19f03ee9d3ef5b4a70205aa7a8e68cb8c2d250f56ef8f5074339abd741d32dbd18d16641a339ef"}');
-      Event event = Event.fromJson(json);
-      Map<String, dynamic> toJson = event.toJson();
-      expect(toJson, json);
+    test('Constructor.fromJson –> toJson', () {
+      final json =
+          '{"id":"f9b8c5b7a8692b0f5b8ca9f2c29ff84d6baa5a60d14cbf1c54bd2bb77ee8b41f","pubkey":"891b945271cd3c65dc22cb9e77ba08f5cd165ad8d9fba370b740f7db95f98b10","created_at":1675015139,"kind":1,"tags":[["e","343ed9c6ca7a0a8f33f8cfed04b6cea4a4dda50a649daffaf85d6410507c5c7c","wss://relay.damus.io","reply"],["p","7b6461d02c6f0be1cacdcf968c4246105a2db51c7770993bf8bb25e59cedffa7"]],"content":"Authorize just this time...I have commitment issues.","sig":"bd63b762379bd06e536ccb943f909f075bd512315fbf2407be19f03ee9d3ef5b4a70205aa7a8e68cb8c2d250f56ef8f5074339abd741d32dbd18d16641a339ef"}';
+      final event = Event.fromJson(json);
+      expect(event.toJson(), json);
     });
   });
 
@@ -146,7 +145,7 @@ void main() {
       }
     ];
 
-    Event event = Event.fromJson(serialized[1] as Map<String, dynamic>);
+    Event event = Event.fromMap(serialized[1] as Map<String, dynamic>);
     expect(event.serialize(), jsonEncode(serialized));
     Event eventWithSubscriptionId =
         Event.deserialize(serializedWithSubscriptionId);
@@ -217,10 +216,9 @@ void main() {
   });
 
   test('Fake event (verify=false) with empty tag', () {
-    var json = jsonDecode(
-      '{"kind": 1, "pubkey":"0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db","content": "dart-nostr","tags": [["p","052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",""]],"created_at": 1672477962,"sig":"246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b","id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"}',
-    );
-    Event event = Event.fromJson(json, verify: false);
+    var json =
+        '{"kind": 1, "pubkey":"0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db","content": "dart-nostr","tags": [["p","052acd328f1c1d48e86fff3e34ada4bfc60578116f4f68f296602530529656a2",""]],"created_at": 1672477962,"sig":"246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b","id": "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"}';
+    final event = Event.fromJson(json, verify: false);
     expect(event.tags[0][2], equals(""));
   });
 

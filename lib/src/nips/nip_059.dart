@@ -49,7 +49,7 @@ class Nip59 {
       content: rumor.content,
     );
 
-    final rumorJson = jsonEncode(unsignedRumor.toJson());
+    final rumorJson = unsignedRumor.toJson();
 
     // Encrypt rumor with (authorPrivkey, recipientPubkey)
     final sealCiphertext = await Nip44.encrypt(
@@ -75,11 +75,10 @@ class Nip59 {
     // Then sign with ephemeral key. If ephemeral key not specified, generate it
     final ephemeral = ephemeralPrivkey ?? Keychain.generate().private;
     final ephemeralPubkey = bip340.getPublicKey(ephemeral);
-    final sealJson = jsonEncode(seal.toJson());
 
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
     final wrapCiphertext = await Nip44.encrypt(
-      plaintext: sealJson,
+      plaintext: seal.toJson(),
       recipientPublicKey: recipientPubkey,
       senderPrivateKey: ephemeral,
     );
@@ -128,8 +127,7 @@ class Nip59 {
     );
 
     // Reconstruct the seal event
-    final sealMap = jsonDecode(sealJsonStr) as Map<String, dynamic>;
-    final seal = Event.fromJson(sealMap);
+    final seal = Event.fromJson(sealJsonStr);
 
     if (seal.kind != 13) {
       throw Exception('Unwrapped content is not a seal (expected kind=13)');

@@ -26,7 +26,7 @@ void main() {
         'sig': ''
       };
 
-      final event = Event.fromJson(map, verify: false);
+      final event = Event.fromMap(map, verify: false);
       final article = Nip23.decode(event);
 
       // Assert

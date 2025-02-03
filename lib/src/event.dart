@@ -173,14 +173,14 @@ class Event {
   /// `verify` to `false` deserialize faster.
   ///
   /// Throws an [Exception] if any required field is missing.
-  factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
-    final id = getRequiredField<String>(json, 'id');
-    final sig = getRequiredField<String>(json, 'sig');
-    final pubkey = getRequiredField<String>(json, 'pubkey');
-    final createdAt = getRequiredField<int>(json, 'created_at');
-    final kind = getRequiredField<int>(json, 'kind');
-    final content = getRequiredField<String>(json, 'content');
-    final rawTags = getRequiredField<List>(json, 'tags');
+  factory Event.fromMap(Map<String, dynamic> map, {bool verify = true}) {
+    final id = getRequiredField<String>(map, 'id');
+    final sig = getRequiredField<String>(map, 'sig');
+    final pubkey = getRequiredField<String>(map, 'pubkey');
+    final createdAt = getRequiredField<int>(map, 'created_at');
+    final kind = getRequiredField<int>(map, 'kind');
+    final content = getRequiredField<String>(map, 'content');
+    final rawTags = getRequiredField<List>(map, 'tags');
 
     var tags = [<String>[]];
     try {
@@ -203,8 +203,11 @@ class Event {
     );
   }
 
-  /// Serialize an event in JSON
-  Map<String, dynamic> toJson() => {
+  factory Event.fromJson(String json, {bool verify = true}) =>
+      Event.fromMap(jsonDecode(json), verify: verify);
+
+  /// Serialize an event as map
+  Map<String, dynamic> toMap() => {
         'id': id,
         'pubkey': pubkey,
         'created_at': createdAt,
@@ -214,14 +217,16 @@ class Event {
         'sig': sig
       };
 
+  String toJson() => json.encode(toMap());
+
   /// Serialize to nostr event message
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
   String serialize() {
     if (subscriptionId != null) {
-      return jsonEncode(["EVENT", subscriptionId, toJson()]);
+      return jsonEncode(["EVENT", subscriptionId, toMap()]);
     } else {
-      return jsonEncode(["EVENT", toJson()]);
+      return jsonEncode(["EVENT", toMap()]);
     }
   }
 
