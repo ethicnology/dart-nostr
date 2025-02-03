@@ -317,15 +317,10 @@ class Event {
 
   /// Each user has a keypair. Signatures, public key, and encodings are done according to the Schnorr signatures standard for the curve secp256k1
   /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
-  String getSignature(String privateKey) {
-    return _processSignature(privateKey, id);
-  }
+  String getSignature(String privateKey) => _processSignature(privateKey, id);
 
   // Support for [getSignature]
-  static String _processSignature(
-    String privateKey,
-    String id,
-  ) {
+  static String _processSignature(String privateKey, String id) {
     /// aux must be 32-bytes random bytes, generated at signature time.
     /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
     String aux = generate64RandomHexChars();
