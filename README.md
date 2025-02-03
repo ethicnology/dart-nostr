@@ -22,6 +22,7 @@ flutter pub add nostr
 - [x] [NIP 10 Conventions for clients' use of e and p tags in text events](https://github.com/nostr-protocol/nips/blob/master/10.md)
 - [x] [NIP 13 Proof of Work](https://github.com/nostr-protocol/nips/blob/master/13.md)
 - [x] [NIP 15 End of Stored Events Notice](https://github.com/nostr-protocol/nips/blob/master/15.md)
+- [x] [NIP 17 Private Direct Messages (Partial)](https://github.com/nostr-protocol/nips/blob/master/17.md)
 - [x] [NIP 19 bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [x] [NIP 20 Command Results](https://github.com/nostr-protocol/nips/blob/master/20.md)
 - [x] [NIP 21 nostr: URI scheme](https://github.com/nostr-protocol/nips/blob/master/21.md)

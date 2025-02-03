@@ -1,0 +1,52 @@
+import 'package:nostr/src/nips/nip_017.dart';
+import 'package:test/test.dart';
+import 'package:nostr/nostr.dart';
+
+void main() async {
+  final authorNsec =
+      'nsec1w8udu59ydjvedgs3yv5qccshcj8k05fh3l60k9x57asjrqdpa00qkmr89m';
+  final authorPrivkey = Nip19.decodePrivkey(authorNsec);
+  final author = Keychain(authorPrivkey);
+
+  final recipientNsec =
+      'nsec12ywtkplvyq5t6twdqwwygavp5lm4fhuang89c943nf2z92eez43szvn4dt';
+  final recipientPrivkey = Nip19.decodePrivkey(recipientNsec);
+  final recipient = Keychain(recipientPrivkey);
+
+  final message = 'Hola, que tal?';
+
+  final dm = await Nip17.encode(
+    authorPrivkey: author.private,
+    receiverPubkey: recipient.public,
+    message: message,
+  );
+
+  group('NIP-17 Direct Message', () {
+    test('encode a direct message', () async {
+      expect(dm.kind, 1059);
+      expect(dm.tags, [
+        [
+          "p",
+          "918e2da906df4ccd12c8ac672d8335add131a4cf9d27ce42b3bb3625755f0788"
+        ]
+      ]);
+    });
+
+    test('decode a direct message', () async {
+      final x = await Nip17.decode(
+        giftWrap: dm,
+        receiverPrivkey: recipient.private,
+      );
+
+      expect(x.kind, 14);
+      expect(x.pubkey, author.public);
+      expect(x.sig, isEmpty);
+      expect(x.tags, [
+        [
+          "p",
+          "918e2da906df4ccd12c8ac672d8335add131a4cf9d27ce42b3bb3625755f0788"
+        ]
+      ]);
+    });
+  });
+}
