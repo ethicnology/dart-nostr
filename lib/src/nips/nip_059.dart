@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/nostr.dart';
 
 /// NIP-59 "Gift Wrap" using the two-layer approach:
@@ -39,10 +38,18 @@ class Nip59 {
     int? createdAt,
     List<List<String>>? extraTags,
   }) async {
+    final authorPubkey = Keychain(authorPrivkey).public;
+
+    if (rumor.pubkey != authorPubkey) {
+      throw Exception(
+        'Beware impersonation: The seal pubkey doesn\'t match the rumor pubkey',
+      );
+    }
+
     // if 'rumor' is already signed, let's forcibly remove the signature & id:
     // Copy without "id" and "sig" to ensure it's an unsigned rumor:
     final unsignedRumor = Event.partial(
-      pubkey: rumor.pubkey,
+      pubkey: authorPubkey,
       createdAt: rumor.createdAt,
       kind: rumor.kind,
       tags: rumor.tags,
@@ -61,7 +68,6 @@ class Nip59 {
     // Build the seal event (kind=13, empty tags, .content = ciphertext)
     // "tags must always be empty for kind=13" per the spec.
     // This event is signed by real author.
-    final authorPubkey = bip340.getPublicKey(authorPrivkey);
     final seal = Event.from(
       kind: 13,
       tags: [], // Per NIP-59, MUST always be empty
@@ -74,7 +80,7 @@ class Nip59 {
     // Create a "gift wrap" (kind=1059) by encrypting the seal using an ephemeral key.
     // Then sign with ephemeral key. If ephemeral key not specified, generate it
     final ephemeral = ephemeralPrivkey ?? Keychain.generate().private;
-    final ephemeralPubkey = bip340.getPublicKey(ephemeral);
+    final ephemeralPubkey = Keychain(ephemeral).public;
 
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
     final wrapCiphertext = await Nip44.encrypt(
@@ -158,6 +164,17 @@ class Nip59 {
       content: content,
       tags: tags,
     );
+
+    if (seal.pubkey != rumor.pubkey) {
+      throw Exception(
+        'Beware impersonation: The seal pubkey doesn\'t match the rumor pubkey',
+      );
+    }
+
+    if (rumor.sig.isNotEmpty) {
+      // If it is signed, the message might leak to relays and become fully public.
+      throw Exception('Rumor should be unsigned');
+    }
 
     // The rumor is intentionally unsigned per NIP-59. It can be any kind of event, but .sig is empty. Return it:
     return rumor;
