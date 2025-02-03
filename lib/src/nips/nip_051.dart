@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/nostr.dart';
 import '../crypto/nip_004.dart';
 
@@ -44,7 +43,10 @@ class Nip51 {
   }
 
   static String bookmarksToContent(
-      List<String> items, String privkey, String pubkey) {
+    List<String> items,
+    String privkey,
+    String pubkey,
+  ) {
     var list = [];
     for (String item in items) {
       list.add(['e', item]);
@@ -77,13 +79,18 @@ class Nip51 {
     return {"people": people, "bookmarks": bookmarks};
   }
 
-  static Event createMutePeople(List<People> items, List<People> encryptedItems,
-      String privkey, String pubkey) {
+  static Event createMutePeople(
+    List<People> items,
+    List<People> encryptedItems,
+    String privkey,
+    String pubkey,
+  ) {
     return Event.from(
-        kind: 10000,
-        tags: peoplesToTags(items),
-        content: peoplesToContent(encryptedItems, privkey, pubkey),
-        privkey: privkey);
+      kind: 10000,
+      tags: peoplesToTags(items),
+      content: peoplesToContent(encryptedItems, privkey, pubkey),
+      privkey: privkey,
+    );
   }
 
   static createPinEvent(List<String> items, List<String> encryptedItems,
@@ -137,7 +144,7 @@ class Nip51 {
       }
       if (tag[0] == "d") identifier = tag[1];
     }
-    String pubkey = bip340.getPublicKey(privkey);
+    final pubkey = Keychain(privkey).public;
     Map content = Nip51.fromContent(event.content, privkey, pubkey);
     people.addAll(content["people"]);
     bookmarks.addAll(content["bookmarks"]);
