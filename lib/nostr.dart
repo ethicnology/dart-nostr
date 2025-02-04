@@ -1,7 +1,7 @@
 /// Support for doing something awesome.
 ///
 /// More dartdocs go here.
-library nostr;
+library;
 
 export 'src/event.dart';
 export 'src/eose.dart';
