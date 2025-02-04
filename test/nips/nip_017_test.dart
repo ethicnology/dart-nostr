@@ -4,13 +4,11 @@ import 'package:nostr/nostr.dart';
 void main() async {
   final authorNsec =
       'nsec1w8udu59ydjvedgs3yv5qccshcj8k05fh3l60k9x57asjrqdpa00qkmr89m';
-  final authorPrivkey = Nip19.decodePrivkey(authorNsec);
-  final author = Keychain(authorPrivkey);
+  final author = Keychain(authorNsec);
 
   final recipientNsec =
       'nsec12ywtkplvyq5t6twdqwwygavp5lm4fhuang89c943nf2z92eez43szvn4dt';
-  final recipientPrivkey = Nip19.decodePrivkey(recipientNsec);
-  final recipient = Keychain(recipientPrivkey);
+  final recipient = Keychain(recipientNsec);
 
   final message = 'Hola, que tal?';
 

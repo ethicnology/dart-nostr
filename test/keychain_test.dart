@@ -14,20 +14,29 @@ void main() {
       );
     });
 
-    test('Keychain with invalid public key (public.length != 64)', () {
-      var hex =
-          "ea7daa0537b93aa3ae4495a274ecc05077e3dc168809d77a7afa4ec1db0fb3bd";
+    test('Keychain from NIP19 nsec', () {
+      var nsec =
+          "nsec1tmsusqq2k28d6exhff7e2xkzm42es9yg0vdeuxk8chufa9sjtsfq8z3spp";
+      var keys = Keychain.from(privateKeyHexOrBech32: nsec);
+      expect(keys.private,
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12');
+    });
 
-      var keys = Keychain(hex);
-      expect(keys.public.length, 64);
+    test('Keychain with invalid encoding (not HEX or Bech32)', () {
+      expect(
+        () => Keychain(
+            'zz7daa0537b93aa3ae4495a274ecc05077e3dc168809d77a7afa4ec1db0fb3bd'),
+        throwsException,
+      );
     });
 
     test('Keychain with invalid private key (private.length != 64)', () {
       expect(
-          () => Keychain(
-                "",
-              ),
-          throwsA(isA<AssertionError>()));
+        () => Keychain(
+          "",
+        ),
+        throwsException,
+      );
     });
 
     test('Keychain.generate', () {
@@ -47,9 +56,9 @@ void main() {
 
       expect(
           Keychain.verify(
-            keys.public,
-            message,
-            signature,
+            pubkey: keys.public,
+            message: message,
+            signature: signature,
           ),
           true);
     });
