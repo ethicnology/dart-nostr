@@ -21,7 +21,7 @@ class Nip17 {
     // If it is signed, the message might leak to relays and become fully public.
     rumor.sig = '';
 
-    return await Nip59.wrap(
+    return Nip59.wrap(
       rumor: rumor,
       authorPrivkey: authorPrivkey,
       recipientPubkey: receiverPubkey,

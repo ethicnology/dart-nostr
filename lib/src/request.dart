@@ -33,11 +33,11 @@ class Request {
 
     // Ensure we have at least ["REQ", <someId>]
     if (data.length < 2) {
-      throw 'Message too short to be a REQ message';
+      throw Exception('Message too short to be a REQ message');
     }
 
     if (data[0] != "REQ") {
-      throw 'Not a REQ message (first element must be "REQ")';
+      throw Exception('Not a REQ message (first element must be "REQ")');
     }
 
     subscriptionId = data[1];

@@ -4,12 +4,12 @@ import 'package:test/test.dart';
 void main() {
   group('nip010', () {
     test('fromTags', () {
-      List<List<String>> tags = [
+      final List<List<String>> tags = [
         ["e", '91cf9..4e5ca', 'wss://alicerelay.com', "root"],
         ["e", '14aeb..8dad4', 'wss://bobrelay.com/nostr', "reply"],
         ["p", '612ae..e610f', 'ws://carolrelay.com/ws'],
       ];
-      Thread thread = Nip10.fromTags(tags);
+      final Thread thread = Nip10.fromTags(tags);
       expect(thread.root.eventId, '91cf9..4e5ca');
       expect(thread.root.relayURL, 'wss://alicerelay.com');
       expect(thread.root.marker, 'root');
@@ -23,10 +23,11 @@ void main() {
     });
 
     test('toTags', () {
-      ETag root = Nip10.rootTag('91cf9..4e5ca', 'wss://alicerelay.com');
-      ETag eTag = ETag("14aeb..8dad4", "wss://bobrelay.com/nostr", "reply");
-      PTag pTag = PTag("612ae..e610f", "ws://carolrelay.com/ws");
-      Thread thread = Thread(root, [eTag], [pTag]);
+      final ETag root = Nip10.rootTag('91cf9..4e5ca', 'wss://alicerelay.com');
+      final ETag eTag =
+          ETag("14aeb..8dad4", "wss://bobrelay.com/nostr", "reply");
+      final PTag pTag = PTag("612ae..e610f", "ws://carolrelay.com/ws");
+      final Thread thread = Thread(root, [eTag], [pTag]);
 
       expect(thread.root.eventId, '91cf9..4e5ca');
       expect(thread.etags[0].eventId, "14aeb..8dad4");

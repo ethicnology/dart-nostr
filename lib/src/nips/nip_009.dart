@@ -29,8 +29,8 @@ class Nip9 {
   /// List<List<String>> tags = Nip9.toTags(events);
   /// ```
   static List<List<String>> toTags(List<String> events) {
-    List<List<String>> result = [];
-    for (var event in events) {
+    final List<List<String>> result = [];
+    for (final event in events) {
       result.add(["e", event]);
     }
     return result;
@@ -77,8 +77,8 @@ class Nip9 {
   /// List<String> eventIds = Nip9.tagsToList(tags);
   /// ```
   static List<String> tagsToList(List<List<String>> tags) {
-    List<String> deleteEvents = [];
-    for (var tag in tags) {
+    final List<String> deleteEvents = [];
+    for (final tag in tags) {
       if (tag[0] == "e") deleteEvents.add(tag[1]);
     }
     return deleteEvents;

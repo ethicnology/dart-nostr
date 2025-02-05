@@ -7,7 +7,7 @@ void main() {
   group('Nip23.decode', () {
     test('should decode a valid event map into a Nip23Article', () {
       // Arrange
-      Map<String, dynamic> map = {
+      final Map<String, dynamic> map = {
         'id': '',
         'kind': Nip23.kindArticle,
         'created_at': 1675642635,

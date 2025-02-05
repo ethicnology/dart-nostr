@@ -43,8 +43,8 @@ class Nip2 {
   /// List<Profile> profiles = Nip2.toProfiles(tags);
   /// ```
   static List<Profile> toProfiles(List<List<String>> tags) {
-    List<Profile> result = [];
-    for (var tag in tags) {
+    final List<Profile> result = [];
+    for (final tag in tags) {
       if (tag[0] == "p") result.add(Profile(tag[1], tag[2], tag[3]));
     }
     return result;
@@ -57,8 +57,8 @@ class Nip2 {
   /// List<List<String>> tags = Nip2.toTags(profiles);
   /// ```
   static List<List<String>> toTags(List<Profile> profiles) {
-    List<List<String>> result = [];
-    for (var profile in profiles) {
+    final List<List<String>> result = [];
+    for (final profile in profiles) {
       result.add(["p", profile.key, profile.relay, profile.petname]);
     }
     return result;

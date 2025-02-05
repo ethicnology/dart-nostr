@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 void main() {
   group('Request', () {
     test('Constructor.toJson', () {
-      Filter myFilter = Filter(
+      final Filter myFilter = Filter(
         ids: [
           "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"
         ],
@@ -42,9 +42,9 @@ void main() {
     });
 
     test('Request.serialize', () {
-      String serialized =
+      const String serialized =
           '["REQ","733209259899167",{"ids":["047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"],"authors":["0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db"],"kinds":[0,1,2,7],"#e":[],"#a":[],"#p":[],"since":1672477960,"until":1674063680,"limit":450,"search":"term"},{"kinds":[0,1,2,7],"since":1673980547,"limit":450}]';
-      var payload = json.encode([
+      final payload = json.encode([
         "REQ",
         "733209259899167",
         {
@@ -69,7 +69,7 @@ void main() {
           "limit": 450
         }
       ]);
-      Request req = Request.deserialize(payload);
+      final Request req = Request.deserialize(payload);
       expect(req.serialize(), serialized);
     });
 
@@ -82,14 +82,14 @@ void main() {
     });
 
     test('Request.deserialize with empty filters', () {
-      final payload = '["REQ","id",{}]';
+      const payload = '["REQ","id",{}]';
       final req = Request.deserialize(payload);
       expect(req.subscriptionId, 'id');
       expect(req.filters.length, 1);
     });
 
     test('Request.deserialize', () {
-      var payload = json.encode([
+      final payload = json.encode([
         "REQ",
         "733209259899167",
         {
@@ -114,7 +114,7 @@ void main() {
           "limit": 450
         }
       ]);
-      Request req = Request.deserialize(payload);
+      final Request req = Request.deserialize(payload);
       expect(req.subscriptionId, "733209259899167");
       expect(req.filters[0].ids,
           ["047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"]);

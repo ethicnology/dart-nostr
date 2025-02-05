@@ -20,8 +20,10 @@ class Eose {
   /// - ["CLOSE", subscription_id]
   factory Eose.deserialize(String payload) {
     final data = json.decode(payload);
-    if (data is! List<dynamic>) throw 'Invalid type for EOSE message';
-    if (data.length != 2) throw 'Invalid length for EOSE message';
+    if (data is! List<dynamic>) {
+      throw Exception('Invalid type for EOSE message');
+    }
+    if (data.length != 2) throw Exception('Invalid length for EOSE message');
     return Eose(data[1]);
   }
 }

@@ -10,15 +10,13 @@ class Close {
 
   /// Serialize to nostr close message
   /// - ["CLOSE", subscription_id]
-  String serialize() {
-    return json.encode(["CLOSE", subscriptionId]);
-  }
+  String serialize() => json.encode(["CLOSE", subscriptionId]);
 
   /// Deserialize a nostr close message
   /// - ["CLOSE", subscription_id]
   Close.deserialize(String payload) {
     final data = json.decode(payload);
-    if (data.length != 2) throw 'Invalid length for CLOSE message';
+    if (data.length != 2) throw Exception('Invalid length for CLOSE message');
     subscriptionId = data[1];
   }
 }

@@ -13,9 +13,9 @@ class Nip10 {
   /// }
   static Thread fromTags(List<List<String>> tags) {
     ETag root = ETag('', '', '');
-    List<ETag> etags = [];
-    List<PTag> ptags = [];
-    for (var tag in tags) {
+    final List<ETag> etags = [];
+    final List<PTag> ptags = [];
+    for (final tag in tags) {
       if (tag[0] == "p") ptags.add(PTag(tag[1], tag[2]));
       if (tag[0] == "e") {
         if (tag[3] == 'root') {
@@ -33,7 +33,7 @@ class Nip10 {
   }
 
   static List<PTag> pTags(List<String> pubkeys, List<String> relays) {
-    List<PTag> result = [];
+    final List<PTag> result = [];
     for (int i = 0; i < pubkeys.length; ++i) {
       result.add(PTag(pubkeys[i], relays.length > i ? relays[i] : ''));
     }
@@ -45,13 +45,13 @@ class Nip10 {
   }
 
   static List<List<String>> toTags(Thread thread) {
-    List<List<String>> result = [];
+    final List<List<String>> result = [];
     result.add(
         ["e", thread.root.eventId, thread.root.relayURL, thread.root.marker]);
-    for (var etag in thread.etags) {
+    for (final etag in thread.etags) {
       result.add(["e", etag.eventId, etag.relayURL, etag.marker]);
     }
-    for (var ptag in thread.ptags) {
+    for (final ptag in thread.ptags) {
       result.add(["p", ptag.pubkey, ptag.relayURL]);
     }
     return result;

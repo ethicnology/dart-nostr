@@ -115,7 +115,7 @@ class Nip23Article {
 
   // Helper to extract single tag value.
   static String? _getTagValue(List<List<String>> tags, String tagName) {
-    for (var tag in tags) {
+    for (final tag in tags) {
       if (tag.isNotEmpty && tag[0] == tagName) {
         return tag.length > 1 ? tag[1] : null;
       }
@@ -125,8 +125,8 @@ class Nip23Article {
 
   // Helper to extract multiple tag values.
   static List<String>? _getTagValues(List<List<String>> tags, String tagName) {
-    List<String> values = [];
-    for (var tag in tags) {
+    final values = <String>[];
+    for (final tag in tags) {
       if (tag.isNotEmpty && tag[0] == tagName && tag.length > 1) {
         values.add(tag[1]);
       }

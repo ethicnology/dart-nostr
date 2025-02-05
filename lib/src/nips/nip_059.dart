@@ -42,7 +42,7 @@ class Nip59 {
 
     if (rumor.pubkey != authorPubkey) {
       throw Exception(
-        'Beware impersonation: The seal pubkey doesn\'t match the rumor pubkey',
+        "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
       );
     }
 
@@ -167,7 +167,7 @@ class Nip59 {
 
     if (seal.pubkey != rumor.pubkey) {
       throw Exception(
-        'Beware impersonation: The seal pubkey doesn\'t match the rumor pubkey',
+        "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
       );
     }
 

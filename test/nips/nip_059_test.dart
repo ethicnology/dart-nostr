@@ -1,19 +1,19 @@
-import 'package:test/test.dart';
 import 'package:nostr/nostr.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('NIP-59 Gift Wrap Tests', () {
     // Example from the spec
-    final authorPrivkey =
+    const authorPrivkey =
         '0beebd062ec8735f4243466049d7747ef5d6594ee838de147f8aab842b15e273';
-    final recipientPrivkey =
+    const recipientPrivkey =
         'e108399bd8424357a710b606ae0c13166d853d327e47a6e5e038197346bdbf45';
-    final ephemeralPrivkey =
+    const ephemeralPrivkey =
         '4f02eac59266002db5801adc5270700ca69d5b8f761d8732fab2fbf233c90cbd';
 
-    final rumorContent = 'Are you going to the party tonight?';
-    final rumorCreatedAt = 1691518405;
-    final rumorPubkey =
+    const rumorContent = 'Are you going to the party tonight?';
+    const rumorCreatedAt = 1691518405;
+    const rumorPubkey =
         '611df01bfcf85c26ae65453b772d8f1dfd25c264621c0277e1fc1518686faef9';
 
     test('Wrap & Unwrap yields the same rumor content (NIP-59 example)',
@@ -21,7 +21,6 @@ void main() {
       // 1) Construct an UNSIGNED rumor (kind=1, no .id, no .sig)
       //    If your "Event" constructor auto-signs, you may need to forcibly remove .id/.sig.
       final rumor = Event.partial(
-        kind: 1,
         tags: [],
         content: rumorContent,
         createdAt: rumorCreatedAt,

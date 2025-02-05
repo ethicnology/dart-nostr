@@ -5,13 +5,13 @@ import 'package:nostr/nostr.dart';
 class Nip28 {
   static Channel getChannelCreation(Event event) {
     try {
-      Map content = json.decode(event.content);
+      final Map content = json.decode(event.content);
       if (event.kind == 40) {
         // create channel
-        Map<String, String> additional = Map.from(content);
-        String? name = additional.remove("name");
-        String? about = additional.remove("about");
-        String? picture = additional.remove("picture");
+        final Map<String, String> additional = Map.from(content);
+        final String? name = additional.remove("name");
+        final String? about = additional.remove("about");
+        final String? picture = additional.remove("picture");
         return Channel(
             event.id, name!, about!, picture!, event.pubkey, additional);
       } else {
@@ -24,22 +24,22 @@ class Nip28 {
 
   static Channel getChannelMetadata(Event event) {
     try {
-      Map content = json.decode(event.content);
+      final Map content = json.decode(event.content);
       if (event.kind == 41) {
         // create channel
-        Map<String, String> additional = Map.from(content);
-        String? name = additional.remove("name");
-        String? about = additional.remove("about");
-        String? picture = additional.remove("picture");
+        final Map<String, String> additional = Map.from(content);
+        final String? name = additional.remove("name");
+        final String? about = additional.remove("about");
+        final String? picture = additional.remove("picture");
         String? channelId;
         String? relay;
-        for (var tag in event.tags) {
+        for (final tag in event.tags) {
           if (tag[0] == "e") {
             channelId = tag[1];
             relay = tag[2];
           }
         }
-        Channel result = Channel(
+        final Channel result = Channel(
             channelId!, name!, about!, picture!, event.pubkey, additional);
         result.relay = relay;
         return result;
@@ -54,9 +54,9 @@ class Nip28 {
   static ChannelMessage getChannelMessage(Event event) {
     try {
       if (event.kind == 42) {
-        var content = event.content;
-        Thread thread = Nip10.fromTags(event.tags);
-        String channelId = thread.root.eventId;
+        final content = event.content;
+        final Thread thread = Nip10.fromTags(event.tags);
+        final String channelId = thread.root.eventId;
         return ChannelMessage(
             channelId, event.pubkey, content, thread, event.createdAt);
       }
@@ -70,14 +70,14 @@ class Nip28 {
     try {
       if (event.kind == 43) {
         String? messageId;
-        for (var tag in event.tags) {
+        for (final tag in event.tags) {
           if (tag[0] == "e") {
             messageId = tag[1];
             break;
           }
         }
-        Map content = json.decode(event.content);
-        String reason = content['reason'];
+        final Map content = json.decode(event.content);
+        final String reason = content['reason'];
         return ChannelMessageHidden(
             event.pubkey, messageId!, reason, event.createdAt);
       }
@@ -91,14 +91,14 @@ class Nip28 {
     try {
       if (event.kind == 44) {
         String? userPubkey;
-        for (var tag in event.tags) {
+        for (final tag in event.tags) {
           if (tag[0] == "p") {
             userPubkey = tag[1];
             break;
           }
         }
-        Map content = json.decode(event.content);
-        String reason = content['reason'];
+        final Map content = json.decode(event.content);
+        final String reason = content['reason'];
         return ChannelUserMuted(
             event.pubkey, userPubkey!, reason, event.createdAt);
       }
@@ -110,7 +110,7 @@ class Nip28 {
 
   static Event createChannel(String name, String about, String picture,
       Map<String, String> additional, String privkey) {
-    Map<String, dynamic> map = {
+    final Map<String, dynamic> map = {
       'name': name,
       'about': about,
       'picture': picture,
@@ -132,7 +132,7 @@ class Nip28 {
       String channelId,
       String relayURL,
       String privkey) {
-    Map<String, dynamic> map = {
+    final Map<String, dynamic> map = {
       'name': name,
       'about': about,
       'picture': picture
@@ -156,7 +156,7 @@ class Nip28 {
     List<ETag>? etags,
     List<PTag>? ptags,
   }) {
-    Thread thread =
+    final Thread thread =
         Thread(Nip10.rootTag(channelId, relay ?? ''), etags ?? [], ptags ?? []);
     return Event.from(
       kind: 42,

@@ -9,8 +9,8 @@ const pubkey =
 /// Unit Tests for Nip9
 void main() {
   test('toTags should convert event IDs to tags', () {
-    List<String> eventIds = ["event1", "event2"];
-    List<List<String>> expectedTags = [
+    final List<String> eventIds = ["event1", "event2"];
+    final List<List<String>> expectedTags = [
       ["e", "event1"],
       ["e", "event2"]
     ];
@@ -18,19 +18,19 @@ void main() {
   });
 
   test('tagsToList should extract event IDs from tags', () {
-    List<List<String>> tags = [
+    final List<List<String>> tags = [
       ["e", "event1"],
       ["e", "event2"]
     ];
-    List<String> expectedEventIds = ["event1", "event2"];
+    final List<String> expectedEventIds = ["event1", "event2"];
     expect(Nip9.tagsToList(tags), equals(expectedEventIds));
   });
 
   test('encode should create a valid Event object', () {
-    List<String> eventIds = ["event1", "event2"];
-    String content = "Reason";
+    final List<String> eventIds = ["event1", "event2"];
+    const String content = "Reason";
 
-    Event event = Nip9.encode(eventIds, content, pubkey, privkey);
+    final Event event = Nip9.encode(eventIds, content, pubkey, privkey);
     expect(event.kind, equals(5));
     expect(
         event.tags,
@@ -43,7 +43,7 @@ void main() {
   });
 
   test('decode should convert a valid Event to a DeleteEvent', () {
-    Event event = Event.from(
+    final Event event = Event.from(
       kind: 5,
       tags: [
         ["e", "event1"],
@@ -53,7 +53,7 @@ void main() {
       pubkey: pubkey,
       privkey: privkey,
     );
-    Nip9DeletionRequest deleteEvent = Nip9.decode(event);
+    final Nip9DeletionRequest deleteEvent = Nip9.decode(event);
     expect(deleteEvent.pubkey, equals(pubkey));
     expect(deleteEvent.deleteEvents, equals(["event1", "event2"]));
     expect(deleteEvent.reason, equals("Reason"));

@@ -1,7 +1,13 @@
 import 'package:bip340/bip340.dart' as bip340;
-import 'package:nostr/src/event.dart';
 import 'package:nostr/src/crypto/nip_004.dart';
+import 'package:nostr/src/event.dart';
 import 'package:nostr/src/utils.dart';
+
+const deprecatedMessage = """
+    NIP-04 a.k.a EncryptedDirectMessage is controversial, please READ: 
+    - https://github.com/ethicnology/dart-nostr/issues/15
+    - https://github.com/nostr-protocol/nips/issues/107
+  """;
 
 /// A special event with kind 4, meaning "encrypted direct message".
 ///
@@ -16,15 +22,10 @@ import 'package:nostr/src/utils.dart';
 /// Note: By default in the libsecp256k1 ECDH implementation, the secret is the SHA256 hash of the shared point (both X and Y coordinates). In Nostr, only the X coordinate of the shared point is used as the secret and it is NOT hashed. If using libsecp256k1, a custom function that copies the X coordinate must be passed as the hashfp argument in secp256k1_ecdh.
 ///
 /// NIP-04 considered harmful, READ: https://github.com/ethicnology/dart-nostr/issues/15 and https://github.com/nostr-protocol/nips/issues/107
-@Deprecated(
-  """
-    NIP-04 a.k.a EncryptedDirectMessage is controversial, please READ: 
-    - https://github.com/ethicnology/dart-nostr/issues/15
-    - https://github.com/nostr-protocol/nips/issues/107
-  """,
-)
+@Deprecated(deprecatedMessage)
 class EncryptedDirectMessage extends Event {
   /// Default constructor
+  @Deprecated(deprecatedMessage)
   EncryptedDirectMessage(Event event, {verify = true})
       : super(
           event.id,
@@ -39,6 +40,7 @@ class EncryptedDirectMessage extends Event {
         );
 
   /// receive an EncryptedDirectMessage
+  @Deprecated(deprecatedMessage)
   EncryptedDirectMessage.receive(Event event, {verify = true})
       : super(
           event.id,
@@ -55,12 +57,13 @@ class EncryptedDirectMessage extends Event {
   }
 
   /// prepare a EncryptedDirectMessage to send quickly with the minimal needed params
+  @Deprecated(deprecatedMessage)
   factory EncryptedDirectMessage.redact(
     String senderPrivkey,
     String receiverPubkey,
     String message,
   ) {
-    var event = Event.partial(
+    final event = Event.partial(
       pubkey: bip340.getPublicKey(senderPrivkey).toLowerCase(),
       createdAt: currentUnixTimestampSeconds(),
       kind: 4,
@@ -71,11 +74,12 @@ class EncryptedDirectMessage extends Event {
         senderPrivkey,
         '02$receiverPubkey',
         message,
-        true,
+        cipher: true,
       ),
     );
-    event.id = event.getEventId();
-    event.sig = event.getSignature(senderPrivkey);
+    event
+      ..id = event.getEventId()
+      ..sig = event.getSignature(senderPrivkey);
     return EncryptedDirectMessage(event);
   }
 
@@ -93,14 +97,14 @@ class EncryptedDirectMessage extends Event {
 
   /// get the deciphered message a.k.a. plaintext
   String getPlaintext(String privkey) {
-    String ciphertext = content.split("?iv=")[0];
+    final String ciphertext = content.split("?iv=")[0];
     String plaintext;
     try {
       plaintext = nip4cipher(
         privkey,
         "02$pubkey",
         ciphertext,
-        false,
+        cipher: false,
         nonce: nonce,
       );
     } catch (e) {
@@ -111,8 +115,8 @@ class EncryptedDirectMessage extends Event {
 
   /// find the given tag prefix and return the value if found
   String? _findTag(String prefix) {
-    String prefix = "p";
-    for (List<String> tag in tags) {
+    const prefix = "p";
+    for (final tag in tags) {
       if (tag.isNotEmpty && tag[0] == prefix && tag.length > 1) return tag[1];
     }
     return null;
@@ -120,7 +124,7 @@ class EncryptedDirectMessage extends Event {
 
   /// parse the ciphered content to return the nonce/IV
   String _findNonce() {
-    List<String> split = content.split("?iv=");
+    final List<String> split = content.split("?iv=");
     if (split.length != 2) throw Exception("invalid content or non ciphered");
     return split[1];
   }

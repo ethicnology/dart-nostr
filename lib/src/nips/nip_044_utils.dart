@@ -12,10 +12,10 @@ Map<String, List<int>> deriveMessageKeys(
   List<int> nonce,
 ) {
   if (conversationKey.length != 32) {
-    throw FormatException('Invalid conversation key length');
+    throw const FormatException('Invalid conversation key length');
   }
   if (nonce.length != 32) {
-    throw FormatException('Invalid nonce length');
+    throw const FormatException('Invalid nonce length');
   }
 
   final hkdfOutput = hkdfExpand(
@@ -98,7 +98,7 @@ Future<List<int>> decryptChaCha20(
 }
 
 String constructPayload(List<int> nonce, List<int> ciphertext, List<int> mac) {
-  List<int> payloadBytes = [
+  final List<int> payloadBytes = [
     0x02, // Version
     ...nonce,
     ...ciphertext,
@@ -119,15 +119,15 @@ List<int> hkdfExpand({
   required List<int> info,
   required int length,
 }) {
-  var hashLen = 32;
-  int n = (length + hashLen - 1) ~/ hashLen;
-  var okm = <int>[];
+  const hashLen = 32;
+  final int n = (length + hashLen - 1) ~/ hashLen;
+  final okm = <int>[];
   var previous = <int>[];
   final u8prk = Uint8List.fromList(prk);
 
   for (var i = 1; i <= n; i++) {
     final hmacSha256 = HMAC_SHA256_64..init(KeyParameter(u8prk));
-    var data = Uint8List.fromList([
+    final data = Uint8List.fromList([
       ...previous,
       ...info,
       i,
@@ -139,7 +139,7 @@ List<int> hkdfExpand({
 }
 
 List<int> unpad(List<int> padded) {
-  int unpaddedLen = (padded[0] << 8) + padded[1];
+  final int unpaddedLen = (padded[0] << 8) + padded[1];
   if (unpaddedLen == 0 || unpaddedLen > padded.length - 2) {
     throw Exception('Invalid padding');
   }

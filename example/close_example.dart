@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'package:nostr/nostr.dart';
 
 void main() async {
-  String subscriptionId = generate64RandomHexChars();
-  var close1 = Close(subscriptionId);
+  final String subscriptionId = generate64RandomHexChars();
+  final close1 = Close(subscriptionId);
   assert(close1.subscriptionId == subscriptionId);
 
-  var close2 = Close(subscriptionId);
+  final close2 = Close(subscriptionId);
   assert(close2.serialize() == '["CLOSE","$subscriptionId"]');
 
-  var close3 = Close.deserialize(json.encode(["CLOSE", subscriptionId]));
+  final close3 = Close.deserialize(json.encode(["CLOSE", subscriptionId]));
   assert(close3.subscriptionId == subscriptionId);
 }

@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:elliptic/elliptic.dart' as elliptic;
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
-import 'package:elliptic/elliptic.dart' as elliptic;
-import 'dart:typed_data';
 
 Uint8List hexToBytes(String hex) {
   if (hex.startsWith('0x')) {
@@ -24,8 +25,11 @@ String bytesToHex(Uint8List bytes) {
   return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 }
 
-void assertConversationKeyGeneration(String privKeyHex, String pubKeyHex,
-    String expectedConversationKeyHex) async {
+Future<void> assertConversationKeyGeneration(
+  String privKeyHex,
+  String pubKeyHex,
+  String expectedConversationKeyHex,
+) async {
   final sharedSecret = Nip44.computeSharedSecret(
     privateKeyHex: privKeyHex,
     publicKeyHex: pubKeyHex,
@@ -53,7 +57,11 @@ Future<void> assertCryptPriv(
   final pk1Hex = sk1.publicKey.toHex();
   final pk2Hex = sk2.publicKey.toHex();
 
-  assertConversationKeyGeneration(sk1Hex, pk2Hex, expectedConversationKeyHex);
+  await assertConversationKeyGeneration(
+    sk1Hex,
+    pk2Hex,
+    expectedConversationKeyHex,
+  );
 
   final nonce = hexToBytes(nonceHex);
 
@@ -123,6 +131,7 @@ Future<void> assertDecryptFail(
     );
     // If no exception is thrown, the test should fail
     fail('Expected decryption to fail, but it succeeded');
+    // ignore: avoid_catches_without_on_clauses
   } catch (e) {
     // Check that the error message contains the expected substring
     expect(e.toString(), contains(expectedErrorMessage),
@@ -143,6 +152,7 @@ Future<void> assertConversationKeyFail(
     Nip44.deriveConversationKey(sharedSecret: sharedSecret);
     // If no exception is thrown, the test should fail
     fail('Expected conversation key generation to fail, but it succeeded');
+    // ignore: avoid_catches_without_on_clauses
   } catch (e) {
     // Check that the error message contains the expected substring
     expect(e.toString(), contains(expectedErrorMessage),
@@ -522,7 +532,7 @@ void main() {
   test('TestDecryptFail004', () async {
     await assertDecryptFail(
       'cff7bd6a3e29a450fd27f6c125d5edeb0987c475fd1e8d97591e0d4d8a89763c',
-      '¯\\_(ツ)_/¯',
+      r'¯\_(ツ)_/¯',
       'Agn/l3ULCEAS4V7LhGFM6IGA17jsDUaFCKhrbXDANholyySBfeh+EN8wNB9gaLlg4j6wdBYh+3oK+mnxWu3NKRbSvQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       'Unsupported version: null',
     );

@@ -26,7 +26,7 @@ T getRequiredField<T>(Map<String, dynamic> map, String field) {
     throw Exception("Missing required field '$field'.");
   }
   if (map[field] is! T) {
-    throw Exception("Field '$field' should be of type ${T.toString()}.");
+    throw Exception("Field '$field' should be of type $T.");
   }
   return map[field] as T;
 }

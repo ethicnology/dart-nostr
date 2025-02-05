@@ -4,21 +4,21 @@ import 'package:test/test.dart';
 void main() {
   group('nip051', () {
     test('createCategorizedPeople', () {
-      Keychain user = Keychain.generate();
-      People publicFriend = People(
+      final Keychain user = Keychain.generate();
+      final People publicFriend = People(
           "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
           'wss://example.com',
           'alias',
           "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181");
-      People privateFriend = People(
+      final People privateFriend = People(
           "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
           'wss://example2.com',
           'bob',
           "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1");
-      Event event = Nip51.createCategorizedPeople("friends", [publicFriend],
-          [privateFriend], user.private, user.public);
+      final Event event = Nip51.createCategorizedPeople("friends",
+          [publicFriend], [privateFriend], user.private, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
+      final Lists lists = Nip51.getLists(event, user.private);
       expect(lists.people[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(lists.people[0].petName, 'alias');
@@ -28,15 +28,15 @@ void main() {
     });
 
     test('createCategorizedBookmarks', () {
-      Keychain user = Keychain.generate();
-      String bookmark =
+      final Keychain user = Keychain.generate();
+      const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
-      String encryptedBookmark =
+      const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      Event event = Nip51.createCategorizedBookmarks("bookmarks", [bookmark],
-          [encryptedBookmark], user.private, user.public);
+      final Event event = Nip51.createCategorizedBookmarks("bookmarks",
+          [bookmark], [encryptedBookmark], user.private, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
+      final Lists lists = Nip51.getLists(event, user.private);
       expect(lists.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(lists.bookmarks[1],
@@ -44,20 +44,20 @@ void main() {
     });
 
     test('createMutePeople', () {
-      Keychain user = Keychain.generate();
-      People publicFriend = People(
+      final Keychain user = Keychain.generate();
+      final People publicFriend = People(
           "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
           'wss://example.com',
           'alias',
           "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181");
-      People privateFriend = People(
+      final People privateFriend = People(
           "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
           'wss://example2.com',
           'bob',
           "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1");
-      Event event = Nip51.createMutePeople(
+      final Event event = Nip51.createMutePeople(
           [publicFriend], [privateFriend], user.private, user.public);
-      Lists lists = Nip51.getLists(event, user.private);
+      final Lists lists = Nip51.getLists(event, user.private);
       expect(lists.people[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(lists.people[0].petName, 'alias');
@@ -67,15 +67,15 @@ void main() {
     });
 
     test('createPinEvent', () {
-      Keychain user = Keychain.generate();
-      String bookmark =
+      final Keychain user = Keychain.generate();
+      const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
-      String encryptedBookmark =
+      const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      Event event = Nip51.createPinEvent(
+      final Event event = Nip51.createPinEvent(
           [bookmark], [encryptedBookmark], user.private, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
+      final Lists lists = Nip51.getLists(event, user.private);
       expect(lists.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(lists.bookmarks[1],

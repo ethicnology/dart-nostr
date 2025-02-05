@@ -31,11 +31,11 @@ BigInt inverseMod(BigInt k, BigInt p) {
   if (k < BigInt.from(0)) {
     return p - inverseMod(-k, p);
   }
-  var s = [BigInt.from(0), BigInt.from(1), BigInt.from(1)];
-  var t = [BigInt.from(1), BigInt.from(0), BigInt.from(0)];
-  var r = [p, k, k];
+  final s = [BigInt.from(0), BigInt.from(1), BigInt.from(1)];
+  final t = [BigInt.from(1), BigInt.from(0), BigInt.from(0)];
+  final r = [p, k, k];
   while (r[0] != BigInt.from(0)) {
-    var quotient = r[2] ~/ r[0];
+    final quotient = r[2] ~/ r[0];
     r[1] = r[2] - quotient * r[0];
     r[2] = r[0];
     r[0] = r[1];
@@ -87,7 +87,7 @@ ECPoint pointAdd(ECPoint? point1, ECPoint? point2) {
   }
   final x3 = m * m - x1 - x2!;
   final y3 = y1 + m * (x3 - x1);
-  ECPoint result = point1.curve.createPoint(x3 % theP, -y3 % theP);
+  final ECPoint result = point1.curve.createPoint(x3 % theP, -y3 % theP);
   assert(isOnCurve(result));
   return result;
 }

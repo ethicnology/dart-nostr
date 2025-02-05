@@ -1,9 +1,10 @@
 // credit: https://github.com/tjcampanella/kepler/blob/master/lib/src/kepler.dart
 
-import 'package:convert/convert.dart';
 import 'dart:typed_data';
+
+import 'package:convert/convert.dart';
+import 'package:nostr/src/crypto/operator.dart';
 import 'package:pointycastle/export.dart';
-import 'operator.dart';
 
 class Kepler {
   /// return a Bytes data secret
@@ -46,7 +47,7 @@ class Kepler {
   static ECPublicKey loadPublicKey(String storedkey) {
     final param = ECCurve_secp256k1();
     if (storedkey.length < 120) {
-      List<int> codeList = [];
+      final codeList = <int>[];
       for (var idx = 0; idx < storedkey.length - 1; idx += 2) {
         final hexStr = storedkey.substring(idx, idx + 2);
         codeList.add(int.parse(hexStr, radix: 16));

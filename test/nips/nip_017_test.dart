@@ -1,16 +1,16 @@
-import 'package:test/test.dart';
 import 'package:nostr/nostr.dart';
+import 'package:test/test.dart';
 
 void main() async {
-  final authorNsec =
+  const authorNsec =
       'nsec1w8udu59ydjvedgs3yv5qccshcj8k05fh3l60k9x57asjrqdpa00qkmr89m';
   final author = Keychain(authorNsec);
 
-  final recipientNsec =
+  const recipientNsec =
       'nsec12ywtkplvyq5t6twdqwwygavp5lm4fhuang89c943nf2z92eez43szvn4dt';
   final recipient = Keychain(recipientNsec);
 
-  final message = 'Hola, que tal?';
+  const message = 'Hola, que tal?';
 
   final dm = await Nip17.encode(
     authorPrivkey: author.private,

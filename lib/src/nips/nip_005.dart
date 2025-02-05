@@ -12,13 +12,13 @@ class Nip5 {
   static Future<DNS?> decode(Event event) async {
     if (event.kind == 0) {
       try {
-        Map map = json.decode(event.content);
-        String dns = map['nip05'];
-        List<dynamic> relays = map['relays'];
+        final Map map = json.decode(event.content);
+        final String dns = map['nip05'];
+        final List<dynamic> relays = map['relays'];
         if (dns.isNotEmpty) {
-          List<dynamic> parts = dns.split('@');
-          String name = parts[0];
-          String domain = parts[1];
+          final List<dynamic> parts = dns.split('@');
+          final String name = parts[0];
+          final String domain = parts[1];
           return DNS(name, domain, event.pubkey,
               relays.map((e) => e.toString()).toList());
         }
@@ -33,7 +33,7 @@ class Nip5 {
   static Event encode(
       String name, String domain, List<String> relays, String privkey) {
     if (isValidName(name) && isValidDomain(domain)) {
-      String content = generateContent(name, domain, relays);
+      final String content = generateContent(name, domain, relays);
       return Event.from(kind: 0, tags: [], content: content, privkey: privkey);
     } else {
       throw Exception("not a valid name or domain!");
@@ -41,12 +41,12 @@ class Nip5 {
   }
 
   static bool isValidName(String input) {
-    RegExp regExp = RegExp(r'^[a-z0-9_]+$');
+    final RegExp regExp = RegExp(r'^[a-z0-9_]+$');
     return regExp.hasMatch(input);
   }
 
   static bool isValidDomain(String domain) {
-    RegExp regExp = RegExp(
+    final RegExp regExp = RegExp(
       r'^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$',
       caseSensitive: false,
     );

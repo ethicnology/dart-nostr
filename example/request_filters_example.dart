@@ -24,7 +24,7 @@ void main() async {
   webSocket.add(requestWithFilter.serialize());
 
   // Listen for events from the WebSocket server
-  await Future.delayed(Duration(seconds: 1));
+  await Future.delayed(const Duration(seconds: 1));
   webSocket.listen((event) {
     print('Received event: $event');
   });

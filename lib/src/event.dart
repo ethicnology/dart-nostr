@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'package:convert/convert.dart';
+
 import 'package:bip340/bip340.dart' as bip340;
+import 'package:convert/convert.dart';
 import 'package:nostr/src/utils.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
@@ -84,7 +85,7 @@ class Event {
     bool verify = true,
   }) {
     pubkey = pubkey.toLowerCase();
-    if (verify && isValid() == false) throw 'Invalid event';
+    if (verify && isValid() == false) throw Exception('Invalid event');
   }
 
   /// Partial constructor, you have to fill the fields yourself
@@ -123,6 +124,7 @@ class Event {
       content,
       sig,
       verify: verify,
+      subscriptionId: subscriptionId,
     );
   }
 
@@ -137,11 +139,11 @@ class Event {
   ///);
   ///```
   factory Event.from({
-    int? createdAt,
     required int kind,
-    List<List<String>> tags = const [],
     required String content,
     required String privkey,
+    int? createdAt,
+    List<List<String>> tags = const [],
     String? pubkey,
     String? subscriptionId,
     bool verify = false,
@@ -188,7 +190,7 @@ class Event {
           .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
           .toList();
     } catch (e) {
-      throw Exception("Invalid 'tags' format: ${e.toString()}");
+      throw Exception("Invalid 'tags' format: $e");
     }
 
     return Event(
@@ -263,7 +265,7 @@ class Event {
       throw Exception('invalid payload');
     }
 
-    List<List<String>> tags = (event['tags'] as List<dynamic>)
+    final List<List<String>> tags = (event['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
@@ -324,14 +326,14 @@ class Event {
   static String _processSignature(String privateKey, String id) {
     /// aux must be 32-bytes random bytes, generated at signature time.
     /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
-    String aux = generate64RandomHexChars();
+    final String aux = generate64RandomHexChars();
     return bip340.sign(privateKey, id, aux);
   }
 
   /// Verify if event checks such as id, signature, non-futuristic are valid
   /// Performances could be a reason to disable event checks
   bool isValid() {
-    String verifyId = getEventId();
+    final String verifyId = getEventId();
     if (createdAt.toString().length == 10 &&
         id == verifyId &&
         bip340.verify(pubkey, id, sig)) {

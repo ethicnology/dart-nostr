@@ -3,14 +3,12 @@
 /// More dartdocs go here.
 library;
 
-export 'src/event.dart';
-export 'src/eose.dart';
-export 'src/keychain.dart';
-export 'src/request.dart';
-export 'src/filter.dart';
 export 'src/close.dart';
+export 'src/eose.dart';
+export 'src/event.dart';
+export 'src/filter.dart';
+export 'src/keychain.dart';
 export 'src/message.dart';
-export 'src/utils.dart';
 export 'src/nips/nip_001.dart';
 export 'src/nips/nip_002.dart';
 export 'src/nips/nip_004.dart';
@@ -28,3 +26,5 @@ export 'src/nips/nip_044.dart';
 export 'src/nips/nip_044_utils.dart';
 export 'src/nips/nip_051.dart';
 export 'src/nips/nip_059.dart';
+export 'src/request.dart';
+export 'src/utils.dart';

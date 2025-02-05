@@ -28,7 +28,7 @@ class Nip19 {
 
   /// The hex public key `3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d`
   /// translates to `npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6`
-  static encode({
+  static String encode({
     required Nip19Prefix prefix,
     required String data,
   }) {
@@ -54,18 +54,18 @@ class Nip19 {
     if (prefix == Nip19Prefix.naddr) {
       special = special.codeUnits
           .map((number) => number.toRadixString(16).padLeft(2, '0'))
-          .join('');
+          .join();
     }
     var result =
         '00${hex.decode(special).length.toRadixString(16).padLeft(2, '0')}$special';
 
     // 1: relay
     if (relays != null) {
-      for (var relay in relays) {
+      for (final relay in relays) {
         result = '${result}01';
-        String value = relay.codeUnits
+        final value = relay.codeUnits
             .map((number) => number.toRadixString(16).padLeft(2, '0'))
-            .join('');
+            .join();
         result =
             '$result${hex.decode(value).length.toRadixString(16).padLeft(2, '0')}$value';
       }
@@ -82,7 +82,7 @@ class Nip19 {
     if (kind != null) {
       result = '${result}03';
       final byteData = ByteData(4);
-      byteData.setUint32(0, kind, Endian.big);
+      byteData.setUint32(0, kind);
       final value = List.generate(
               byteData.lengthInBytes,
               (index) =>
@@ -118,7 +118,7 @@ class Nip19 {
   }) {
     try {
       String special = '';
-      List<String> relays = [];
+      final List<String> relays = [];
       String? author;
       int? kind;
       final decoded = bech32Decode(payload, length: payload.length);
@@ -126,10 +126,10 @@ class Nip19 {
 
       var index = 0;
       while (index < data.length) {
-        var type = data[index++];
-        var length = data[index++];
+        final type = data[index++];
+        final length = data[index++];
 
-        var value = Uint8List.fromList(data.sublist(index, index + length));
+        final value = Uint8List.fromList(data.sublist(index, index + length));
         index += length;
 
         if (type == 0) {
@@ -142,7 +142,7 @@ class Nip19 {
           author = hex.encode(value);
         } else if (type == 3) {
           final byteData = ByteData.sublistView(value);
-          kind = byteData.getUint32(0, Endian.big);
+          kind = byteData.getUint32(0);
         }
       }
 
@@ -169,7 +169,8 @@ enum Nip19Prefix {
   nevent,
   naddr;
 
-  static from(String name) => Nip19Prefix.values.byName(name.toLowerCase());
+  static Nip19Prefix from(String name) =>
+      Nip19Prefix.values.byName(name.toLowerCase());
 }
 
 /// Shareable identifiers with extra metadata

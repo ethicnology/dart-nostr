@@ -29,24 +29,25 @@ class Nip1 {
   }) {
     List<List<String>> tags = [];
     if (rootEvent != null) {
-      ETag root = Nip10.rootTag(rootEvent, rootEventRelay ?? '');
+      final ETag root = Nip10.rootTag(rootEvent, rootEventRelay ?? '');
 
-      List<ETag> reply = replyEvent == null
+      final List<ETag> reply = replyEvent == null
           ? <ETag>[]
           : [Nip10.replyTag(replyEvent, replyEventRelay ?? '')];
 
-      Thread thread = Thread(root, reply, []);
+      final Thread thread = Thread(root, reply, []);
       tags = Nip10.toTags(thread);
     }
 
-    List<PTag> pTags = Nip10.pTags(replyUsers ?? [], replyUserRelays ?? []);
+    final List<PTag> pTags =
+        Nip10.pTags(replyUsers ?? [], replyUserRelays ?? []);
 
-    for (var pTag in pTags) {
+    for (final pTag in pTags) {
       tags.add(["p", pTag.pubkey, pTag.relayURL]);
     }
 
     if (hashTags != null) {
-      for (var t in hashTags) {
+      for (final t in hashTags) {
         tags.add(['t', t]);
       }
     }
@@ -55,22 +56,22 @@ class Nip1 {
   }
 
   static List<String>? hashTags(List<List<String>> tags) {
-    List<String> hashTags = [];
-    for (var tag in tags) {
+    final List<String> hashTags = [];
+    for (final tag in tags) {
       if (tag[0] == 't') hashTags.add(tag[1]);
     }
     return hashTags;
   }
 
   static String? quoteRepostId(List<List<String>> tags) {
-    for (var tag in tags) {
+    for (final tag in tags) {
       if (tag[0] == 'q') return tag[1];
     }
     return null;
   }
 
   static String? groupId(List<List<String>> tags) {
-    for (var tag in tags) {
+    for (final tag in tags) {
       if (tag[0] == 'h') return tag[1];
     }
     return null;
