@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -18,7 +20,7 @@ void main() {
 
     test('Eose.deserialize', () {
       String subscriptionId = generate64RandomHexChars();
-      var serialized = ["EOSE", subscriptionId];
+      var serialized = json.encode(["EOSE", subscriptionId]);
       var eose = Eose.deserialize(serialized);
       expect(eose.subscriptionId, subscriptionId);
     });

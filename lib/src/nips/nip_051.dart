@@ -38,7 +38,7 @@ class Nip51 {
         item.aliasPubKey ?? "",
       ]);
     }
-    String content = jsonEncode(list);
+    String content = json.encode(list);
     return nip4cipher(privkey, '02$pubkey', content, true);
   }
 
@@ -51,7 +51,7 @@ class Nip51 {
     for (String item in items) {
       list.add(['e', item]);
     }
-    String content = jsonEncode(list);
+    String content = json.encode(list);
     return nip4cipher(privkey, '02$pubkey', content, true);
   }
 
@@ -67,7 +67,7 @@ class Nip51 {
     String encString = content.substring(0, ivIndex);
     String deContent =
         nip4cipher(privkey, "02$pubkey", encString, false, nonce: iv);
-    for (List tag in jsonDecode(deContent)) {
+    for (List tag in json.decode(deContent)) {
       if (tag[0] == "p") {
         people.add(People(tag[1], tag.length > 2 ? tag[2] : "",
             tag.length > 3 ? tag[3] : "", tag.length > 4 ? tag[4] : ""));

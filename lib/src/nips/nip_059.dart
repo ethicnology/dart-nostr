@@ -147,7 +147,7 @@ class Nip59 {
       recipientPrivateKey: recipientPrivkey,
     );
 
-    final rumorMap = jsonDecode(rumorJsonStr) as Map<String, dynamic>;
+    final rumorMap = json.decode(rumorJsonStr) as Map<String, dynamic>;
     final pubkey = getRequiredField<String>(rumorMap, 'pubkey');
     final createdAt = getRequiredField<int>(rumorMap, 'created_at');
     final kind = getRequiredField<int>(rumorMap, 'kind');

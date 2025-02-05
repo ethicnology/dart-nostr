@@ -13,14 +13,15 @@ class Eose {
   /// Serialize to nostr close message
   /// - ["EOSE", subscription_id]
   String serialize() {
-    return jsonEncode(["EOSE", subscriptionId]);
+    return json.encode(["EOSE", subscriptionId]);
   }
 
   /// Deserialize a nostr close message
   /// - ["CLOSE", subscription_id]
-  factory Eose.deserialize(input) {
-    if (input is! List<dynamic>) throw 'Invalid type for EOSE message';
-    if (input.length != 2) throw 'Invalid length for EOSE message';
-    return Eose(input[1]);
+  factory Eose.deserialize(String payload) {
+    final data = json.decode(payload);
+    if (data is! List<dynamic>) throw 'Invalid type for EOSE message';
+    if (data.length != 2) throw 'Invalid length for EOSE message';
+    return Eose(data[1]);
   }
 }

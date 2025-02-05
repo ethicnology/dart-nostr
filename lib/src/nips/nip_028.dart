@@ -5,7 +5,7 @@ import 'package:nostr/nostr.dart';
 class Nip28 {
   static Channel getChannelCreation(Event event) {
     try {
-      Map content = jsonDecode(event.content);
+      Map content = json.decode(event.content);
       if (event.kind == 40) {
         // create channel
         Map<String, String> additional = Map.from(content);
@@ -24,7 +24,7 @@ class Nip28 {
 
   static Channel getChannelMetadata(Event event) {
     try {
-      Map content = jsonDecode(event.content);
+      Map content = json.decode(event.content);
       if (event.kind == 41) {
         // create channel
         Map<String, String> additional = Map.from(content);
@@ -76,7 +76,7 @@ class Nip28 {
             break;
           }
         }
-        Map content = jsonDecode(event.content);
+        Map content = json.decode(event.content);
         String reason = content['reason'];
         return ChannelMessageHidden(
             event.pubkey, messageId!, reason, event.createdAt);
@@ -97,7 +97,7 @@ class Nip28 {
             break;
           }
         }
-        Map content = jsonDecode(event.content);
+        Map content = json.decode(event.content);
         String reason = content['reason'];
         return ChannelUserMuted(
             event.pubkey, userPubkey!, reason, event.createdAt);
@@ -119,7 +119,7 @@ class Nip28 {
     return Event.from(
       kind: 40,
       tags: [],
-      content: jsonEncode(map),
+      content: json.encode(map),
       privkey: privkey,
     );
   }
@@ -143,14 +143,19 @@ class Nip28 {
       tags: [
         ["e", channelId, relayURL]
       ],
-      content: jsonEncode(map),
+      content: json.encode(map),
       privkey: privkey,
     );
   }
 
   static Event sendChannelMessage(
-      String channelId, String content, String privkey,
-      {String? relay, List<ETag>? etags, List<PTag>? ptags}) {
+    String channelId,
+    String content,
+    String privkey, {
+    String? relay,
+    List<ETag>? etags,
+    List<PTag>? ptags,
+  }) {
     Thread thread =
         Thread(Nip10.rootTag(channelId, relay ?? ''), etags ?? [], ptags ?? []);
     return Event.from(
@@ -162,26 +167,27 @@ class Nip28 {
   }
 
   static Event hideChannelMessage(
-      String messageId, String reason, String privkey) {
-    Map<String, dynamic> map = {'reason': reason};
+    String messageId,
+    String reason,
+    String privkey,
+  ) {
     return Event.from(
       kind: 43,
       tags: [
         ["e", messageId]
       ],
-      content: jsonEncode(map),
+      content: json.encode({'reason': reason}),
       privkey: privkey,
     );
   }
 
   static Event muteUser(String pubkey, String reason, String privkey) {
-    Map<String, dynamic> map = {'reason': reason};
     return Event.from(
         kind: 44,
         tags: [
           ["p", pubkey]
         ],
-        content: jsonEncode(map),
+        content: json.encode({'reason': reason}),
         privkey: privkey);
   }
 }

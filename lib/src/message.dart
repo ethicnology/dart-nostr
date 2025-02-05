@@ -11,7 +11,7 @@ class Message {
 
 // nostr message deserializer
   Message.deserialize(String payload) {
-    dynamic data = jsonDecode(payload);
+    dynamic data = json.decode(payload);
     if (!MessageType.values.map((e) => e.name).contains(data[0])) {
       throw 'Unsupported payload (or NIP)';
     }
@@ -19,24 +19,24 @@ class Message {
     messageType = MessageType.fromName(data[0]);
     switch (messageType) {
       case MessageType.event:
-        message = Event.deserialize(data);
+        message = Event.deserialize(payload);
         // ignore: deprecated_member_use_from_same_package
         if (message.kind == 4) message = EncryptedDirectMessage(message);
         break;
       case MessageType.ok:
-        message = Nip20.deserialize(data);
+        message = Nip20.deserialize(payload);
         break;
       case MessageType.req:
         message = Request.deserialize(payload);
         break;
       case MessageType.close:
-        message = Close.deserialize(data);
+        message = Close.deserialize(payload);
         break;
       case MessageType.eose:
-        message = Eose.deserialize(data);
+        message = Eose.deserialize(payload);
         break;
       default:
-        message = jsonEncode(data.sublist(1));
+        message = json.encode(data.sublist(1));
         break;
     }
   }

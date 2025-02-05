@@ -12,7 +12,7 @@ class Nip5 {
   static Future<DNS?> decode(Event event) async {
     if (event.kind == 0) {
       try {
-        Map map = jsonDecode(event.content);
+        Map map = json.decode(event.content);
         String dns = map['nip05'];
         List<dynamic> relays = map['relays'];
         if (dns.isNotEmpty) {
@@ -54,13 +54,15 @@ class Nip5 {
   }
 
   static String generateContent(
-      String name, String domain, List<String> relays) {
-    Map<String, dynamic> map = {
+    String name,
+    String domain,
+    List<String> relays,
+  ) {
+    return json.encode({
       'name': name,
       'nip05': '$name@$domain',
       'relays': relays,
-    };
-    return jsonEncode(map);
+    });
   }
 }
 

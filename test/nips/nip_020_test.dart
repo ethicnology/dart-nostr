@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -25,16 +27,16 @@ void main() {
     });
 
     test('deserialize', () {
-      var jsonNip20 = [
+      var serializedNip20 = [
         "OK",
         "b1a649ebe8b435ec71d3784793f3bbf4b93e64e17568a741aecd4c7ddeafce30",
         true,
         ""
       ];
-      var nip20 = Nip20.deserialize(jsonNip20);
-      expect(nip20.eventId, jsonNip20[1]);
-      expect(nip20.status, jsonNip20[2]);
-      expect(nip20.message, jsonNip20[3]);
+      var nip20 = Nip20.deserialize(json.encode(serializedNip20));
+      expect(nip20.eventId, serializedNip20[1]);
+      expect(nip20.status, serializedNip20[2]);
+      expect(nip20.message, serializedNip20[3]);
     });
   });
 }

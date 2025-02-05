@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:nostr/nostr.dart';
 
 void main() async {
@@ -8,6 +10,6 @@ void main() async {
   var close2 = Close(subscriptionId);
   assert(close2.serialize() == '["CLOSE","$subscriptionId"]');
 
-  var close3 = Close.deserialize(["CLOSE", subscriptionId]);
+  var close3 = Close.deserialize(json.encode(["CLOSE", subscriptionId]));
   assert(close3.subscriptionId == subscriptionId);
 }

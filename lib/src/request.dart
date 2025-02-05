@@ -28,25 +28,25 @@ class Request {
 
   /// Deserialize a nostr request message
   /// - '["REQ", subscriptionId, filter JSON, filter JSON, ...]'
-  Request.deserialize(String input) {
-    final payload = json.decode(input);
+  Request.deserialize(String payload) {
+    final data = json.decode(payload);
 
     // Ensure we have at least ["REQ", <someId>]
-    if (payload.length < 2) {
+    if (data.length < 2) {
       throw 'Message too short to be a REQ message';
     }
 
-    if (payload[0] != "REQ") {
+    if (data[0] != "REQ") {
       throw 'Not a REQ message (first element must be "REQ")';
     }
 
-    subscriptionId = payload[1];
+    subscriptionId = data[1];
     filters = [];
 
     // Remaining items (from index 2 onward) are filters
-    if (payload.length > 2) {
-      for (var i = 2; i < payload.length; i++) {
-        filters.add(Filter.fromJson(payload[i]));
+    if (data.length > 2) {
+      for (var i = 2; i < data.length; i++) {
+        filters.add(Filter.fromJson(data[i]));
       }
     }
   }

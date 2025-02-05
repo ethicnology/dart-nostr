@@ -113,7 +113,7 @@ void main() {
   });
 
   test('Constructor.serialize', () {
-    var serialized = [
+    var serialized = json.encode([
       "EVENT",
       {
         "id":
@@ -127,8 +127,8 @@ void main() {
         "sig":
             "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
       }
-    ];
-    var serializedWithSubscriptionId = [
+    ]);
+    var serializedWithSubscriptionId = json.encode([
       "EVENT",
       "subscription_id",
       {
@@ -143,15 +143,15 @@ void main() {
         "sig":
             "246970954e7b74e7fe381a4c818fed739ee59444cb536dadf45fbbce33bd7455ae7cd678c347c4a0c6e0a4483d18c7e26b7abe76f4cc73234f774e0e0d65204b",
       }
-    ];
+    ]);
 
-    Event event = Event.fromMap(serialized[1] as Map<String, dynamic>);
-    expect(event.serialize(), jsonEncode(serialized));
-    Event eventWithSubscriptionId =
+    final event = Event.deserialize(serialized);
+    expect(event.serialize(), serialized);
+    final eventWithSubscriptionId =
         Event.deserialize(serializedWithSubscriptionId);
     expect(
       eventWithSubscriptionId.serialize(),
-      jsonEncode(serializedWithSubscriptionId),
+      serializedWithSubscriptionId,
     );
   });
 
@@ -183,18 +183,18 @@ void main() {
             "bd63b762379bd06e536ccb943f909f075bd512315fbf2407be19f03ee9d3ef5b4a70205aa7a8e68cb8c2d250f56ef8f5074339abd741d32dbd18d16641a339ef"
       }
     ];
-    Event event = Event.deserialize(serialized);
+    final event = Event.deserialize(json.encode(serialized));
     expect(event.subscriptionId, serialized[1]);
-    var json = serialized[2] as Map<String, dynamic>;
-    expect(event.id, json['id']);
-    expect(event.pubkey, json['pubkey']);
-    expect(event.createdAt, json['created_at']);
-    expect(event.kind, json['kind']);
-    expect(event.tags, json['tags']);
-    expect(event.content, json['content']);
-    expect(event.sig, json['sig']);
+    final serializedEvent = serialized[2] as Map<String, dynamic>;
+    expect(event.id, serializedEvent['id']);
+    expect(event.pubkey, serializedEvent['pubkey']);
+    expect(event.createdAt, serializedEvent['created_at']);
+    expect(event.kind, serializedEvent['kind']);
+    expect(event.tags, serializedEvent['tags']);
+    expect(event.content, serializedEvent['content']);
+    expect(event.sig, serializedEvent['sig']);
 
-    var serializeWithoutSubscriptionId = [
+    final serializeWithoutSubscriptionId = json.encode([
       "EVENT",
       {
         "id":
@@ -209,8 +209,8 @@ void main() {
         "sig":
             "4912a6850a711a876fd2443771f69e094041f7e832df65646a75c2c77989480cce9b41aa5ea3d055c16fe5beb7d11d3d5fa29b4c4046c150b09393c4d3d16eb4"
       }
-    ];
-    Event eventWithoutSubscriptionId =
+    ]);
+    final eventWithoutSubscriptionId =
         Event.deserialize(serializeWithoutSubscriptionId);
     expect(eventWithoutSubscriptionId.subscriptionId, null);
   });
@@ -223,7 +223,7 @@ void main() {
   });
 
   test('Event.deserialize throw', () {
-    expect(() => Event.deserialize([]), throwsException);
+    expect(() => Event.deserialize(json.encode([])), throwsException);
   });
 
   test('Event.partial', () {

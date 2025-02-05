@@ -26,14 +26,15 @@ class Nip20 {
 
   /// Serialize to nostr close message
   /// - ["OK", "event_id", true|false, "message"]
-  String serialize() => jsonEncode(["OK", eventId, status, message]);
+  String serialize() => json.encode(["OK", eventId, status, message]);
 
   /// Deserialize a nostr close message
   /// - ["OK", "event_id", true|false, "message"]
-  Nip20.deserialize(input) {
-    assert(input.length == 4);
-    eventId = input[1];
-    status = input[2];
-    message = input[3];
+  Nip20.deserialize(String payload) {
+    final data = json.decode(payload);
+    assert(data.length == 4);
+    eventId = data[1];
+    status = data[2];
+    message = data[3];
   }
 }

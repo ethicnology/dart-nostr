@@ -203,8 +203,8 @@ class Event {
     );
   }
 
-  factory Event.fromJson(String json, {bool verify = true}) =>
-      Event.fromMap(jsonDecode(json), verify: verify);
+  factory Event.fromJson(String payload, {bool verify = true}) =>
+      Event.fromMap(json.decode(payload), verify: verify);
 
   /// Serialize an event as map
   Map<String, dynamic> toMap() => {
@@ -223,11 +223,11 @@ class Event {
   /// - ["EVENT", event JSON as defined above]
   /// - ["EVENT", subscription_id, event JSON as defined above]
   String serialize() {
-    if (subscriptionId != null) {
-      return jsonEncode(["EVENT", subscriptionId, toMap()]);
-    } else {
-      return jsonEncode(["EVENT", toMap()]);
-    }
+    return json.encode([
+      "EVENT",
+      if (subscriptionId != null) subscriptionId,
+      toMap(),
+    ]);
   }
 
   /// Deserialize a nostr event message
@@ -250,30 +250,31 @@ class Event {
   ///   }
   /// ]);
   /// ```
-  factory Event.deserialize(input, {bool verify = true}) {
-    Map<String, dynamic> json = {};
+  factory Event.deserialize(String input, {bool verify = true}) {
+    final data = json.decode(input);
+    Map<String, dynamic> event;
     String? subscriptionId;
-    if (input.length == 2) {
-      json = input[1] as Map<String, dynamic>;
-    } else if (input.length == 3) {
-      json = input[2] as Map<String, dynamic>;
-      subscriptionId = input[1] as String;
+    if (data.length == 2) {
+      event = data[1] as Map<String, dynamic>;
+    } else if (data.length == 3) {
+      event = data[2] as Map<String, dynamic>;
+      subscriptionId = data[1] as String;
     } else {
-      throw Exception('invalid input');
+      throw Exception('invalid payload');
     }
 
-    List<List<String>> tags = (json['tags'] as List<dynamic>)
+    List<List<String>> tags = (event['tags'] as List<dynamic>)
         .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
         .toList();
 
     return Event(
-      json['id'],
-      json['pubkey'],
-      json['created_at'],
-      json['kind'],
+      event['id'],
+      event['pubkey'],
+      event['created_at'],
+      event['kind'],
       tags,
-      json['content'],
-      json['sig'],
+      event['content'],
+      event['sig'],
       subscriptionId: subscriptionId,
       verify: verify,
     );
