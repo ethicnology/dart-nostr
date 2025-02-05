@@ -27,7 +27,7 @@ class Message {
         message = Nip20.deserialize(data);
         break;
       case MessageType.req:
-        message = Request.deserialize(data);
+        message = Request.deserialize(payload);
         break;
       case MessageType.close:
         message = Close.deserialize(data);

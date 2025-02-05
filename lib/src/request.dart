@@ -10,24 +10,44 @@ class Request {
   /// filters is a JSON object that determines what events will be sent in that subscription
   late List<Filter> filters;
 
-  Request(this.subscriptionId, this.filters);
+  Request({required this.subscriptionId, this.filters = const []});
 
   /// Serialize to nostr request message
   /// - ["REQ", subscription_id, filter JSON, filter JSON, ...]
   String serialize() {
-    var theFilters = jsonEncode(filters.map((item) => item.toJson()).toList());
-    var header = jsonEncode(["REQ", subscriptionId]);
-    return '${header.substring(0, header.length - 1)},${theFilters.substring(1, theFilters.length)}';
+    final theFilters = filters.map((item) => item.toJson()).toList();
+
+    return json.encode(
+      [
+        "REQ",
+        subscriptionId,
+        if (filters.isEmpty) Filter() else ...theFilters,
+      ],
+    );
   }
 
   /// Deserialize a nostr request message
-  /// - ["REQ", subscription_id, filter JSON, filter JSON, ...]
-  Request.deserialize(input) {
-    if (input.length < 3) throw 'Message too short';
-    subscriptionId = input[1];
+  /// - '["REQ", subscriptionId, filter JSON, filter JSON, ...]'
+  Request.deserialize(String input) {
+    final payload = json.decode(input);
+
+    // Ensure we have at least ["REQ", <someId>]
+    if (payload.length < 2) {
+      throw 'Message too short to be a REQ message';
+    }
+
+    if (payload[0] != "REQ") {
+      throw 'Not a REQ message (first element must be "REQ")';
+    }
+
+    subscriptionId = payload[1];
     filters = [];
-    for (var i = 2; i < input.length; i++) {
-      filters.add(Filter.fromJson(input[i]));
+
+    // Remaining items (from index 2 onward) are filters
+    if (payload.length > 2) {
+      for (var i = 2; i < payload.length; i++) {
+        filters.add(Filter.fromJson(payload[i]));
+      }
     }
   }
 }

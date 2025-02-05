@@ -3,7 +3,8 @@ import 'package:nostr/nostr.dart';
 
 void main() async {
 // Create a subscription message request with one or many filters
-  Request requestWithFilter = Request(generate64RandomHexChars(), [
+  final requestWithFilter =
+      Request(subscriptionId: generate64RandomHexChars(), filters: [
     Filter(
       kinds: [0, 1, 2, 7],
       since: 1674063680,
@@ -12,7 +13,7 @@ void main() async {
   ]);
 
   // Connecting to a nostr relay using websocket
-  WebSocket webSocket = await WebSocket.connect(
+  final webSocket = await WebSocket.connect(
     'wss://relay.nostr.info', // or any nostr relay
   );
   // if the current socket fail try another one
