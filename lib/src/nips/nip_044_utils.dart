@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:convert/convert.dart';
-import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:pointycastle/export.dart';
 
 // ignore: non_constant_identifier_names
@@ -60,41 +59,22 @@ int calcPaddedLen(int unpaddedLen) {
   }
 }
 
-Future<List<int>> encryptChaCha20(
+List<int> chacha20(
   List<int> key,
   List<int> nonce,
   List<int> data,
-) async {
-  final algorithm = crypto.Chacha20(macAlgorithm: crypto.MacAlgorithm.empty);
-  final skey = crypto.SecretKey(key);
-  final secretBox = await algorithm.encrypt(
-    data,
-    secretKey: skey,
-    nonce: nonce,
-  );
+  bool forEncryption, // encryption (true) or decryption (false).
+) {
+  final keyParam = KeyParameter(Uint8List.fromList(key));
+  final params = ParametersWithIV(keyParam, Uint8List.fromList(nonce));
+  final input = Uint8List.fromList(data);
+  final output = Uint8List(input.length);
 
-  return secretBox.cipherText;
-}
+  final cipher = ChaCha7539Engine();
+  cipher.init(forEncryption, params);
+  cipher.processBytes(input, 0, input.length, output, 0);
 
-Future<List<int>> decryptChaCha20(
-  List<int> key,
-  List<int> nonce,
-  List<int> ciphertext,
-) async {
-  final algorithm = crypto.Chacha20(macAlgorithm: crypto.MacAlgorithm.empty);
-  final skey = crypto.SecretKey(key);
-  final secretBox = crypto.SecretBox(
-    ciphertext,
-    nonce: nonce,
-    mac: crypto.Mac.empty,
-  );
-
-  final plaintext = await algorithm.decrypt(
-    secretBox,
-    secretKey: skey,
-  );
-
-  return plaintext;
+  return output;
 }
 
 String constructPayload(List<int> nonce, List<int> ciphertext, List<int> mac) {

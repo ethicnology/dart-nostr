@@ -37,8 +37,7 @@ class Nip44 {
     final paddedPlaintext = pad(utf8.encode(plaintext));
 
     // Step 6: Encrypt
-    final ciphertext =
-        await encryptChaCha20(chachaKey, chachaNonce, paddedPlaintext);
+    final ciphertext = chacha20(chachaKey, chachaNonce, paddedPlaintext, true);
 
     // Step 7: Calculate MAC
     final mac = calculateMac(hmacKey, nonce, ciphertext);
@@ -80,8 +79,7 @@ class Nip44 {
     verifyMac(hmacKey, nonce, ciphertext, mac);
 
     // Step 6: Decrypt
-    final paddedPlaintext =
-        await decryptChaCha20(chachaKey, chachaNonce, ciphertext);
+    final paddedPlaintext = chacha20(chachaKey, chachaNonce, ciphertext, false);
 
     // Step 7: Unpad Plaintext
     final plaintextBytes = unpad(paddedPlaintext);
