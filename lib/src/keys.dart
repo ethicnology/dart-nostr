@@ -60,9 +60,16 @@ class Keys {
     required String message,
     required String signature,
   }) {
+    if (hex.decode(pubkey).length != 32) {
+      throw Exception(
+          "pubkey must be 32-bytes hex encoded (a hash of the actual message)");
+    }
     if (hex.decode(message).length != 32) {
       throw Exception(
-          "message must also be 32-bytes (a hash of the actual message)");
+          "message must be 32-bytes hex encoded (a hash of the actual message)");
+    }
+    if (hex.decode(signature).length != 64) {
+      throw Exception("signature must be 64-bytes hex encoded");
     }
     return bip340.verify(pubkey, message, signature);
   }
