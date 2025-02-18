@@ -6,7 +6,7 @@ class Nip17 {
     required String authorPrivkey,
     required String receiverPubkey,
   }) async {
-    final authorPubkey = Keychain(authorPrivkey).public;
+    final authorPubkey = Keys(authorPrivkey).public;
 
     final rumor = Event.partial(
       pubkey: authorPubkey,

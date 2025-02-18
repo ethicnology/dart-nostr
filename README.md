@@ -41,16 +41,16 @@ import 'dart:io';
 import 'package:nostr/nostr.dart';
 
 void main() async {
-  // Use the Keychain class to manipulate private/public keys and use handy methods encapsulated from dart-bip340
-  var keys = Keychain(
+  // Use the Keys class to manipulate secret/public keys and use handy methods encapsulated from dart-bip340
+  var keys = Keys(
     "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
   assert(keys.public ==
       "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b");
 
   // or generate random keys
-  var randomKeys = Keychain.generate();
-  print(randomKeys.private);
+  var randomKeys = Keys.generate();
+  print(randomKeys.secret);
 
   // Instantiate an event with all the field
   String id =
@@ -87,7 +87,7 @@ void main() async {
   );
   assert(partialEvent.isValid() == true);
 
-  // Instantiate an event with a partial data and let the library sign the event with your private key
+  // Instantiate an event with a partial data and let the library sign the event with your secret key
   Event anotherEvent = Event.from(
     kind: 1,
     tags: [],

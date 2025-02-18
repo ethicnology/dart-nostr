@@ -7,7 +7,7 @@ export 'src/close.dart';
 export 'src/eose.dart';
 export 'src/event.dart';
 export 'src/filter.dart';
-export 'src/keychain.dart';
+export 'src/keys.dart';
 export 'src/message.dart';
 export 'src/nips/nip_001.dart';
 export 'src/nips/nip_002.dart';

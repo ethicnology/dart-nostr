@@ -2,43 +2,46 @@ import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:nostr/nostr.dart';
 
-/// A keychain encapsulates a public key and a private key, which are used for tasks such as encrypting and decrypting messages, or creating and verifying digital signatures.
-class Keychain {
-  /// An hex-encoded (64 chars) private key used to decrypt messages or create digital signatures, and it must be kept secret.
-  late String private;
+/// Keys encapsulates a public key and a secret key, which are used for tasks such as encrypting and decrypting messages, or creating and verifying digital signatures.
+class Keys {
+  /// An hex-encoded (64 chars) secret key used to decrypt messages or create digital signatures, and it must be kept secret.
+  late String secret;
 
   /// A hex-encoded (64 chars) public key used to encrypt messages or verify digital signatures, and it can be shared with anyone.
   late String public;
 
-  /// Instantiate a Keychain from a private key using HEX or BECH32 encoding
-  Keychain(String privateKeyHexOrBech32) {
-    if (RegExp(r'^[0-9A-Fa-f]+$').hasMatch(privateKeyHexOrBech32)) {
-      private = privateKeyHexOrBech32.toLowerCase();
-      public = bip340.getPublicKey(private);
+  // String get nsec => Nip19.encode(prefix: Nip19Prefix.nsec, data: secret);
+  // String get npub => Nip19.encode(prefix: Nip19Prefix.npub, data: public);
+
+  /// Instantiate a Keys from a secret key using HEX or BECH32 encoding
+  Keys(String secretKey) {
+    if (RegExp(r'^[0-9A-Fa-f]+$').hasMatch(secretKey)) {
+      secret = secretKey.toLowerCase();
+      public = bip340.getPublicKey(secret);
       return;
     }
 
     try {
-      final nsec = Nip19.decode(payload: privateKeyHexOrBech32);
+      final nsec = Nip19.decode(payload: secretKey);
       if (nsec.prefix != Nip19Prefix.nsec) {
         throw Exception('bech32 must have prefix "nsec", got ${nsec.prefix}');
       }
-      private = nsec.data;
-      public = bip340.getPublicKey(private);
+      secret = nsec.data;
+      public = bip340.getPublicKey(secret);
     } catch (e) {
       throw Exception('Expects HEX or valid Bech32 "nsec".: $e');
     }
   }
 
   /// Wrap the default constructor with a named parameter for those who enjoy them
-  factory Keychain.from({required String privateKeyHexOrBech32}) {
-    return Keychain(privateKeyHexOrBech32);
+  factory Keys.from({required String secretKey}) {
+    return Keys(secretKey);
   }
 
-  /// Instantiate a Keychain from random bytes
-  Keychain.generate() {
-    private = generate64RandomHexChars();
-    public = bip340.getPublicKey(private);
+  /// Instantiate a Keys from random bytes
+  Keys.generate() {
+    secret = generate64RandomHexChars();
+    public = bip340.getPublicKey(secret);
   }
 
   /// Encapsulate dart-bip340 sign() so you don't need to add bip340 as a dependency
@@ -48,7 +51,7 @@ class Keychain {
       throw Exception(
           "message must also be 32-bytes (a hash of the actual message)");
     }
-    return bip340.sign(private, message, aux);
+    return bip340.sign(secret, message, aux);
   }
 
   /// Encapsulate dart-bip340 verify() so you don't need to add bip340 as a dependency

@@ -145,7 +145,7 @@ class Nip51 {
       }
       if (tag[0] == "d") identifier = tag[1];
     }
-    final pubkey = Keychain(privkey).public;
+    final pubkey = Keys(privkey).public;
     final Map content = Nip51.fromContent(event.content, privkey, pubkey);
     people.addAll(content["people"]);
     bookmarks.addAll(content["bookmarks"]);

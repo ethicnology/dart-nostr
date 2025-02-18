@@ -4,16 +4,16 @@ import 'package:test/test.dart';
 void main() async {
   const authorNsec =
       'nsec1w8udu59ydjvedgs3yv5qccshcj8k05fh3l60k9x57asjrqdpa00qkmr89m';
-  final author = Keychain(authorNsec);
+  final author = Keys(authorNsec);
 
   const recipientNsec =
       'nsec12ywtkplvyq5t6twdqwwygavp5lm4fhuang89c943nf2z92eez43szvn4dt';
-  final recipient = Keychain(recipientNsec);
+  final recipient = Keys(recipientNsec);
 
   const message = 'Hola, que tal?';
 
   final dm = await Nip17.encode(
-    authorPrivkey: author.private,
+    authorPrivkey: author.secret,
     receiverPubkey: recipient.public,
     message: message,
   );
@@ -32,7 +32,7 @@ void main() async {
     test('decode a direct message', () async {
       final x = await Nip17.decode(
         giftWrap: dm,
-        receiverPrivkey: recipient.private,
+        receiverPrivkey: recipient.secret,
       );
 
       expect(x.kind, 14);

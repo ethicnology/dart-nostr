@@ -34,7 +34,7 @@ void main() {
       final giftWrap = await Nip59.wrap(
         rumor: rumor,
         authorPrivkey: authorPrivkey,
-        recipientPubkey: Keychain(recipientPrivkey).public,
+        recipientPubkey: Keys(recipientPrivkey).public,
         ephemeralPrivkey: ephemeralPrivkey,
         createdAt: 1703021488,
       );

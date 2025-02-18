@@ -6,18 +6,18 @@ void main() {
     test('encode', () {
       const hex =
           "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12";
-      final user = Keychain(hex);
+      final user = Keys(hex);
       final List<String> relays = [
         'wss://relay.example.com',
         'wss://relay2.example.com'
       ];
       final Event event =
-          Nip5.encode('name', 'example.com', relays, user.private);
+          Nip5.encode('name', 'example.com', relays, user.secret);
       expect(event.kind, 0);
 
-      expect(() => Nip5.encode('name', 'example', relays, user.private),
+      expect(() => Nip5.encode('name', 'example', relays, user.secret),
           throwsException);
-      expect(() => Nip5.encode('name!', 'example.com', relays, user.private),
+      expect(() => Nip5.encode('name!', 'example.com', relays, user.secret),
           throwsException);
     });
 

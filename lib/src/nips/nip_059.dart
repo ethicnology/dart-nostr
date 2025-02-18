@@ -17,7 +17,7 @@ class Nip59 {
   /// `rumor`         A Nostr event without a signature. If it has .sig or .id,
   ///                 we will forcibly remove them to preserve "unsigned rumor."
   ///
-  /// `authorPrivkey` The real author's private key (hex-encoded, 32 bytes).
+  /// `authorPrivkey` The real author's secret key (hex-encoded, 32 bytes).
   ///
   /// `recipientPubkey` The final recipient's pubkey (hex-encoded, 32 bytes).
   ///
@@ -38,7 +38,7 @@ class Nip59 {
     int? createdAt,
     List<List<String>>? extraTags,
   }) async {
-    final authorPubkey = Keychain(authorPrivkey).public;
+    final authorPubkey = Keys(authorPrivkey).public;
 
     if (rumor.pubkey != authorPubkey) {
       throw Exception(
@@ -79,8 +79,8 @@ class Nip59 {
 
     // Create a "gift wrap" (kind=1059) by encrypting the seal using an ephemeral key.
     // Then sign with ephemeral key. If ephemeral key not specified, generate it
-    final ephemeral = ephemeralPrivkey ?? Keychain.generate().private;
-    final ephemeralPubkey = Keychain(ephemeral).public;
+    final ephemeral = ephemeralPrivkey ?? Keys.generate().secret;
+    final ephemeralPubkey = Keys(ephemeral).public;
 
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
     final wrapCiphertext = await Nip44.encrypt(
@@ -113,7 +113,7 @@ class Nip59 {
   /// then decrypt that seal to get the underlying rumor.
   ///
   /// `giftWrap` must be a `kind=1059` event posted by ephemeral key.
-  /// `recipientPrivkey` is the real recipient's private key.
+  /// `recipientPrivkey` is the real recipient's secret key.
   ///
   /// Returns the final "rumor" (an **unsigned** event), which you can parse or show.
   static Future<Event> unwrap({
