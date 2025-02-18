@@ -1,4 +1,5 @@
 import 'package:bip340/bip340.dart' as bip340;
+import 'package:convert/convert.dart';
 import 'package:nostr/nostr.dart';
 
 /// A keychain encapsulates a public key and a private key, which are used for tasks such as encrypting and decrypting messages, or creating and verifying digital signatures.
@@ -43,6 +44,10 @@ class Keychain {
   /// Encapsulate dart-bip340 sign() so you don't need to add bip340 as a dependency
   String sign({required String message}) {
     final aux = generate64RandomHexChars();
+    if (hex.decode(message).length != 32) {
+      throw Exception(
+          "message must also be 32-bytes (a hash of the actual message)");
+    }
     return bip340.sign(private, message, aux);
   }
 
@@ -52,6 +57,10 @@ class Keychain {
     required String message,
     required String signature,
   }) {
+    if (hex.decode(message).length != 32) {
+      throw Exception(
+          "message must also be 32-bytes (a hash of the actual message)");
+    }
     return bip340.verify(pubkey, message, signature);
   }
 }
