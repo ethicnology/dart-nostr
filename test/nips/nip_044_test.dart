@@ -31,7 +31,7 @@ Future<void> assertConversationKeyGeneration(
   String expectedConversationKeyHex,
 ) async {
   final sharedSecret = Nip44.computeSharedSecret(
-    privateKeyHex: privKeyHex,
+    secretKeyHex: privKeyHex,
     publicKeyHex: pubKeyHex,
   );
   final conversationKey =
@@ -50,7 +50,7 @@ Future<void> assertCryptPriv(
     String nonceHex,
     String plaintext,
     String expectedCiphertext) async {
-  // Compute public keys from private keys
+  // Compute public keys from secret keys
   final ec = elliptic.getS256();
   final sk1 = elliptic.PrivateKey.fromHex(ec, sk1Hex);
   final sk2 = elliptic.PrivateKey.fromHex(ec, sk2Hex);
@@ -67,7 +67,7 @@ Future<void> assertCryptPriv(
 
   final encryptedMessage = await Nip44.encrypt(
     plaintext: plaintext,
-    senderPrivateKey: sk1Hex,
+    senderSecretKey: sk1Hex,
     recipientPublicKey: pk2Hex,
     customNonce: nonce,
   );
@@ -77,7 +77,7 @@ Future<void> assertCryptPriv(
 
   final decryptedMessage = await Nip44.decrypt(
     payload: encryptedMessage,
-    recipientPrivateKey: sk2Hex,
+    recipientSecretKey: sk2Hex,
     senderPublicKey: pk1Hex,
   );
 
@@ -146,7 +146,7 @@ Future<void> assertConversationKeyFail(
   try {
     // Attempt to compute shared secret
     final sharedSecret = Nip44.computeSharedSecret(
-        privateKeyHex: privKeyHex, publicKeyHex: pubKeyHex);
+        secretKeyHex: privKeyHex, publicKeyHex: pubKeyHex);
     // Attempt to derive conversation key
     Nip44.deriveConversationKey(sharedSecret: sharedSecret);
     // If no exception is thrown, the test should fail
@@ -258,7 +258,7 @@ void assertMessageKeyGeneration(
 
 List<int> generateConversationKey(String privKeyHex, String pubKeyHex) {
   final sharedSecret = Nip44.computeSharedSecret(
-      privateKeyHex: privKeyHex, publicKeyHex: pubKeyHex);
+      secretKeyHex: privKeyHex, publicKeyHex: pubKeyHex);
   final conversationKey =
       Nip44.deriveConversationKey(sharedSecret: sharedSecret);
   return conversationKey;

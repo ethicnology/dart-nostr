@@ -62,7 +62,7 @@ class Nip59 {
     final sealCiphertext = await Nip44.encrypt(
       plaintext: rumorJson,
       recipientPublicKey: recipientPubkey,
-      senderPrivateKey: authorPrivkey,
+      senderSecretKey: authorPrivkey,
     );
 
     // Build the seal event (kind=13, empty tags, .content = ciphertext)
@@ -86,7 +86,7 @@ class Nip59 {
     final wrapCiphertext = await Nip44.encrypt(
       plaintext: seal.toJson(),
       recipientPublicKey: recipientPubkey,
-      senderPrivateKey: ephemeral,
+      senderSecretKey: ephemeral,
     );
 
     // Build gift wrap event (kind=1059). Typically includes ["p", recipient] in tags
@@ -129,7 +129,7 @@ class Nip59 {
     final sealJsonStr = await Nip44.decrypt(
       payload: giftWrap.content,
       senderPublicKey: giftWrap.pubkey,
-      recipientPrivateKey: recipientPrivkey,
+      recipientSecretKey: recipientPrivkey,
     );
 
     // Reconstruct the seal event
@@ -144,7 +144,7 @@ class Nip59 {
     final rumorJsonStr = await Nip44.decrypt(
       payload: seal.content,
       senderPublicKey: seal.pubkey,
-      recipientPrivateKey: recipientPrivkey,
+      recipientSecretKey: recipientPrivkey,
     );
 
     final rumorMap = json.decode(rumorJsonStr) as Map<String, dynamic>;

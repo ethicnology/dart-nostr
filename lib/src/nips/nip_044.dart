@@ -8,7 +8,7 @@ import 'package:nostr/nostr.dart';
 class Nip44 {
   static Future<String> encrypt({
     required String plaintext,
-    required String senderPrivateKey,
+    required String senderSecretKey,
     required String recipientPublicKey,
     List<int>? customNonce,
     List<int>? customConversationKey,
@@ -16,7 +16,7 @@ class Nip44 {
     // Step 1: Compute Shared Secret
     final sharedSecret = customConversationKey ??
         computeSharedSecret(
-          privateKeyHex: senderPrivateKey,
+          secretKeyHex: senderSecretKey,
           publicKeyHex: recipientPublicKey,
         );
 
@@ -48,14 +48,14 @@ class Nip44 {
 
   static Future<String> decrypt({
     required String payload,
-    required String recipientPrivateKey,
+    required String recipientSecretKey,
     required String senderPublicKey,
     List<int>? customConversationKey,
   }) async {
     // Step 1: Compute Shared Secret
     final sharedSecret = customConversationKey ??
         computeSharedSecret(
-          privateKeyHex: recipientPrivateKey,
+          secretKeyHex: recipientSecretKey,
           publicKeyHex: senderPublicKey,
         );
 
@@ -88,13 +88,13 @@ class Nip44 {
   }
 
   static List<int> computeSharedSecret({
-    required String privateKeyHex,
+    required String secretKeyHex,
     required String publicKeyHex,
   }) {
     final ec = getS256();
-    final privateKey = PrivateKey.fromHex(ec, privateKeyHex);
+    final secretKey = PrivateKey.fromHex(ec, secretKeyHex);
     final publicKey = PublicKey.fromHex(ec, checkPublicKey(publicKeyHex));
-    final sec = computeSecret(privateKey, publicKey);
+    final sec = computeSecret(secretKey, publicKey);
     return sec;
   }
 
