@@ -27,4 +27,5 @@ export 'src/nips/nip_044_utils.dart';
 export 'src/nips/nip_051.dart';
 export 'src/nips/nip_059.dart';
 export 'src/request.dart';
+export 'src/schnorr.dart';
 export 'src/utils.dart';

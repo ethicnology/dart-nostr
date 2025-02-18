@@ -1,5 +1,4 @@
 import 'package:bip340/bip340.dart' as bip340;
-import 'package:convert/convert.dart';
 import 'package:nostr/nostr.dart';
 
 /// Keys encapsulates a public key and a secret key, which are used for tasks such as encrypting and decrypting messages, or creating and verifying digital signatures.
@@ -45,32 +44,6 @@ class Keys {
   }
 
   /// Encapsulate dart-bip340 sign() so you don't need to add bip340 as a dependency
-  String sign({required String message}) {
-    final aux = generate64RandomHexChars();
-    if (hex.decode(message).length != 32) {
-      throw Exception(
-          "message must also be 32-bytes (a hash of the actual message)");
-    }
-    return bip340.sign(secret, message, aux);
-  }
-
-  /// Encapsulate dart-bip340 verify() so you don't need to add bip340 as a dependency
-  static bool verify({
-    required String pubkey,
-    required String message,
-    required String signature,
-  }) {
-    if (hex.decode(pubkey).length != 32) {
-      throw Exception(
-          "pubkey must be 32-bytes hex encoded (a hash of the actual message)");
-    }
-    if (hex.decode(message).length != 32) {
-      throw Exception(
-          "message must be 32-bytes hex encoded (a hash of the actual message)");
-    }
-    if (hex.decode(signature).length != 64) {
-      throw Exception("signature must be 64-bytes hex encoded");
-    }
-    return bip340.verify(pubkey, message, signature);
-  }
+  String sign({required String message}) =>
+      Schnorr.sign(secretKey: secret, message: message);
 }
