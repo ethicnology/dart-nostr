@@ -29,3 +29,5 @@ class Nip21 {
     return _prefix + content;
   }
 }
+
+typedef NostrUri = Nip21;

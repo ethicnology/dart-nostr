@@ -239,3 +239,5 @@ class ShareableIdentifiers {
     this.kind,
   });
 }
+
+typedef Bech32Entities = Nip19;

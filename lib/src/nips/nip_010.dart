@@ -114,3 +114,5 @@ class Thread {
   /// Creates a [Thread] with the given [root], [etags], and [ptags].
   Thread(this.root, this.etags, this.ptags);
 }
+
+typedef Threading = Nip10;
