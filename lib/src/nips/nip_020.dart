@@ -24,11 +24,11 @@ class Nip20 {
   /// Default constructor
   Nip20(this.eventId, this.status, this.message);
 
-  /// Serialize to nostr close message
+  /// Serialize to nostr OK message
   /// - ["OK", "event_id", true|false, "message"]
   String serialize() => json.encode(["OK", eventId, status, message]);
 
-  /// Deserialize a nostr close message
+  /// Deserialize a nostr OK message
   /// - ["OK", "event_id", true|false, "message"]
   Nip20.deserialize(String payload) {
     final data = json.decode(payload);
@@ -38,3 +38,5 @@ class Nip20 {
     message = data[3];
   }
 }
+
+typedef CommandResult = Nip20;

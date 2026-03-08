@@ -134,3 +134,5 @@ class Nip23Article {
     return values.isNotEmpty ? values : null;
   }
 }
+
+typedef Article = Nip23;

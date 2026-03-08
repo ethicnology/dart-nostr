@@ -29,3 +29,5 @@ class Nip13 {
     return count;
   }
 }
+
+typedef ProofOfWork = Nip13;
