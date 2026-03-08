@@ -1,29 +1,40 @@
 import 'dart:convert';
 
-/// Indicates "end of stored events"
+import 'package:nostr/src/error.dart';
+
+/// Represents a Nostr EOSE (End Of Stored Events) message.
 ///
-/// this class is mostly for getting subscription id
+/// A relay sends an EOSE message to indicate that all stored events
+/// matching a subscription have been sent. After this message, only
+/// new events will be transmitted for the subscription.
 class Eose {
-  /// default constructor
+  /// Creates an [Eose] message for the given [subscriptionId].
   Eose(this.subscriptionId);
 
-  /// subscription_id is a random string that should be used to represent a subscription.
+  /// The subscription identifier that this EOSE message refers to.
   final String subscriptionId;
 
-  /// Serialize to nostr EOSE message
-  /// - ["EOSE", subscription_id]
+  /// Serializes this EOSE message to the Nostr wire format.
+  ///
+  /// Returns a JSON-encoded string: `["EOSE", subscription_id]`.
   String serialize() {
     return json.encode(["EOSE", subscriptionId]);
   }
 
-  /// Deserialize a nostr EOSE message
-  /// - ["CLOSE", subscription_id]
+  /// Deserializes a Nostr EOSE message from a JSON-encoded [payload].
+  ///
+  /// The expected format is `["EOSE", subscription_id]`.
+  ///
+  /// Throws a [DeserializationException] if the payload is not a list
+  /// or does not contain exactly two elements.
   factory Eose.deserialize(String payload) {
     final data = json.decode(payload);
     if (data is! List<dynamic>) {
-      throw Exception('Invalid type for EOSE message');
+      throw const DeserializationException('Invalid type for EOSE message');
     }
-    if (data.length != 2) throw Exception('Invalid length for EOSE message');
+    if (data.length != 2) {
+      throw const DeserializationException('Invalid length for EOSE message');
+    }
     return Eose(data[1]);
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
+import 'package:nostr/src/error.dart';
 import 'package:nostr/src/utils.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
@@ -17,15 +18,18 @@ import 'package:nostr/src/utils.dart';
 /// - "content": "arbitrary string",
 /// - "sig": "64-bytes signature of the sha256 hash of the serialized event data, which is the same as the 'id' field"
 class Event {
-  /// 32-bytes hex-encoded sha256 of the the serialized event data (hex)
+  /// 32-bytes hex-encoded sha256 of the the serialized event data (hex).
   late String id;
 
-  /// 32-bytes hex-encoded public key of the event creator (hex)
+  /// 32-bytes hex-encoded public key of the event creator (hex).
   late String pubkey;
 
-  /// unix timestamp in seconds
+  /// Unix timestamp in seconds indicating when the event was created.
   late int createdAt;
 
+  /// The event kind, which determines how the event content and tags
+  /// should be interpreted.
+  ///
   /// -  0: set_metadata: the content is set to a stringified JSON object {name: username, about: string, picture: url} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
   /// -  1: text_note: the content is set to the text content of a note (anything the user wants to say). Non-plaintext notes should instead use kind 1000-10000 as described in NIP-16.
   /// -  2: recommend_server: the content is set to the URL (e.g., wss://somerelay.com) of a relay the event creator wants to recommend to its followers.
@@ -33,21 +37,24 @@ class Event {
 
   /// The tags array can store a tag identifier as the first element of each subarray, plus arbitrary information afterward (always as strings).
   ///
-  /// This NIP defines "p" — meaning "pubkey", which points to a pubkey of someone that is referred to in the event —, and "e" — meaning "event", which points to the id of an event this event is quoting, replying to or referring to somehow.
+  /// This NIP defines "p" -- meaning "pubkey", which points to a pubkey of someone that is referred to in the event --, and "e" -- meaning "event", which points to the id of an event this event is quoting, replying to or referring to somehow.
   late List<List<String>> tags;
 
-  /// arbitrary string
+  /// Arbitrary string content of the event.
   String content = "";
 
-  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
+  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field.
   late String sig;
 
-  /// subscription_id is a random string that should be used to represent a subscription.
+  /// Optional subscription identifier, present when the event was received
+  /// as part of a subscription response.
   String? subscriptionId;
 
-  /// Default constructor
+  /// Default constructor.
   ///
-  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  /// If [verify] is `true` (the default), the event is validated after
+  /// construction and an [EventValidationException] is thrown when it is
+  /// invalid.
   ///
   ///```dart
   /// String id =
@@ -85,12 +92,14 @@ class Event {
     bool verify = true,
   }) {
     pubkey = pubkey.toLowerCase();
-    if (verify && isValid() == false) throw Exception('Invalid event');
+    if (verify && isValid() == false) {
+      throw const EventValidationException('Invalid event');
+    }
   }
 
-  /// Partial constructor, you have to fill the fields yourself
+  /// Partial constructor, you have to fill the fields yourself.
   ///
-  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  /// By default [verify] is `false`, so no validation is performed.
   ///
   /// ```dart
   /// var partialEvent = Event.partial();
@@ -128,7 +137,10 @@ class Event {
     );
   }
 
-  /// Instantiate Event object from the minimum needed data
+  /// Instantiate an [Event] from the minimum needed data.
+  ///
+  /// The [id] and [sig] are computed automatically from the provided
+  /// [secretKey].
   ///
   /// ```dart
   ///Event event = Event.from(
@@ -168,13 +180,13 @@ class Event {
     );
   }
 
-  /// Deserialize an event from a JSON
+  /// Deserializes an event from a JSON map.
   ///
-  /// `verify`: ensure the signature is valid, `true` by default.
+  /// If [verify] is `true` (the default), the signature is validated.
+  /// Setting [verify] to `false` skips validation for faster deserialization.
   ///
-  /// `verify` to `false` deserialize faster.
-  ///
-  /// Throws an [Exception] if any required field is missing.
+  /// Throws a [DeserializationException] if any required field is missing
+  /// or has the wrong type.
   factory Event.fromMap(Map<String, dynamic> map, {bool verify = true}) {
     final id = getRequiredField<String>(map, 'id');
     final sig = getRequiredField<String>(map, 'sig');
@@ -190,7 +202,7 @@ class Event {
           .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
           .toList();
     } catch (e) {
-      throw Exception("Invalid 'tags' format: $e");
+      throw DeserializationException("Invalid 'tags' format: $e");
     }
 
     return Event(
@@ -205,10 +217,13 @@ class Event {
     );
   }
 
+  /// Deserializes an event from a JSON string.
+  ///
+  /// If [verify] is `true` (the default), the signature is validated.
   factory Event.fromJson(String payload, {bool verify = true}) =>
       Event.fromMap(json.decode(payload), verify: verify);
 
-  /// Serialize an event as map
+  /// Serializes this event to a [Map].
   Map<String, dynamic> toMap() => {
         'id': id,
         'pubkey': pubkey,
@@ -219,11 +234,14 @@ class Event {
         'sig': sig
       };
 
+  /// Serializes this event to a JSON string.
   String toJson() => json.encode(toMap());
 
-  /// Serialize to nostr event message
-  /// - ["EVENT", event JSON as defined above]
-  /// - ["EVENT", subscription_id, event JSON as defined above]
+  /// Serializes to a Nostr event message for the wire.
+  ///
+  /// Returns one of:
+  /// - `["EVENT", event JSON]`
+  /// - `["EVENT", subscription_id, event JSON]`
   String serialize() {
     return json.encode([
       "EVENT",
@@ -232,9 +250,13 @@ class Event {
     ]);
   }
 
-  /// Deserialize a nostr event message
-  /// - ["EVENT", event JSON as defined above]
-  /// - ["EVENT", subscription_id, event JSON as defined above]
+  /// Deserializes a Nostr event message from a JSON-encoded [input].
+  ///
+  /// Accepts both relay-style `["EVENT", subscription_id, {event}]` and
+  /// client-style `["EVENT", {event}]` formats.
+  ///
+  /// Throws a [DeserializationException] if the payload structure is invalid.
+  ///
   /// ```dart
   /// Event event = Event.deserialize([
   ///   "EVENT",
@@ -262,7 +284,7 @@ class Event {
       event = data[2] as Map<String, dynamic>;
       subscriptionId = data[1] as String;
     } else {
-      throw Exception('invalid payload');
+      throw const DeserializationException('invalid payload');
     }
 
     final List<List<String>> tags = (event['tags'] as List<dynamic>)
@@ -282,17 +304,15 @@ class Event {
     );
   }
 
-  /// To obtain the event.id, we sha256 the serialized event.
-  /// The serialization is done over the UTF-8 JSON-serialized string (with no white space or line breaks) of the following structure:
+  /// Computes and returns the event id by SHA-256 hashing the serialized
+  /// event data.
   ///
-  ///[
-  ///  0,
-  ///  `pubkey`, as a (lowercase) hex string,
-  ///  `created_at`, as a number,
-  ///  `kind`, as a number,
-  ///  `tags`, as an array of arrays of non-null strings,
-  ///  `content`, as a strin>
-  ///]
+  /// The serialization is done over the UTF-8 JSON-serialized string (with
+  /// no white space or line breaks) of the following structure:
+  ///
+  /// ```json
+  /// [0, pubkey, created_at, kind, tags, content]
+  /// ```
   String getEventId() {
     // Included for minimum breaking changes
     return _processEventId(
@@ -318,8 +338,9 @@ class Event {
     return hex.encode(hash);
   }
 
-  /// Each user has a keypair. Signatures, public key, and encodings are done according to the Schnorr signatures standard for the curve secp256k1
-  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
+  /// Signs [id] with [secretKey] using Schnorr signatures (BIP-340).
+  ///
+  /// Returns a 64-byte hex-encoded signature.
   String getSignature(String secretKey) => _processSignature(secretKey, id);
 
   // Support for [getSignature]
@@ -330,8 +351,12 @@ class Event {
     return bip340.sign(secretKey, id, aux);
   }
 
-  /// Verify if event checks such as id, signature, non-futuristic are valid
-  /// Performances could be a reason to disable event checks
+  /// Verifies that this event is valid.
+  ///
+  /// Checks that:
+  /// - The [createdAt] timestamp has a 10-digit length (seconds).
+  /// - The [id] matches the recomputed event id.
+  /// - The [sig] is a valid Schnorr signature over [id] for [pubkey].
   bool isValid() {
     final String verifyId = getEventId();
     if (createdAt.toString().length == 10 &&

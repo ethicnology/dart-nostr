@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
+import 'package:nostr/src/error.dart';
 import 'package:pointycastle/export.dart';
 
 /// Generates [bytes] random bytes and returns them as a hex string.
@@ -21,17 +22,37 @@ List<int> generateRandomBytes(int quantity) {
   return List<int>.generate(quantity, (i) => random.nextInt(256));
 }
 
+/// Returns the value of [field] from [map], or throws a
+/// [DeserializationException] if the field is missing, null, or the
+/// wrong type.
 T getRequiredField<T>(Map<String, dynamic> map, String field) {
   if (!map.containsKey(field) || map[field] == null) {
-    throw Exception("Missing required field '$field'.");
+    throw DeserializationException("Missing required field '$field'.");
   }
   if (map[field] is! T) {
-    throw Exception("Field '$field' should be of type $T.");
+    throw DeserializationException("Field '$field' should be of type $T.");
   }
   return map[field] as T;
 }
 
+/// Computes the SHA-256 hash of [bytes].
 List<int> sha256(List<int> bytes) {
   final hash = SHA256Digest().process(Uint8List.fromList(bytes));
   return hash;
+}
+
+/// Finds the first value for a tag with the given [name].
+String? findTagValue(List<List<String>> tags, String name) {
+  for (final tag in tags) {
+    if (tag.isNotEmpty && tag[0] == name && tag.length > 1) return tag[1];
+  }
+  return null;
+}
+
+/// Finds all values for tags with the given [name].
+List<String> findAllTagValues(List<List<String>> tags, String name) {
+  return tags
+    .where((t) => t.isNotEmpty && t[0] == name && t.length > 1)
+    .map((t) => t[1])
+    .toList();
 }

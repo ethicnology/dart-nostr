@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:nostr/nostr.dart';
 
+/// Gift wrap — [NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md)
+///
 /// NIP-59 "Gift Wrap" using the two-layer approach:
 ///   Rumor (unsigned) -> Seal (kind=13) -> GiftWrap (kind=1059).
 ///
@@ -14,22 +16,18 @@ import 'package:nostr/nostr.dart';
 class Nip59 {
   /// Create a full "gift wrap" (kind=1059) that hides an underlying rumor.
   ///
-  /// `rumor`         A Nostr event without a signature. If it has .sig or .id,
-  ///                 we will forcibly remove them to preserve "unsigned rumor."
-  ///
-  /// `authorSecretKey` The real author's secret key (hex-encoded, 32 bytes).
-  ///
-  /// `recipientPubkey` The final recipient's pubkey (hex-encoded, 32 bytes).
-  ///
-  /// `ephemeralSecretKey` Optionally specify the ephemeral key used for the gift wrap.
-  ///                    If null, it is randomly generated.
-  ///
-  /// `createdAt`     Optionally override 'created_at' for the final gift wrap.
-  ///                 Timestamps can be randomized to defeat time analysis.
-  ///
-  /// `extraTags`     Additional tags to store inside the final gift wrap (e.g. expiration).
+  /// [rumor] is a Nostr event without a signature. If it has .sig or .id,
+  ///   they will be forcibly removed to preserve "unsigned rumor."
+  /// [authorSecretKey] is the real author's secret key (hex-encoded, 32 bytes).
+  /// [recipientPubkey] is the final recipient's pubkey (hex-encoded, 32 bytes).
+  /// [ephemeralSecretKey] optionally specifies the ephemeral key used for the gift wrap.
+  ///   If null, it is randomly generated.
+  /// [createdAt] optionally overrides 'created_at' for the final gift wrap.
+  ///   Timestamps can be randomized to defeat time analysis.
+  /// [extraTags] are additional tags to store inside the final gift wrap (e.g. expiration).
   ///
   /// Returns a `kind=1059` event that you broadcast. The seal is inside the `content`.
+  /// Throws [CryptoException] if the rumor pubkey does not match the author.
   static Future<Event> wrap({
     required Event rumor,
     required String authorSecretKey,
@@ -41,7 +39,7 @@ class Nip59 {
     final authorPubkey = Keys(authorSecretKey).public;
 
     if (rumor.pubkey != authorPubkey) {
-      throw Exception(
+      throw const CryptoException(
         "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
       );
     }
@@ -112,16 +110,18 @@ class Nip59 {
   /// Unwrap a gift-wrapped event (`kind=1059`) to recover the sealed rumor (`kind=13`),
   /// then decrypt that seal to get the underlying rumor.
   ///
-  /// `giftWrap` must be a `kind=1059` event posted by ephemeral key.
-  /// `recipientSecretKey` is the real recipient's secret key.
+  /// [giftWrap] must be a `kind=1059` event posted by ephemeral key.
+  /// [recipientSecretKey] is the real recipient's secret key.
   ///
   /// Returns the final "rumor" (an **unsigned** event), which you can parse or show.
+  /// Throws [CryptoException] if the event is not a gift wrap, not a seal,
+  /// the pubkeys do not match, or the rumor is signed.
   static Future<Event> unwrap({
     required Event giftWrap,
     required String recipientSecretKey,
   }) async {
     if (giftWrap.kind != 1059) {
-      throw Exception('Not a gift wrap event (expected kind=1059)');
+      throw const CryptoException('Not a gift wrap event (expected kind=1059)');
     }
 
     // Decrypt the gift wrap to recover the "seal" (kind=13)
@@ -136,7 +136,7 @@ class Nip59 {
     final seal = Event.fromJson(sealJsonStr);
 
     if (seal.kind != 13) {
-      throw Exception('Unwrapped content is not a seal (expected kind=13)');
+      throw const CryptoException('Unwrapped content is not a seal (expected kind=13)');
     }
 
     // Decrypt the seal to recover the rumor
@@ -166,14 +166,14 @@ class Nip59 {
     );
 
     if (seal.pubkey != rumor.pubkey) {
-      throw Exception(
+      throw const CryptoException(
         "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
       );
     }
 
     if (rumor.sig.isNotEmpty) {
       // If it is signed, the message might leak to relays and become fully public.
-      throw Exception('Rumor should be unsigned');
+      throw const CryptoException('Rumor should be unsigned');
     }
 
     // The rumor is intentionally unsigned per NIP-59. It can be any kind of event, but .sig is empty. Return it:

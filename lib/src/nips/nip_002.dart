@@ -1,18 +1,20 @@
 import 'package:nostr/nostr.dart';
 
-/// Follow List and Petnames (NIP-02)
+/// Follow list and petnames — [NIP-02](https://github.com/nostr-protocol/nips/blob/master/02.md)
 ///
 /// A kind 3 event with a list of p tags representing the followed profiles.
 class Nip2 {
-  /// Returns the profiles from a follow list event (kind=3)
+  /// Returns the profiles from a follow list event (kind=3).
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 3.
   static List<Profile> decode(Event event) {
     if (event.kind == 3) {
       return toProfiles(event.tags);
     }
-    throw Exception("${event.kind} is not nip2 compatible");
+    throw InvalidKindException(event.kind, [3]);
   }
 
-  /// Returns profiles from event.tags
+  /// Returns profiles from event.tags.
   static List<Profile> toProfiles(List<List<String>> tags) {
     final List<Profile> result = [];
     for (final tag in tags) {
@@ -21,7 +23,7 @@ class Nip2 {
     return result;
   }
 
-  /// Returns tags from profiles list
+  /// Returns tags from profiles list.
   static List<List<String>> toTags(List<Profile> profiles) {
     final List<List<String>> result = [];
     for (final profile in profiles) {
@@ -35,15 +37,16 @@ class Nip2 {
 ///
 /// Tag format: ["p", "32-bytes hex key", "relay URL", "petname"]
 class Profile {
-  /// 32-bytes hex-encoded public key of the profile
+  /// 32-bytes hex-encoded public key of the profile.
   String pubkey;
 
-  /// A relay URL where events from that key can be found (can be empty)
+  /// A relay URL where events from that key can be found (can be empty).
   String relay;
 
-  /// A local name ("petname") for that profile (can be empty)
+  /// A local name ("petname") for that profile (can be empty).
   String petname;
 
+  /// Creates a [Profile] with the given [pubkey], [relay], and [petname].
   Profile(this.pubkey, this.relay, this.petname);
 }
 

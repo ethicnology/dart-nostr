@@ -6,6 +6,7 @@ library;
 
 export 'src/close.dart';
 export 'src/eose.dart';
+export 'src/error.dart';
 export 'src/event.dart';
 export 'src/filter.dart';
 export 'src/keys.dart';

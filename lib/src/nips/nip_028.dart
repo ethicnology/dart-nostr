@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:nostr/nostr.dart';
 
-/// Public Chat & Channel (NIP-28)
+/// Public chat channels — [NIP-28](https://github.com/nostr-protocol/nips/blob/master/28.md)
 class Nip28 {
+  /// Decodes a kind-40 event into a [Channel].
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 40.
   static Channel getChannelCreation(Event event) {
     if (event.kind != 40) {
-      throw Exception("kind ${event.kind} is not nip28 compatible (expected 40)");
+      throw InvalidKindException(event.kind, [40]);
     }
     final Map content = json.decode(event.content);
     final Map<String, String> additional = Map.from(content);
@@ -16,9 +19,13 @@ class Nip28 {
         event.id, name, about, picture, event.pubkey, additional);
   }
 
+  /// Decodes a kind-41 event into a [Channel] with updated metadata.
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 41.
+  /// Throws [MissingTagException] if the `e` tag (channel reference) is absent.
   static Channel getChannelMetadata(Event event) {
     if (event.kind != 41) {
-      throw Exception("kind ${event.kind} is not nip28 compatible (expected 41)");
+      throw InvalidKindException(event.kind, [41]);
     }
     final Map content = json.decode(event.content);
     final Map<String, String> additional = Map.from(content);
@@ -34,7 +41,7 @@ class Nip28 {
       }
     }
     if (channelId == null) {
-      throw Exception("Missing channel reference (e tag) in kind 41 event");
+      throw MissingTagException('e');
     }
     final Channel result = Channel(
         channelId, name, about, picture, event.pubkey, additional);
@@ -42,18 +49,25 @@ class Nip28 {
     return result;
   }
 
+  /// Decodes a kind-42 event into a [ChannelMessage].
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 42.
   static ChannelMessage getChannelMessage(Event event) {
     if (event.kind != 42) {
-      throw Exception("kind ${event.kind} is not nip28 compatible (expected 42)");
+      throw InvalidKindException(event.kind, [42]);
     }
     final Thread thread = Nip10.fromTags(event.tags);
     return ChannelMessage(
         thread.root.eventId, event.pubkey, event.content, thread, event.createdAt);
   }
 
+  /// Decodes a kind-43 event into a [ChannelMessageHidden].
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 43.
+  /// Throws [MissingTagException] if the `e` tag (message reference) is absent.
   static ChannelMessageHidden getMessageHidden(Event event) {
     if (event.kind != 43) {
-      throw Exception("kind ${event.kind} is not nip28 compatible (expected 43)");
+      throw InvalidKindException(event.kind, [43]);
     }
     String? messageId;
     for (final tag in event.tags) {
@@ -63,7 +77,7 @@ class Nip28 {
       }
     }
     if (messageId == null) {
-      throw Exception("Missing message reference (e tag) in kind 43 event");
+      throw MissingTagException('e');
     }
     final Map content = json.decode(event.content);
     final String reason = content['reason'] ?? '';
@@ -71,9 +85,13 @@ class Nip28 {
         event.pubkey, messageId, reason, event.createdAt);
   }
 
+  /// Decodes a kind-44 event into a [ChannelUserMuted].
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 44.
+  /// Throws [MissingTagException] if the `p` tag (user reference) is absent.
   static ChannelUserMuted getUserMuted(Event event) {
     if (event.kind != 44) {
-      throw Exception("kind ${event.kind} is not nip28 compatible (expected 44)");
+      throw InvalidKindException(event.kind, [44]);
     }
     String? userPubkey;
     for (final tag in event.tags) {
@@ -83,7 +101,7 @@ class Nip28 {
       }
     }
     if (userPubkey == null) {
-      throw Exception("Missing user reference (p tag) in kind 44 event");
+      throw MissingTagException('p');
     }
     final Map content = json.decode(event.content);
     final String reason = content['reason'] ?? '';
@@ -91,8 +109,20 @@ class Nip28 {
         event.pubkey, userPubkey, reason, event.createdAt);
   }
 
-  static Event createChannel(String name, String about, String picture,
-      Map<String, String> additional, String secretKey) {
+  /// Creates a kind-40 channel creation event.
+  ///
+  /// [name] is the channel name.
+  /// [about] is the channel description.
+  /// [picture] is the channel picture URL.
+  /// [additional] is a map of extra metadata fields.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  static Event createChannel({
+    required String name,
+    required String about,
+    required String picture,
+    required Map<String, String> additional,
+    required String secretKey,
+  }) {
     final Map<String, dynamic> map = {
       'name': name,
       'about': about,
@@ -107,14 +137,24 @@ class Nip28 {
     );
   }
 
-  static Event setChannelMetaData(
-      String name,
-      String about,
-      String picture,
-      Map<String, String> additional,
-      String channelId,
-      String relayURL,
-      String secretKey) {
+  /// Creates a kind-41 channel metadata update event.
+  ///
+  /// [name] is the channel name.
+  /// [about] is the channel description.
+  /// [picture] is the channel picture URL.
+  /// [additional] is a map of extra metadata fields.
+  /// [channelId] is the event ID of the kind-40 channel creation event.
+  /// [relayURL] is the relay URL where the channel was created.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  static Event setChannelMetaData({
+    required String name,
+    required String about,
+    required String picture,
+    required Map<String, String> additional,
+    required String channelId,
+    required String relayURL,
+    required String secretKey,
+  }) {
     final Map<String, dynamic> map = {
       'name': name,
       'about': about,
@@ -131,10 +171,18 @@ class Nip28 {
     );
   }
 
-  static Event sendChannelMessage(
-    String channelId,
-    String content,
-    String secretKey, {
+  /// Creates a kind-42 channel message event.
+  ///
+  /// [channelId] is the event ID of the kind-40 channel creation event.
+  /// [content] is the message text.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [relay] is an optional relay URL for the root tag.
+  /// [etags] is an optional list of event tags for threading.
+  /// [ptags] is an optional list of pubkey tags for mentions.
+  static Event sendChannelMessage({
+    required String channelId,
+    required String content,
+    required String secretKey,
     String? relay,
     List<ETag>? etags,
     List<PTag>? ptags,
@@ -149,11 +197,16 @@ class Nip28 {
     );
   }
 
-  static Event hideChannelMessage(
-    String messageId,
-    String reason,
-    String secretKey,
-  ) {
+  /// Creates a kind-43 hide channel message event.
+  ///
+  /// [messageId] is the event ID of the message to hide.
+  /// [reason] is the human-readable reason for hiding.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  static Event hideChannelMessage({
+    required String messageId,
+    required String reason,
+    required String secretKey,
+  }) {
     return Event.from(
       kind: 43,
       tags: [
@@ -164,7 +217,16 @@ class Nip28 {
     );
   }
 
-  static Event muteUser(String pubkey, String reason, String secretKey) {
+  /// Creates a kind-44 mute user event.
+  ///
+  /// [pubkey] is the public key of the user to mute.
+  /// [reason] is the human-readable reason for muting.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  static Event muteUser({
+    required String pubkey,
+    required String reason,
+    required String secretKey,
+  }) {
     return Event.from(
         kind: 44,
         tags: [
@@ -175,73 +237,90 @@ class Nip28 {
   }
 }
 
-/// Channel info
+/// Channel info for a NIP-28 public chat channel.
 class Channel {
+  /// The event ID of the channel creation event (kind 40).
   String channelId;
+
+  /// The channel name.
   String name;
+
+  /// The channel description.
   String about;
+
+  /// The channel picture URL.
   String picture;
+
+  /// The public key of the channel creator.
   String owner;
+
+  /// The relay URL where the channel was created (set by metadata events).
   String? relay;
+
+  /// Extra metadata fields beyond name, about, and picture.
   Map<String, String> additional;
 
+  /// Creates a [Channel] with the given fields.
   Channel(this.channelId, this.name, this.about, this.picture, this.owner,
       this.additional);
 }
 
-/// A message in a channel (kind 42)
+/// A message in a channel (kind 42).
 class ChannelMessage {
-  /// The channel this message belongs to (root e tag)
+  /// The channel this message belongs to (root e tag).
   String channelId;
 
-  /// The message author's public key
+  /// The message author's public key.
   String pubkey;
 
-  /// The message text
+  /// The message text.
   String content;
 
-  /// Thread references (root, replies, mentions)
+  /// Thread references (root, replies, mentions).
   Thread thread;
 
-  /// Unix timestamp in seconds
+  /// Unix timestamp in seconds.
   int createdAt;
 
+  /// Creates a [ChannelMessage] with the given fields.
   ChannelMessage(
       this.channelId, this.pubkey, this.content, this.thread, this.createdAt);
 }
 
-/// A hidden channel message (kind 43)
+/// A hidden channel message (kind 43).
 class ChannelMessageHidden {
-  /// The user who requested the hide
+  /// The user who requested the hide.
   String pubkey;
 
-  /// The hidden message's event ID (from e tag)
+  /// The hidden message's event ID (from e tag).
   String messageId;
 
-  /// The reason for hiding
+  /// The reason for hiding.
   String reason;
 
-  /// Unix timestamp in seconds
+  /// Unix timestamp in seconds.
   int createdAt;
 
+  /// Creates a [ChannelMessageHidden] with the given fields.
   ChannelMessageHidden(
       this.pubkey, this.messageId, this.reason, this.createdAt);
 }
 
-/// A muted user in a channel (kind 44)
+/// A muted user in a channel (kind 44).
 class ChannelUserMuted {
-  /// The user who requested the mute
+  /// The user who requested the mute.
   String pubkey;
 
-  /// The muted user's public key (from p tag)
+  /// The muted user's public key (from p tag).
   String userPubkey;
 
-  /// The reason for muting
+  /// The reason for muting.
   String reason;
 
-  /// Unix timestamp in seconds
+  /// Unix timestamp in seconds.
   int createdAt;
 
+  /// Creates a [ChannelUserMuted] with the given fields.
   ChannelUserMuted(
       this.pubkey, this.userPubkey, this.reason, this.createdAt);
 }

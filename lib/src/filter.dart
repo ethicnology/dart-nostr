@@ -1,36 +1,40 @@
-/// A filter is a JSON object that determines what events will be sent in a subscription.
+/// A filter determines what events will be sent in a Nostr subscription.
+///
+/// Filters are JSON objects sent as part of a REQ message. The relay
+/// returns stored events that match the filter, followed by new events
+/// as they arrive.
 class Filter {
-  /// a list of event ids or prefixes
+  /// A list of event ids or prefixes to match.
   List<String>? ids;
 
-  /// a list of pubkeys or prefixes, the pubkey of an event must be one of these
+  /// A list of pubkeys or prefixes; the pubkey of an event must be one of these.
   List<String>? authors;
 
-  /// a list of a kind numbers
+  /// A list of event kind numbers to match.
   List<int>? kinds;
 
-  /// a list of event ids that are referenced in an "e" tag
+  /// A list of event ids that are referenced in an "e" tag.
   List<String>? eTags;
 
-  /// a list of event ids that are referenced in an "a" tag
+  /// A list of event ids that are referenced in an "a" tag.
   List<String>? aTags;
 
-  /// a list of pubkeys that are referenced in a "p" tag
+  /// A list of pubkeys that are referenced in a "p" tag.
   List<String>? pTags;
 
-  /// a timestamp, events must be newer than this to pass
+  /// A unix timestamp; events must be newer than this to pass.
   int? since;
 
-  /// a timestamp, events must be older than this to pass
+  /// A unix timestamp; events must be older than this to pass.
   int? until;
 
-  /// maximum number of events to be returned in the initial query
+  /// Maximum number of events to be returned in the initial query.
   int? limit;
 
-  /// nip-50 search term
+  /// NIP-50 full-text search term.
   String? search;
 
-  /// Default constructor
+  /// Creates a [Filter] with the given optional constraints.
   Filter({
     this.ids,
     this.authors,
@@ -44,7 +48,7 @@ class Filter {
     this.search,
   });
 
-  /// Deserialize a filter from a JSON
+  /// Deserializes a [Filter] from a JSON map.
   Filter.fromJson(Map<String, dynamic> json) {
     ids = json['ids'] == null ? null : List<String>.from(json['ids']);
     authors =
@@ -59,7 +63,7 @@ class Filter {
     search = json['search'];
   }
 
-  /// Serialize a filter to JSON
+  /// Serializes this filter to a JSON-compatible map.
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     if (ids != null) data['ids'] = ids;

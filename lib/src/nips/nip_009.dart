@@ -1,6 +1,6 @@
 import 'package:nostr/nostr.dart';
 
-/// Event Deletion Request (NIP-09)
+/// Event deletion requests — [NIP-09](https://github.com/nostr-protocol/nips/blob/master/09.md)
 ///
 /// A kind 5 event requesting deletion of previously published events.
 /// Tags may reference events by ID ("e"), addressable events ("a"),
@@ -87,9 +87,11 @@ class Nip9 {
   }
 
   /// Decodes a kind-5 event into a [DeletionRequest].
+  ///
+  /// Throws [InvalidKindException] if the event kind is not 5.
   static DeletionRequest decode(Event event) {
     if (event.kind == 5) return toDeleteEvent(event);
-    throw Exception("${event.kind} is not nip9 compatible");
+    throw InvalidKindException(event.kind, [5]);
   }
 }
 
@@ -110,6 +112,7 @@ class DeletionRequest {
   /// Unix timestamp of the deletion request.
   int createdAt;
 
+  /// Creates a [DeletionRequest] with the given fields.
   DeletionRequest(
     this.pubkey,
     this.eventIds,

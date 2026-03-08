@@ -2,6 +2,12 @@ import 'package:bech32/bech32.dart';
 import 'package:convert/convert.dart';
 import 'package:nostr/nostr.dart';
 
+/// Encodes hex data into a bech32 string with the given [prefix].
+///
+/// [hexData] is the hex-encoded data to encode.
+/// [length] is an optional maximum length for the bech32 output.
+///
+/// Returns the bech32-encoded string.
 String bech32Encode(Nip19Prefix prefix, String hexData, {int? length}) {
   final data = hex.decode(hexData);
   final convertedData = _convertBits(data, 8, 5, true);
@@ -12,6 +18,13 @@ String bech32Encode(Nip19Prefix prefix, String hexData, {int? length}) {
   return bech32.encode(bech32Data);
 }
 
+/// Decodes a bech32 string into its prefix and hex data.
+///
+/// [bech32Data] is the bech32-encoded string to decode.
+/// [length] is an optional maximum length for decoding.
+///
+/// Returns a record with the [Nip19Prefix] and hex-encoded data.
+/// Throws [DeserializationException] if the data contains invalid values.
 ({Nip19Prefix prefix, String data}) bech32Decode(
   String bech32Data, {
   int? length,
@@ -32,7 +45,7 @@ List<int> _convertBits(List<int> data, int fromBits, int toBits, bool pad) {
 
   for (final value in data) {
     if (value < 0 || value >> fromBits != 0) {
-      throw Exception('Invalid value: $value');
+      throw DeserializationException('Invalid value: $value');
     }
     acc = (acc << fromBits) | value;
     bits += fromBits;
@@ -48,7 +61,7 @@ List<int> _convertBits(List<int> data, int fromBits, int toBits, bool pad) {
       result.add((acc << (toBits - bits)) & maxv);
     }
   } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv) != 0) {
-    throw Exception('Invalid data');
+    throw const DeserializationException('Invalid data');
   }
 
   return result;

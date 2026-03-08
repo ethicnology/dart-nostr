@@ -1,6 +1,6 @@
 import 'dart:math';
 
-/// Proof of Work (NIP-13)
+/// Proof of work — [NIP-13](https://github.com/nostr-protocol/nips/blob/master/13.md)
 ///
 /// NIP-13 introduces Proof of Work (PoW) for nostr notes to deter spam. PoW is validated by counting the number of leading zero bits in a note's ID (difficulty).
 ///

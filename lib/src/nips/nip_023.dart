@@ -1,5 +1,7 @@
 import 'package:nostr/nostr.dart';
 
+/// Long-form content — [NIP-23](https://github.com/nostr-protocol/nips/blob/master/23.md)
+///
 /// A utility class to handle Nostr long-form content a.k.a. Articles according to NIP-23.
 /// Provides decoding, and validation functionalities for Nostr articles.
 ///
@@ -8,52 +10,58 @@ import 'package:nostr/nostr.dart';
 /// var article = Nip23.decode(event);
 /// ```
 class Nip23 {
+  /// Event kind for a published article.
   static const int kindArticle = 30023;
+
+  /// Event kind for a draft article.
   static const int kindDraft = 30024;
 
   /// Returns a [Nip23Article] instance representing the decoded event.
   ///
-  /// Throws an [Exception] if the event is not a valid NIP-23 kind.
+  /// Throws [InvalidKindException] if the event is not a valid NIP-23 kind.
   static Nip23Article decode(Event event) => Nip23Article.fromEvent(event);
 }
 
 /// Represents a Nostr long-form content event according to NIP-23.
+///
 /// Provides a structured way to handle article events instead of using raw Maps.
 class Nip23Article {
-  ///  The article's content in Markdown format.
+  /// The article's content in Markdown format.
   final String content;
 
-  ///  The public key of the author.
+  /// The public key of the author.
   final String pubkey;
 
-  ///  Unix timestamp of the event creation.
+  /// Unix timestamp of the event creation.
   final int createdAt;
 
-  ///  A unique identifier for the article a.k.a `d` tag.
+  /// A unique identifier for the article a.k.a `d` tag.
   final String articleId;
 
-  ///  (Optional) The title of the article.
+  /// The title of the article (optional).
   final String? title;
 
-  ///  (Optional) URL of an image associated with the article.
+  /// URL of an image associated with the article (optional).
   final String? image;
 
-  ///  (Optional) A short summary of the article.
+  /// A short summary of the article (optional).
   final String? summary;
 
-  ///  (Optional) Unix timestamp of the first publication.
+  /// Unix timestamp of the first publication (optional).
   final int? publishedAt;
 
-  ///  (Optional) List of topics (hashtags).
+  /// List of topics (hashtags) (optional).
   final List<String>? topics;
 
-  ///  (Optional) Extra tags for metadata.
+  /// Extra tags for metadata (optional).
   final List<List<String>>? additionalTags;
 
-  ///  should be either [Nip23.kindArticle] or [Nip23.kindDraft].
+  /// The event kind, should be either [Nip23.kindArticle] or [Nip23.kindDraft].
   final int kind;
 
   /// Constructs a [Nip23Article].
+  ///
+  /// Throws [InvalidKindException] if [kind] is not [Nip23.kindArticle] or [Nip23.kindDraft].
   Nip23Article({
     required this.content,
     required this.pubkey,
@@ -68,21 +76,22 @@ class Nip23Article {
     this.kind = Nip23.kindArticle,
   }) {
     if (kind != Nip23.kindArticle && kind != Nip23.kindDraft) {
-      throw Exception('Invalid kind for Nip23Article');
+      throw InvalidKindException(kind, [Nip23.kindArticle, Nip23.kindDraft]);
     }
   }
 
   /// Factory constructor to create a [Nip23Article] from an [Event] instance.
   ///
-  /// Throws an [Exception] if any required field is missing or invalid.
+  /// Throws [InvalidKindException] if the event kind is not valid for NIP-23.
+  /// Throws [MissingTagException] if the required `d` tag is absent.
   factory Nip23Article.fromEvent(Event event) {
     if (event.kind != Nip23.kindArticle && event.kind != Nip23.kindDraft) {
-      throw Exception('Invalid NIP-23 kind: ${event.kind}.');
+      throw InvalidKindException(event.kind, [Nip23.kindArticle, Nip23.kindDraft]);
     }
 
     final articleId = _getTagValue(event.tags, 'd');
     if (articleId == null) {
-      throw Exception('Missing required tag: d (articleId).');
+      throw MissingTagException('d');
     }
 
     final title = _getTagValue(event.tags, 'title');

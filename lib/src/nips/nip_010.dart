@@ -1,7 +1,11 @@
+/// Text note threading — [NIP-10](https://github.com/nostr-protocol/nips/blob/master/10.md)
+///
 /// This NIP describes how to use "e" and "p" tags in text events,
 /// especially those that are replies to other text events.
 /// It helps clients thread the replies into a tree rooted at the original event.
 class Nip10 {
+  /// Parses `e` and `p` tags from an event into a [Thread].
+  ///
   ///{
   ///     "tags": [
   ///         ["e", <kind_40_event_id>, <relay-url>, "root"],
@@ -33,10 +37,14 @@ class Nip10 {
     return Thread(root, etags, ptags);
   }
 
+  /// Creates an [ETag] with the `reply` marker.
   static ETag replyTag(String eventId, String relay) {
     return ETag(eventId, relay, 'reply');
   }
 
+  /// Builds a list of [PTag]s from parallel lists of pubkeys and relays.
+  ///
+  /// If [relays] is shorter than [pubkeys], missing entries default to `''`.
   static List<PTag> pTags(List<String> pubkeys, List<String> relays) {
     final List<PTag> result = [];
     for (int i = 0; i < pubkeys.length; ++i) {
@@ -45,10 +53,12 @@ class Nip10 {
     return result;
   }
 
+  /// Creates an [ETag] with the `root` marker.
   static ETag rootTag(String eventId, String relay) {
     return ETag(eventId, relay, 'root');
   }
 
+  /// Converts a [Thread] back into a list of `e` and `p` tag arrays.
   static List<List<String>> toTags(Thread thread) {
     final List<List<String>> result = [];
     result.add(
@@ -63,24 +73,44 @@ class Nip10 {
   }
 }
 
+/// An `e` (event) tag with optional relay URL and marker.
 class ETag {
+  /// The referenced event ID.
   String eventId;
+
+  /// The relay URL where the event can be found.
   String relayURL;
+
+  /// The marker indicating the role: `root`, `reply`, or `mention`.
   String marker; // root, reply, mention
 
+  /// Creates an [ETag] with the given [eventId], [relayURL], and [marker].
   ETag(this.eventId, this.relayURL, this.marker);
 }
 
+/// A `p` (pubkey) tag with optional relay URL.
 class PTag {
+  /// The referenced public key.
   String pubkey;
+
+  /// The relay URL where events from this pubkey can be found.
   String relayURL;
 
+  /// Creates a [PTag] with the given [pubkey] and [relayURL].
   PTag(this.pubkey, this.relayURL);
 }
 
+/// A thread structure parsed from `e` and `p` tags.
 class Thread {
+  /// The root event tag of the thread.
   ETag root;
+
+  /// Reply and mention event tags.
   List<ETag> etags;
+
+  /// Referenced pubkey tags.
   List<PTag> ptags;
+
+  /// Creates a [Thread] with the given [root], [etags], and [ptags].
   Thread(this.root, this.etags, this.ptags);
 }

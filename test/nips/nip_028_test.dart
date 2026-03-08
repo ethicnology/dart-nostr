@@ -7,14 +7,14 @@ void main() {
       const String privkey =
           "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
       final Event event = Nip28.createChannel(
-          'name',
-          'about',
-          'http://image.jpg',
-          {
+          name: 'name',
+          about: 'about',
+          picture: 'http://image.jpg',
+          additional: {
             'badges':
                 '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181'
           },
-          privkey);
+          secretKey: privkey);
       final Channel channel = Nip28.getChannelCreation(event);
       expect(channel.picture, 'http://image.jpg');
       expect(channel.additional['badges'],
@@ -25,16 +25,17 @@ void main() {
       const String privkey =
           "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
       final Event event = Nip28.setChannelMetaData(
-          'name',
-          'about',
-          'http://image.jpg',
-          {
+          name: 'name',
+          about: 'about',
+          picture: 'http://image.jpg',
+          additional: {
             'badges':
                 '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181'
           },
-          'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
-          'wss://example.com',
-          privkey);
+          channelId:
+              'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+          relayURL: 'wss://example.com',
+          secretKey: privkey);
       final Channel channel = Nip28.getChannelMetadata(event);
       expect(channel.channelId,
           "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9");
@@ -47,9 +48,10 @@ void main() {
       const String privkey =
           "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
       final Event event = Nip28.sendChannelMessage(
-          "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
-          'content',
-          privkey);
+          channelId:
+              "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
+          content: 'content',
+          secretKey: privkey);
       final ChannelMessage channelMessage = Nip28.getChannelMessage(event);
 
       expect(channelMessage.channelId,
@@ -65,9 +67,10 @@ void main() {
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1',
           "wss://example.com");
       final Event event2 = Nip28.sendChannelMessage(
-          "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
-          'content',
-          privkey,
+          channelId:
+              "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
+          content: 'content',
+          secretKey: privkey,
           etags: [eTag],
           ptags: [pTag]);
       final ChannelMessage channelMessage2 = Nip28.getChannelMessage(event2);
@@ -85,9 +88,10 @@ void main() {
       const String privkey =
           "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
       final Event event = Nip28.hideChannelMessage(
-          "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
-          "reason",
-          privkey);
+          messageId:
+              "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
+          reason: "reason",
+          secretKey: privkey);
       final ChannelMessageHidden channelMessageHidden =
           Nip28.getMessageHidden(event);
 
@@ -101,9 +105,10 @@ void main() {
       const String privkey =
           "826ef0e93c1278bd89945377fadb6b6b51d9eedf74ecdb64a96f1897bb670be8";
       final Event event = Nip28.muteUser(
-          "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
-          "reason",
-          privkey);
+          pubkey:
+              "b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9",
+          reason: "reason",
+          secretKey: privkey);
       final ChannelUserMuted channelUserMuted = Nip28.getUserMuted(event);
 
       expect(channelUserMuted.pubkey,

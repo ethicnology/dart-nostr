@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:nostr/nostr.dart';
 
-/// Lists
+/// Lists — [NIP-51](https://github.com/nostr-protocol/nips/blob/master/51.md)
 ///
 /// Mute, pin, categorized people, and categorized bookmarks, using NIP-44
 /// encryption for private content.
 class Nip51 {
+  /// Converts a list of [Contact]s to `["p", pubkey, relay, petname]` tags.
   static List<List<String>> contactsToTags(List<Contact> items) {
     final List<List<String>> result = [];
     for (final Contact item in items) {
@@ -19,6 +20,7 @@ class Nip51 {
     return result;
   }
 
+  /// Converts a list of event IDs to `["e", id]` tags.
   static List<List<String>> bookmarksToTags(List<String> items) {
     final List<List<String>> result = [];
     for (final String item in items) {
@@ -27,6 +29,7 @@ class Nip51 {
     return result;
   }
 
+  /// Encrypts a list of [Contact]s into NIP-44 ciphertext for event content.
   static Future<String> contactsToContent(
     List<Contact> items,
     String secretKey,
@@ -49,6 +52,7 @@ class Nip51 {
     );
   }
 
+  /// Encrypts a list of bookmark event IDs into NIP-44 ciphertext for event content.
   static Future<String> bookmarksToContent(
     List<String> items,
     String secretKey,
@@ -66,7 +70,14 @@ class Nip51 {
     );
   }
 
-  static Future<Map<String, List>> fromContent(
+  /// Decrypts encrypted NIP-51 list content into contacts and bookmarks.
+  ///
+  /// [content] is the NIP-44-encrypted event content.
+  /// [secretKey] is the hex-encoded secret key for decryption.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  ///
+  /// Returns a record with `contacts` and `bookmarks`.
+  static Future<({List<Contact> contacts, List<String> bookmarks})> fromContent(
     String content,
     String secretKey,
     String pubkey,
@@ -89,9 +100,15 @@ class Nip51 {
         bookmarks.add(tag[1]);
       }
     }
-    return {"contacts": contacts, "bookmarks": bookmarks};
+    return (contacts: contacts, bookmarks: bookmarks);
   }
 
+  /// Creates a kind-10000 mute list event.
+  ///
+  /// [items] are the public contacts in the mute list (stored in tags).
+  /// [encryptedItems] are the private contacts (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
   static Future<Event> createMutePeople(
     List<Contact> items,
     List<Contact> encryptedItems,
@@ -106,6 +123,12 @@ class Nip51 {
     );
   }
 
+  /// Creates a kind-10001 pin list event.
+  ///
+  /// [items] are the public bookmarks (stored in tags).
+  /// [encryptedItems] are the private bookmarks (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
   static Future<Event> createPinEvent(
     List<String> items,
     List<String> encryptedItems,
@@ -120,6 +143,13 @@ class Nip51 {
     );
   }
 
+  /// Creates a kind-30000 categorized people list event.
+  ///
+  /// [identifier] is the `d` tag value naming the category.
+  /// [items] are the public contacts (stored in tags).
+  /// [encryptedItems] are the private contacts (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
   static Future<Event> createCategorizedPeople(
     String identifier,
     List<Contact> items,
@@ -137,6 +167,13 @@ class Nip51 {
     );
   }
 
+  /// Creates a kind-30001 categorized bookmarks list event.
+  ///
+  /// [identifier] is the `d` tag value naming the category.
+  /// [items] are the public bookmarks (stored in tags).
+  /// [encryptedItems] are the private bookmarks (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
   static Future<Event> createCategorizedBookmarks(
     String identifier,
     List<String> items,
@@ -154,12 +191,18 @@ class Nip51 {
     );
   }
 
+  /// Decodes a NIP-51 list event into a [UserList].
+  ///
+  /// Supports kinds 10000 (mute), 10001 (pin), 30000 (categorized people),
+  /// and 30001 (categorized bookmarks).
+  ///
+  /// Throws [InvalidKindException] if the event kind is not one of the above.
   static Future<UserList> getLists(Event event, String secretKey) async {
     if (event.kind != 10000 &&
         event.kind != 10001 &&
         event.kind != 30000 &&
         event.kind != 30001) {
-      throw Exception("${event.kind} is not nip51 compatible");
+      throw InvalidKindException(event.kind, [10000, 10001, 30000, 30001]);
     }
     String identifier = "";
     final List<Contact> contacts = [];
@@ -178,10 +221,10 @@ class Nip51 {
       if (tag[0] == "d") identifier = tag[1];
     }
     final pubkey = Keys(secretKey).public;
-    final Map content =
+    final content =
         await Nip51.fromContent(event.content, secretKey, pubkey);
-    contacts.addAll(content["contacts"] as List<Contact>);
-    bookmarks.addAll(content["bookmarks"] as List<String>);
+    contacts.addAll(content.contacts);
+    bookmarks.addAll(content.bookmarks);
     if (event.kind == 10000) identifier = "Mute";
     if (event.kind == 10001) identifier = "Pin";
 
@@ -193,20 +236,34 @@ class Nip51 {
 ///
 /// Tag format: ["p", pubkey, relay?, petname?]
 class Contact {
+  /// The hex-encoded public key of the contact.
   String pubkey;
+
+  /// The preferred relay URL for this contact (optional).
   String? mainRelay;
+
+  /// A local petname for this contact (optional).
   String? petName;
 
+  /// Creates a [Contact] with the given [pubkey], [mainRelay], and [petName].
   Contact(this.pubkey, this.mainRelay, this.petName);
 }
 
 /// The decoded contents of a NIP-51 list event.
 class UserList {
+  /// The public key of the list owner.
   String owner;
+
+  /// The list identifier (category name, or "Mute"/"Pin" for non-categorized).
   String identifier;
+
+  /// The contacts in this list.
   List<Contact> contacts;
+
+  /// The bookmarked event IDs in this list.
   List<String> bookmarks;
 
+  /// Creates a [UserList] with the given fields.
   UserList(this.owner, this.identifier, this.contacts, this.bookmarks);
 }
 

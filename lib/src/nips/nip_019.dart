@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
+import 'package:nostr/src/error.dart';
 import 'package:nostr/src/nips/nip_019_utils.dart';
 
-/// bech32-encoded entities
+/// Bech32-encoded entities — [NIP-19](https://github.com/nostr-protocol/nips/blob/master/19.md)
 ///
 /// This NIP standardizes bech32-formatted strings that can be used to display keys,
 /// ids and other information in clients. These formats are not meant to be used anywhere
@@ -16,29 +17,46 @@ class Nip19 {
     Nip19Prefix.naddr
   ];
 
+  /// Decodes a bech32-encoded NIP-19 string into its prefix and hex data.
+  ///
   /// The bech32 npub `npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6`
   /// translates to the hex public key `3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d`
+  ///
+  /// Throws [NostrException] if the payload is a shareable identifier
+  /// (nprofile, nevent, naddr) — use [decodeShareableIdentifiers] instead.
   static ({Nip19Prefix prefix, String data}) decode({required String payload}) {
     final decoded = bech32Decode(payload);
     if (_shareableIdentifiersPrefixes.contains(decoded.prefix)) {
-      throw Exception('use ${Nip19.decodeShareableIdentifiers} instead');
+      throw NostrException('use ${Nip19.decodeShareableIdentifiers} instead');
     }
     return decoded;
   }
 
+  /// Encodes hex data into a bech32-encoded NIP-19 string.
+  ///
   /// The hex public key `3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d`
   /// translates to `npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6`
+  ///
+  /// Throws [NostrException] if the prefix is a shareable identifier
+  /// (nprofile, nevent, naddr) — use [encodeShareableIdentifiers] instead.
   static String encode({
     required Nip19Prefix prefix,
     required String data,
   }) {
     if (_shareableIdentifiersPrefixes.contains(prefix)) {
-      throw Exception('use ${Nip19.encodeShareableIdentifiers} instead');
+      throw NostrException('use ${Nip19.encodeShareableIdentifiers} instead');
     }
     return bech32Encode(prefix, data);
   }
 
-  /// Encode shareable identifiers (nprofile, nevent, naddr) as TLV data
+  /// Encode shareable identifiers (nprofile, nevent, naddr) as TLV data.
+  ///
+  /// [prefix] must be one of [Nip19Prefix.nprofile], [Nip19Prefix.nevent],
+  /// or [Nip19Prefix.naddr].
+  /// [data] is the primary identifier (pubkey, event id, or d-tag value).
+  /// [relays] is an optional list of relay URLs.
+  /// [author] is an optional pubkey of the event author.
+  /// [kind] is an optional event kind number.
   static String encodeShareableIdentifiers({
     required Nip19Prefix prefix,
     required String data,
@@ -47,7 +65,7 @@ class Nip19 {
     int? kind,
   }) {
     if (!_shareableIdentifiersPrefixes.contains(prefix)) {
-      throw Exception('$prefix not in $_shareableIdentifiersPrefixes');
+      throw NostrException('$prefix not in $_shareableIdentifiersPrefixes');
     }
 
     // 0: data
@@ -94,6 +112,9 @@ class Nip19 {
     return bech32Encode(prefix, result, length: result.length + 90);
   }
 
+  /// Decodes a shareable identifier (nprofile, nevent, naddr) from a
+  /// bech32-encoded TLV payload.
+  ///
   /// For these events, the contents are a binary-encoded list of TLV (type-length-value),
   /// with T and L being 1 byte each (uint8, i.e. a number in the range of 0-255),
   ///  and V being a sequence of bytes of the size indicated by L.
@@ -113,6 +134,8 @@ class Nip19 {
   /// 3: kind
   /// - for naddr, the 32-bit unsigned integer of the kind, big-endian
   /// - for nevent, optionally, the 32-bit unsigned integer of the kind, big-endian
+  ///
+  /// Throws [DeserializationException] if the payload cannot be decoded.
   static ShareableIdentifiers decodeShareableIdentifiers({
     required String payload,
   }) {
@@ -154,36 +177,60 @@ class Nip19 {
         kind: kind,
       );
     } catch (e) {
-      throw Exception('Failed to decode shareable entity: $e');
+      throw DeserializationException('Failed to decode shareable entity: $e');
     }
   }
 }
 
-/// Represents all the prefixes availables
-/// nrelay is deprecated
+/// Represents all the prefixes available for NIP-19 encoding.
+///
+/// `nrelay` is deprecated and not included.
 enum Nip19Prefix {
+  /// Secret key prefix.
   nsec,
+
+  /// Public key prefix.
   npub,
+
+  /// Note (event) ID prefix.
   note,
+
+  /// Profile with relay metadata prefix.
   nprofile,
+
+  /// Event with relay metadata prefix.
   nevent,
+
+  /// Addressable event (replaceable) prefix.
   naddr;
 
+  /// Resolves a [Nip19Prefix] from its string [name].
   static Nip19Prefix from(String name) =>
       Nip19Prefix.values.byName(name.toLowerCase());
 }
 
-/// Shareable identifiers with extra metadata
+/// Shareable identifiers with extra metadata.
+///
 /// When sharing a profile or an event, an app may decide to include relay information
 /// and other metadata such that other apps can locate and display these entities
 /// more easily.
 class ShareableIdentifiers {
+  /// The NIP-19 prefix indicating the entity type.
   final Nip19Prefix prefix;
+
+  /// The primary identifier (pubkey, event id, or d-tag value).
   final String data;
+
+  /// Relay URLs where the entity is likely to be found.
   List<String> relays;
+
+  /// The pubkey of the event author (for nevent and naddr).
   String? author;
+
+  /// The event kind (for nevent and naddr).
   int? kind;
 
+  /// Creates a [ShareableIdentifiers] with the given fields.
   ShareableIdentifiers({
     required this.prefix,
     required this.data,

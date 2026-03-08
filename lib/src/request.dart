@@ -1,19 +1,30 @@
 import 'dart:convert';
 
+import 'package:nostr/src/error.dart';
 import 'package:nostr/src/filter.dart';
 
-/// Used to request events and subscribe to new updates.
+/// Represents a Nostr REQ message used to request events and subscribe
+/// to new updates.
+///
+/// A REQ message contains a [subscriptionId] and one or more [filters]
+/// that determine which events will be returned.
 class Request {
-  /// subscription_id is a random string that should be used to represent a subscription.
-  late String subscriptionId;
+  /// The subscription identifier for this request.
+  ///
+  /// This is a random string that uniquely identifies the subscription.
+  final String subscriptionId;
 
-  /// filters is a JSON object that determines what events will be sent in that subscription
-  late List<Filter> filters;
+  /// The list of filters that determine which events will be sent in
+  /// this subscription.
+  final List<Filter> filters;
 
+  /// Creates a [Request] with the given [subscriptionId] and [filters].
   Request({required this.subscriptionId, this.filters = const []});
 
-  /// Serialize to nostr request message
-  /// - ["REQ", subscription_id, filter JSON, filter JSON, ...]
+  /// Serializes this request to the Nostr wire format.
+  ///
+  /// Returns a JSON-encoded string:
+  /// `["REQ", subscription_id, filter JSON, filter JSON, ...]`.
   String serialize() {
     final theFilters = filters.map((item) => item.toJson()).toList();
 
@@ -26,22 +37,29 @@ class Request {
     );
   }
 
-  /// Deserialize a nostr request message
-  /// - '["REQ", subscriptionId, filter JSON, filter JSON, ...]'
-  Request.deserialize(String payload) {
+  /// Deserializes a Nostr REQ message from a JSON-encoded [payload].
+  ///
+  /// The expected format is:
+  /// `["REQ", subscriptionId, filter JSON, filter JSON, ...]`.
+  ///
+  /// Throws a [DeserializationException] if the payload is too short
+  /// or does not start with `"REQ"`.
+  factory Request.deserialize(String payload) {
     final data = json.decode(payload);
 
     // Ensure we have at least ["REQ", <someId>]
     if (data.length < 2) {
-      throw Exception('Message too short to be a REQ message');
+      throw const DeserializationException('Message too short to be a REQ message');
     }
 
     if (data[0] != "REQ") {
-      throw Exception('Not a REQ message (first element must be "REQ")');
+      throw const DeserializationException(
+        'Not a REQ message (first element must be "REQ")',
+      );
     }
 
-    subscriptionId = data[1];
-    filters = [];
+    final subscriptionId = data[1] as String;
+    final filters = <Filter>[];
 
     // Remaining items (from index 2 onward) are filters
     if (data.length > 2) {
@@ -49,5 +67,7 @@ class Request {
         filters.add(Filter.fromJson(data[i]));
       }
     }
+
+    return Request(subscriptionId: subscriptionId, filters: filters);
   }
 }

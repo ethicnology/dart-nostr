@@ -1,22 +1,35 @@
 import 'dart:convert';
 
-/// Used to stop previous subscriptions.
-class Close {
-  /// subscription_id is a random string that should be used to represent a subscription.
-  late String subscriptionId;
+import 'package:nostr/src/error.dart';
 
-  /// Default constructor
+/// Represents a Nostr CLOSE message used to stop previous subscriptions.
+///
+/// A relay sends or receives CLOSE messages to terminate an active
+/// subscription identified by [subscriptionId].
+class Close {
+  /// The subscription identifier for the subscription to close.
+  ///
+  /// This is a random string that was used when the subscription was created.
+  final String subscriptionId;
+
+  /// Creates a [Close] message for the given [subscriptionId].
   Close(this.subscriptionId);
 
-  /// Serialize to nostr close message
-  /// - ["CLOSE", subscription_id]
+  /// Serializes this close message to the Nostr wire format.
+  ///
+  /// Returns a JSON-encoded string: `["CLOSE", subscription_id]`.
   String serialize() => json.encode(["CLOSE", subscriptionId]);
 
-  /// Deserialize a nostr close message
-  /// - ["CLOSE", subscription_id]
-  Close.deserialize(String payload) {
+  /// Deserializes a Nostr CLOSE message from a JSON-encoded [payload].
+  ///
+  /// The expected format is `["CLOSE", subscription_id]`.
+  ///
+  /// Throws a [DeserializationException] if the payload length is not 2.
+  factory Close.deserialize(String payload) {
     final data = json.decode(payload);
-    if (data.length != 2) throw Exception('Invalid length for CLOSE message');
-    subscriptionId = data[1];
+    if (data.length != 2) {
+      throw const DeserializationException('Invalid length for CLOSE message');
+    }
+    return Close(data[1]);
   }
 }

@@ -4,13 +4,21 @@ import 'package:elliptic/ecdh.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:nostr/nostr.dart';
 
-/// Versioned keypair-based encryption (NIP-44 v2).
+/// Versioned encryption — [NIP-44](https://github.com/nostr-protocol/nips/blob/master/44.md)
 ///
 /// Uses secp256k1 ECDH + HKDF-extract("nip44-v2") as conversation key,
 /// then ChaCha20 + HMAC-SHA256 for per-message encryption.
 ///
 /// This format MUST be used in the context of a signed event (NIP-01).
 class Nip44 {
+  /// Encrypts [plaintext] from sender to recipient using NIP-44 v2.
+  ///
+  /// [senderSecretKey] is the sender's hex-encoded secret key.
+  /// [recipientPublicKey] is the recipient's hex-encoded public key.
+  /// [customNonce] is an optional 32-byte nonce (random if omitted).
+  /// [conversationKey] is an optional pre-computed key (for testing with spec vectors).
+  ///
+  /// Returns a base64-encoded payload.
   static Future<String> encrypt({
     required String plaintext,
     required String senderSecretKey,
@@ -43,6 +51,13 @@ class Nip44 {
     return constructPayload(nonce, ciphertext, mac);
   }
 
+  /// Decrypts a NIP-44 v2 [payload] from sender to recipient.
+  ///
+  /// [recipientSecretKey] is the recipient's hex-encoded secret key.
+  /// [senderPublicKey] is the sender's hex-encoded public key.
+  /// [conversationKey] is an optional pre-computed key (for testing with spec vectors).
+  ///
+  /// Returns the decrypted plaintext string.
   static Future<String> decrypt({
     required String payload,
     required String recipientSecretKey,
@@ -78,6 +93,12 @@ class Nip44 {
     return utf8.decode(plaintextBytes);
   }
 
+  /// Computes the ECDH shared secret between a secret key and a public key.
+  ///
+  /// [secretKeyHex] is the hex-encoded secret key.
+  /// [publicKeyHex] is the hex-encoded public key.
+  ///
+  /// Returns the shared secret as a list of bytes.
   static List<int> computeSharedSecret({
     required String secretKeyHex,
     required String publicKeyHex,
@@ -88,6 +109,9 @@ class Nip44 {
     return computeSecret(secretKey, publicKey);
   }
 
+  /// Derives the NIP-44 v2 conversation key from a shared secret.
+  ///
+  /// Uses HKDF-extract with salt `"nip44-v2"`.
   static List<int> deriveConversationKey({required List<int> sharedSecret}) {
     return hkdfExtract(
       ikm: sharedSecret,

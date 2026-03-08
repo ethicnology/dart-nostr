@@ -11,13 +11,26 @@ void main() {
         'wss://relay.example.com',
         'wss://relay2.example.com'
       ];
-      final Event event =
-          Nip5.encode('name', 'example.com', relays, user.secret);
+      final Event event = Nip5.encode(
+          name: 'name',
+          domain: 'example.com',
+          relays: relays,
+          secretKey: user.secret);
       expect(event.kind, 0);
 
-      expect(() => Nip5.encode('name', 'example', relays, user.secret),
+      expect(
+          () => Nip5.encode(
+              name: 'name',
+              domain: 'example',
+              relays: relays,
+              secretKey: user.secret),
           throwsException);
-      expect(() => Nip5.encode('name!', 'example.com', relays, user.secret),
+      expect(
+          () => Nip5.encode(
+              name: 'name!',
+              domain: 'example.com',
+              relays: relays,
+              secretKey: user.secret),
           throwsException);
     });
 

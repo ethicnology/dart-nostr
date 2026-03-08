@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:nostr/nostr.dart';
 
-/// Mapping Nostr keys to DNS-based internet identifiers
+/// DNS-based internet identifiers — [NIP-05](https://github.com/nostr-protocol/nips/blob/master/05.md)
 class Nip5 {
   /// Decode a kind-0 (set_metadata) event and extract its NIP-05 identity.
   ///
   /// Returns null if the event has no `nip05` field in its content.
+  /// Throws [InvalidKindException] if the event kind is not 0.
+  /// Throws [DeserializationException] if the content cannot be parsed.
   static Future<DNS?> decode(Event event) async {
     if (event.kind == 0) {
       try {
@@ -20,20 +22,31 @@ class Nip5 {
         return DNS(name, domain, event.pubkey,
             relays.map((e) => e.toString()).toList());
       } catch (e) {
-        throw Exception(e.toString());
+        throw DeserializationException(e.toString());
       }
     }
-    throw Exception("kind ${event.kind} is not NIP-05 compatible (expected kind 0)");
+    throw InvalidKindException(event.kind, [0]);
   }
 
   /// Encode a kind-0 set_metadata event with NIP-05 identity.
-  static Event encode(
-      String name, String domain, List<String> relays, String secretKey) {
+  ///
+  /// [name] is the local part of the identifier (before the @).
+  /// [domain] is the domain part of the identifier (after the @).
+  /// [relays] is a list of relay URLs to include in the content.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  ///
+  /// Throws [NostrException] if the name or domain is invalid.
+  static Event encode({
+    required String name,
+    required String domain,
+    required List<String> relays,
+    required String secretKey,
+  }) {
     if (isValidName(name) && isValidDomain(domain)) {
       final String content = generateContent(name, domain, relays);
       return Event.from(kind: 0, tags: [], content: content, secretKey: secretKey);
     } else {
-      throw Exception("Invalid NIP-05 name or domain");
+      throw const NostrException("Invalid NIP-05 name or domain");
     }
   }
 
@@ -87,9 +100,11 @@ class Nip5 {
   }
 
   /// Returns a NIP-05 verification URL for the given identifier.
+  ///
+  /// Throws [NostrException] if the identifier does not contain exactly one `@`.
   static Uri verificationUrl(String identifier) {
     final parts = identifier.split('@');
-    if (parts.length != 2) throw Exception('Invalid NIP-05 identifier');
+    if (parts.length != 2) throw const NostrException('Invalid NIP-05 identifier');
     return Uri.https(parts[1], '/.well-known/nostr.json', {'name': parts[0]});
   }
 
@@ -99,6 +114,7 @@ class Nip5 {
     return regExp.hasMatch(input);
   }
 
+  /// Returns `true` if [domain] is a valid DNS domain name.
   static bool isValidDomain(String domain) {
     final RegExp regExp = RegExp(
       r'^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$',
@@ -107,6 +123,7 @@ class Nip5 {
     return regExp.hasMatch(domain);
   }
 
+  /// Generates JSON content for a kind-0 event with NIP-05 fields.
   static String generateContent(
     String name,
     String domain,
@@ -122,11 +139,19 @@ class Nip5 {
 
 /// A resolved NIP-05 DNS identity.
 class DNS {
+  /// The local part of the identifier (before the @).
   String name;
+
+  /// The domain part of the identifier (after the @).
   String domain;
+
+  /// The public key associated with this identifier.
   String pubkey;
+
+  /// Relay URLs where events from this identity can be found.
   List<String> relays;
 
+  /// Creates a [DNS] with the given fields.
   DNS(this.name, this.domain, this.pubkey, this.relays);
 }
 
