@@ -44,5 +44,14 @@ void main() {
       final msg = Message.deserialize(payload);
       expect(msg.type, "OK");
     });
+
+    test('CLOSED', () {
+      const String payload =
+          '["CLOSED", "sub123", "error: subscription not found"]';
+      final msg = Message.deserialize(payload);
+      expect(msg.type, "CLOSED");
+      expect(msg.message['subscriptionId'], "sub123");
+      expect(msg.message['message'], "error: subscription not found");
+    });
   });
 }

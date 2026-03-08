@@ -11,9 +11,9 @@ void main() {
         "0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db"
       ];
       final List<int> kinds = [0, 1, 2, 7];
-      final List<String> e = [];
-      final List<String> a = [];
-      final List<String> p = [];
+      final List<String> eTags = [];
+      final List<String> aTags = [];
+      final List<String> pTags = [];
       const int since = 1672477960;
       const int until = 1674063680;
       const int limit = 450;
@@ -23,9 +23,9 @@ void main() {
         ids: ids,
         authors: authors,
         kinds: kinds,
-        e: e,
-        a: a,
-        p: p,
+        eTags: eTags,
+        aTags: aTags,
+        pTags: pTags,
         since: since,
         until: until,
         limit: limit,
@@ -35,9 +35,9 @@ void main() {
       expect(filter.ids, ids);
       expect(filter.authors, authors);
       expect(filter.kinds, kinds);
-      expect(filter.e, e);
-      expect(filter.a, a);
-      expect(filter.p, p);
+      expect(filter.eTags, eTags);
+      expect(filter.aTags, aTags);
+      expect(filter.pTags, pTags);
       expect(filter.since, since);
       expect(filter.until, until);
       expect(filter.limit, limit);
@@ -66,13 +66,25 @@ void main() {
       expect(filter.ids, json['ids']);
       expect(filter.authors, json['authors']);
       expect(filter.kinds, json['kinds']);
-      expect(filter.e, json['#e']);
-      expect(filter.a, json['#a']);
-      expect(filter.p, json['#p']);
+      expect(filter.eTags, json['#e']);
+      expect(filter.aTags, json['#a']);
+      expect(filter.pTags, json['#p']);
       expect(filter.since, json['since']);
       expect(filter.until, json['until']);
       expect(filter.limit, json['limit']);
       expect(filter.search, json['search']);
+    });
+
+    test('toJson serializes tag filters with # prefix', () {
+      final filter = Filter(
+        eTags: ['abc123'],
+        pTags: ['def456'],
+        aTags: ['30023:pk:id'],
+      );
+      final json = filter.toJson();
+      expect(json['#e'], ['abc123']);
+      expect(json['#p'], ['def456']);
+      expect(json['#a'], ['30023:pk:id']);
     });
   });
 }

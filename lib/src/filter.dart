@@ -1,4 +1,4 @@
-/// filter is a JSON object that determines what events will be sent in that subscription
+/// A filter is a JSON object that determines what events will be sent in a subscription.
 class Filter {
   /// a list of event ids or prefixes
   List<String>? ids;
@@ -10,13 +10,13 @@ class Filter {
   List<int>? kinds;
 
   /// a list of event ids that are referenced in an "e" tag
-  List<String>? e;
+  List<String>? eTags;
 
   /// a list of event ids that are referenced in an "a" tag
-  List<String>? a;
+  List<String>? aTags;
 
   /// a list of pubkeys that are referenced in a "p" tag
-  List<String>? p;
+  List<String>? pTags;
 
   /// a timestamp, events must be newer than this to pass
   int? since;
@@ -31,17 +31,18 @@ class Filter {
   String? search;
 
   /// Default constructor
-  Filter(
-      {this.ids,
-      this.authors,
-      this.kinds,
-      this.e,
-      this.a,
-      this.p,
-      this.since,
-      this.until,
-      this.limit,
-      this.search});
+  Filter({
+    this.ids,
+    this.authors,
+    this.kinds,
+    this.eTags,
+    this.aTags,
+    this.pTags,
+    this.since,
+    this.until,
+    this.limit,
+    this.search,
+  });
 
   /// Deserialize a filter from a JSON
   Filter.fromJson(Map<String, dynamic> json) {
@@ -49,24 +50,24 @@ class Filter {
     authors =
         json['authors'] == null ? null : List<String>.from(json['authors']);
     kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
-    e = json['#e'] == null ? null : List<String>.from(json['#e']);
-    a = json['#a'] == null ? null : List<String>.from(json['#a']);
-    p = json['#p'] == null ? null : List<String>.from(json['#p']);
+    eTags = json['#e'] == null ? null : List<String>.from(json['#e']);
+    aTags = json['#a'] == null ? null : List<String>.from(json['#a']);
+    pTags = json['#p'] == null ? null : List<String>.from(json['#p']);
     since = json['since'];
     until = json['until'];
     limit = json['limit'];
     search = json['search'];
   }
 
-  /// Serialize a filter in JSON
+  /// Serialize a filter to JSON
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     if (ids != null) data['ids'] = ids;
     if (authors != null) data['authors'] = authors;
     if (kinds != null) data['kinds'] = kinds;
-    if (e != null) data['#e'] = e;
-    if (a != null) data['#a'] = a;
-    if (p != null) data['#p'] = p;
+    if (eTags != null) data['#e'] = eTags;
+    if (aTags != null) data['#a'] = aTags;
+    if (pTags != null) data['#p'] = pTags;
     if (since != null) data['since'] = since;
     if (until != null) data['until'] = until;
     if (limit != null) data['limit'] = limit;
