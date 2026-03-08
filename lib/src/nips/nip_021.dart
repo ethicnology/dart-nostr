@@ -14,6 +14,14 @@ class Nip21 {
     return uri.substring(_prefix.length);
   }
 
-  /// Generates a `nostr:` URI from a given content
-  static String encode(String content) => _prefix + content;
+  /// Generates a `nostr:` URI from a given NIP-19 identifier.
+  ///
+  /// Throws if the identifier starts with "nsec" — secret keys must never
+  /// be shared as URIs per the NIP-21 spec.
+  static String encode(String content) {
+    if (content.startsWith('nsec')) {
+      throw Exception('nsec must not be used in nostr: URIs');
+    }
+    return _prefix + content;
+  }
 }

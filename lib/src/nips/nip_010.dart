@@ -16,12 +16,17 @@ class Nip10 {
     final List<ETag> etags = [];
     final List<PTag> ptags = [];
     for (final tag in tags) {
-      if (tag[0] == "p") ptags.add(PTag(tag[1], tag[2]));
+      if (tag[0] == "p" && tag.length >= 3) {
+        ptags.add(PTag(tag[1], tag[2]));
+      }
       if (tag[0] == "e") {
-        if (tag[3] == 'root') {
-          root = ETag(tag[1], tag[2], tag[3]);
+        final eventId = tag.length > 1 ? tag[1] : '';
+        final relay = tag.length > 2 ? tag[2] : '';
+        final marker = tag.length > 3 ? tag[3] : '';
+        if (marker == 'root') {
+          root = ETag(eventId, relay, marker);
         } else {
-          etags.add(ETag(tag[1], tag[2], tag[3]));
+          etags.add(ETag(eventId, relay, marker));
         }
       }
     }

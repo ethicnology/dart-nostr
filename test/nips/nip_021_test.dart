@@ -30,5 +30,12 @@ void main() {
     test('Invalid Nostr URI parsing', () {
       expect(() => Nip21.decode('noprefix'), throwsA(isA<Exception>()));
     });
+
+    test('encode rejects nsec identifiers', () {
+      expect(
+        () => Nip21.encode('nsec1tmsusqq2k28d6exhff7e2xkzm42es9yg0vdeuxk8chufa9sjtsfq8z3spp'),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 }

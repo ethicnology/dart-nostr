@@ -33,5 +33,28 @@ void main() {
       expect(thread.etags[0].eventId, "14aeb..8dad4");
       expect(thread.ptags[0].pubkey, "612ae..e610f");
     });
+
+    test('fromTags handles tags without markers (deprecated positional)', () {
+      final List<List<String>> tags = [
+        ["e", "abc123", "wss://relay.example.com"],
+        ["e", "def456"],
+        ["p", "pubkey1", "wss://relay.example.com"],
+      ];
+      final Thread thread = Nip10.fromTags(tags);
+      // Both should parse without crashing
+      expect(thread.etags.length, 2);
+      expect(thread.etags[0].marker, '');
+      expect(thread.etags[1].marker, '');
+    });
+
+    test('fromTags handles p tags with only pubkey', () {
+      final List<List<String>> tags = [
+        ["e", "abc123", "wss://relay.com", "root"],
+        // p tag without relay — should not crash
+      ];
+      final Thread thread = Nip10.fromTags(tags);
+      expect(thread.root.eventId, 'abc123');
+      expect(thread.ptags, isEmpty);
+    });
   });
 }
