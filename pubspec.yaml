@@ -14,4 +14,5 @@ dependencies:
   bip340: ^0.3.0
   convert: ^3.1.1
   elliptic: ^0.3.11
+  http: ^1.2.0
   pointycastle: ^3.7.3
