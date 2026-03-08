@@ -41,7 +41,7 @@ class Nip19 {
   /// Encode shareable identifiers (nprofile, nevent, naddr) as TLV data
   static String encodeShareableIdentifiers({
     required Nip19Prefix prefix,
-    required String special,
+    required String data,
     List<String>? relays,
     String? author,
     int? kind,
@@ -50,14 +50,14 @@ class Nip19 {
       throw Exception('$prefix not in $_shareableIdentifiersPrefixes');
     }
 
-    // 0: special
+    // 0: data
     if (prefix == Nip19Prefix.naddr) {
-      special = special.codeUnits
+      data = data.codeUnits
           .map((number) => number.toRadixString(16).padLeft(2, '0'))
           .join();
     }
     var result =
-        '00${hex.decode(special).length.toRadixString(16).padLeft(2, '0')}$special';
+        '00${hex.decode(data).length.toRadixString(16).padLeft(2, '0')}$data';
 
     // 1: relay
     if (relays != null) {
@@ -98,7 +98,7 @@ class Nip19 {
   /// with T and L being 1 byte each (uint8, i.e. a number in the range of 0-255),
   ///  and V being a sequence of bytes of the size indicated by L.
   ///
-  /// 0: special depends on the bech32 prefix:
+  /// 0: data depends on the bech32 prefix:
   /// - for nprofile it will be the 32 bytes of the profile public key
   /// - for nevent it will be the 32 bytes of the event id
   /// - for naddr, it is the identifier (the "d" tag) of the event being referenced. For normal replaceable events use an empty string.
@@ -117,23 +117,23 @@ class Nip19 {
     required String payload,
   }) {
     try {
-      String special = '';
+      String data = '';
       final List<String> relays = [];
       String? author;
       int? kind;
       final decoded = bech32Decode(payload, length: payload.length);
-      final data = hex.decode(decoded.data);
+      final tlvBytes = hex.decode(decoded.data);
 
       var index = 0;
-      while (index < data.length) {
-        final type = data[index++];
-        final length = data[index++];
+      while (index < tlvBytes.length) {
+        final type = tlvBytes[index++];
+        final length = tlvBytes[index++];
 
-        final value = Uint8List.fromList(data.sublist(index, index + length));
+        final value = Uint8List.fromList(tlvBytes.sublist(index, index + length));
         index += length;
 
         if (type == 0) {
-          special = (decoded.prefix == Nip19Prefix.naddr)
+          data = (decoded.prefix == Nip19Prefix.naddr)
               ? String.fromCharCodes(value)
               : hex.encode(value);
         } else if (type == 1) {
@@ -148,7 +148,7 @@ class Nip19 {
 
       return ShareableIdentifiers(
         prefix: decoded.prefix,
-        special: special,
+        data: data,
         relays: relays,
         author: author,
         kind: kind,
@@ -179,14 +179,14 @@ enum Nip19Prefix {
 /// more easily.
 class ShareableIdentifiers {
   final Nip19Prefix prefix;
-  final String special;
+  final String data;
   List<String> relays;
   String? author;
   int? kind;
 
   ShareableIdentifiers({
     required this.prefix,
-    required this.special,
+    required this.data,
     this.relays = const [],
     this.author,
     this.kind,

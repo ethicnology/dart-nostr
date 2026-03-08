@@ -1,5 +1,7 @@
 import 'package:bip340/bip340.dart' as bip340;
-import 'package:nostr/nostr.dart';
+import 'package:nostr/src/nips/nip_019.dart';
+import 'package:nostr/src/schnorr.dart';
+import 'package:nostr/src/utils.dart';
 
 /// Keys encapsulates a public key and a secret key, which are used for tasks such as encrypting and decrypting messages, or creating and verifying digital signatures.
 class Keys {
@@ -9,8 +11,11 @@ class Keys {
   /// A hex-encoded (64 chars) public key used to encrypt messages or verify digital signatures, and it can be shared with anyone.
   late String public;
 
-  // String get nsec => Nip19.encode(prefix: Nip19Prefix.nsec, data: secret);
-  // String get npub => Nip19.encode(prefix: Nip19Prefix.npub, data: public);
+  /// Bech32-encoded secret key (nsec1...)
+  String get nsec => Nip19.encode(prefix: Nip19Prefix.nsec, data: secret);
+
+  /// Bech32-encoded public key (npub1...)
+  String get npub => Nip19.encode(prefix: Nip19Prefix.npub, data: public);
 
   /// Instantiate a Keys from a secret key using HEX or BECH32 encoding
   Keys(String secretKey) {
@@ -39,7 +44,7 @@ class Keys {
 
   /// Instantiate a Keys from random bytes
   Keys.generate() {
-    secret = generate64RandomHexChars();
+    secret = generateRandomHex();
     public = bip340.getPublicKey(secret);
   }
 

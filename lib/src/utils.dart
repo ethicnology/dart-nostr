@@ -4,18 +4,18 @@ import 'dart:typed_data';
 import 'package:convert/convert.dart';
 import 'package:pointycastle/export.dart';
 
-/// generates 32 random bytes converted in hex
-String generate64RandomHexChars() {
-  final randomBytes = generateRandomBytes(32);
-  return hex.encode(randomBytes);
+/// Generates [bytes] random bytes and returns them as a hex string.
+/// Defaults to 32 bytes (64 hex chars).
+String generateRandomHex({int bytes = 32}) {
+  return hex.encode(generateRandomBytes(bytes));
 }
 
-/// current unix timestamp in seconds
+/// Current unix timestamp in seconds
 int currentUnixTimestampSeconds() {
   return DateTime.now().millisecondsSinceEpoch ~/ 1000;
 }
 
-/// generates the requested quantity of random secure bytes
+/// Generates the requested quantity of random secure bytes
 List<int> generateRandomBytes(int quantity) {
   final random = Random.secure();
   return List<int>.generate(quantity, (i) => random.nextInt(256));

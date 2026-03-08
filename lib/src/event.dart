@@ -134,14 +134,14 @@ class Event {
   ///Event event = Event.from(
   ///  kind: 1,
   ///  content: "",
-  ///  privkey:
+  ///  secretKey:
   ///      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   ///);
   ///```
   factory Event.from({
     required int kind,
     required String content,
-    required String privkey,
+    required String secretKey,
     int? createdAt,
     List<List<String>> tags = const [],
     String? pubkey,
@@ -149,11 +149,11 @@ class Event {
     bool verify = false,
   }) {
     createdAt ??= currentUnixTimestampSeconds();
-    pubkey ??= bip340.getPublicKey(privkey).toLowerCase();
+    pubkey ??= bip340.getPublicKey(secretKey).toLowerCase();
 
     final id = _processEventId(pubkey, createdAt, kind, tags, content);
 
-    final sig = _processSignature(privkey, id);
+    final sig = _processSignature(secretKey, id);
 
     return Event(
       id,
@@ -326,7 +326,7 @@ class Event {
   static String _processSignature(String secretKey, String id) {
     /// aux must be 32-bytes random bytes, generated at signature time.
     /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
-    final String aux = generate64RandomHexChars();
+    final String aux = generateRandomHex();
     return bip340.sign(secretKey, id, aux);
   }
 

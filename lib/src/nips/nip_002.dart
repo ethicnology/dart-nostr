@@ -1,30 +1,10 @@
 import 'package:nostr/nostr.dart';
 
-/// Contact List and Petnames
+/// Follow List and Petnames (NIP-02)
 ///
-/// A special event with kind 3, meaning "contact list" is defined as having a list of p tags, one for each of the followed/known profiles one is following.
-///
-/// Each tag entry should contain the key for the profile, a relay URL where events from that key can be found
-/// (can be set to an empty string if not needed), and a local name (or "petname") for that profile (can also be set to an empty string or not provided),
-/// i.e., ["p", "32-bytes hex key", "main relay URL", "petname"].
-/// The content can be anything and should be ignored.
+/// A kind 3 event with a list of p tags representing the followed profiles.
 class Nip2 {
-  /// Returns the profils from a contact list event (kind=3)
-  ///
-  /// ```dart
-  ///  var event = Event.from(
-  ///    kind: 3,
-  ///    tags: [
-  ///      ["p", "91cf9..4e5ca", "wss://alicerelay.com/", "alice"],
-  ///      ["p", "14aeb..8dad4", "wss://bobrelay.com/nostr", "bob"],
-  ///      ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"],
-  ///    ],
-  ///    content: "",
-  ///    privkey: "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
-  ///  );
-  ///
-  ///  List<Profile> profiles = Nip2.decode(event);
-  ///```
+  /// Returns the profiles from a follow list event (kind=3)
   static List<Profile> decode(Event event) {
     if (event.kind == 3) {
       return toProfiles(event.tags);
@@ -33,15 +13,6 @@ class Nip2 {
   }
 
   /// Returns profiles from event.tags
-  ///
-  /// ```dart
-  /// List<List<String>> tags = [
-  ///   ["p", "91cf9..4e5ca", "wss://alicerelay.com/", "alice"],
-  ///   ["p", "14aeb..8dad4", "wss://bobrelay.com/nostr", "bob"],
-  ///   ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"]
-  /// ];
-  /// List<Profile> profiles = Nip2.toProfiles(tags);
-  /// ```
   static List<Profile> toProfiles(List<List<String>> tags) {
     final List<Profile> result = [];
     for (final tag in tags) {
@@ -51,41 +22,29 @@ class Nip2 {
   }
 
   /// Returns tags from profiles list
-  ///
-  /// ```dart
-  /// List<Profile> profiles = [Profile("21df6d143fb96c2ec9d63726bf9edc71", "ws://erinrelay.com/ws", "erin")];
-  /// List<List<String>> tags = Nip2.toTags(profiles);
-  /// ```
   static List<List<String>> toTags(List<Profile> profiles) {
     final List<List<String>> result = [];
     for (final profile in profiles) {
-      result.add(["p", profile.key, profile.relay, profile.petname]);
+      result.add(["p", profile.pubkey, profile.relay, profile.petname]);
     }
     return result;
   }
 }
 
-/// Each tag entry should contain the key for the profile, a relay URL where events from that key can be found
-/// (can be set to an empty string if not needed), and a local name (or "petname") for that profile (can also be set to an empty string or not provided),
-/// i.e., ["p", "32-bytes hex key", "main relay URL", "petname"].
-/// The content can be anything and should be ignored.
+/// A profile entry in a follow list (NIP-02).
 ///
-/// ```dart
-/// String key = "91cf9..4e5ca";
-/// String relay = "wss://alicerelay.com/";
-/// String petname = "alice";
-/// var profile = Profile(key, relay, petname);
-/// ```
+/// Tag format: ["p", "32-bytes hex key", "relay URL", "petname"]
 class Profile {
-  /// Each tag entry should contain the key for the profile,
-  String key;
+  /// 32-bytes hex-encoded public key of the profile
+  String pubkey;
 
-  /// A relay URL where events from that key can be found (can be set to an empty string if not needed)
+  /// A relay URL where events from that key can be found (can be empty)
   String relay;
 
-  /// A local name (or "petname") for that profile (can also be set to an empty string or not provided)
+  /// A local name ("petname") for that profile (can be empty)
   String petname;
 
-  /// Default constructor
-  Profile(this.key, this.relay, this.petname);
+  Profile(this.pubkey, this.relay, this.petname);
 }
+
+typedef FollowList = Nip2;

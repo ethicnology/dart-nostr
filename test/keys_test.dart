@@ -45,6 +45,26 @@ void main() {
       expect(keys.secret.length, 64);
     });
 
+    test('Keys.nsec getter', () {
+      const hex =
+          "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12";
+      final keys = Keys(hex);
+      expect(keys.nsec, startsWith('nsec1'));
+      // Round-trip: nsec → Keys → same secret
+      final restored = Keys(keys.nsec);
+      expect(restored.secret, hex);
+    });
+
+    test('Keys.npub getter', () {
+      const hex =
+          "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12";
+      final keys = Keys(hex);
+      expect(keys.npub, startsWith('npub1'));
+      // Decode npub and verify it matches the public key
+      final decoded = Nip19.decode(payload: keys.npub);
+      expect(decoded.data, keys.public);
+    });
+
     test('Keys.verify', () {
       const hex =
           "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12";

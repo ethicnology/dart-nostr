@@ -8,7 +8,7 @@ void main() {
       const String relay = "wss://alicerelay.com/";
       const String petname = "alice";
       final profile = Profile(key, relay, petname);
-      expect(profile.key, key);
+      expect(profile.pubkey, key);
       expect(profile.relay, relay);
       expect(profile.petname, petname);
     });
@@ -20,7 +20,7 @@ void main() {
         ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"]
       ];
       final List<Profile> profiles = Nip2.toProfiles(tags);
-      expect(profiles[0].key, tags[0][1]);
+      expect(profiles[0].pubkey, tags[0][1]);
       expect(profiles[1].relay, tags[1][2]);
       expect(profiles[2].petname, tags[2][3]);
     });
@@ -46,12 +46,12 @@ void main() {
           ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"],
         ],
         content: "",
-        privkey:
+        secretKey:
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
 
       final List<Profile> profiles = Nip2.decode(event);
-      expect(profiles[0].key, "91cf9..4e5ca");
+      expect(profiles[0].pubkey, "91cf9..4e5ca");
       expect(profiles[1].relay, "wss://bobrelay.com/nostr");
       expect(profiles[2].petname, "carol");
     });
@@ -61,7 +61,7 @@ void main() {
         kind: 6,
         tags: [],
         content: "",
-        privkey:
+        secretKey:
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
       expect(() => Nip2.decode(event), throwsException);

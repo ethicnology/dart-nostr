@@ -1,24 +1,29 @@
 import 'package:nostr/nostr.dart';
 
-/// Basic Event Kinds
-/// 0: set_metadata: the content is set to a stringified JSON object {name: `username`, about: `string`, picture: `url`} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
-/// 1: text_note: the content is set to the plaintext content of a note (anything the user wants to say). Do not use Markdown! Clients should not have to guess how to interpret content like [](). Use different event kinds for parsable content.
+/// Basic Event Kinds (NIP-01)
+///
+/// 0: set_metadata: the content is set to a stringified JSON object
+/// {name: `username`, about: `string`, picture: `url`} describing the user
+/// who created the event.
+///
+/// 1: text_note: the content is set to the plaintext content of a note
+/// (anything the user wants to say).
 class Nip1 {
   static Event encodeSetMetadata({
     required String content,
-    required String privkey,
+    required String secretKey,
   }) {
     return Event.from(
       kind: 0,
       tags: [],
       content: content,
-      privkey: privkey,
+      secretKey: secretKey,
     );
   }
 
-  static Event encodeTextNote(
-    String content,
-    String privkey, {
+  static Event encodeTextNote({
+    required String content,
+    required String secretKey,
     String? rootEvent,
     String? rootEventRelay,
     String? replyEvent,
@@ -52,15 +57,15 @@ class Nip1 {
       }
     }
 
-    return Event.from(kind: 1, tags: tags, content: content, privkey: privkey);
+    return Event.from(kind: 1, tags: tags, content: content, secretKey: secretKey);
   }
 
-  static List<String>? hashTags(List<List<String>> tags) {
-    final List<String> hashTags = [];
+  static List<String>? extractHashTags(List<List<String>> tags) {
+    final List<String> result = [];
     for (final tag in tags) {
-      if (tag[0] == 't') hashTags.add(tag[1]);
+      if (tag[0] == 't') result.add(tag[1]);
     }
-    return hashTags;
+    return result;
   }
 
   static String? quoteRepostId(List<List<String>> tags) {
@@ -77,15 +82,15 @@ class Nip1 {
     return null;
   }
 
-  static TextNote decodeTextNote(Event event) {
+  static Note decodeTextNote(Event event) {
     if (event.kind == 1 || event.kind == 11 || event.kind == 12) {
-      return TextNote(
+      return Note(
         event.id,
         event.pubkey,
         event.createdAt,
         Nip10.fromTags(event.tags),
         event.content,
-        hashTags(event.tags),
+        extractHashTags(event.tags),
         quoteRepostId(event.tags),
         groupId(event.tags),
       );
@@ -94,8 +99,9 @@ class Nip1 {
   }
 }
 
-class TextNote {
-  String nodeId;
+/// A decoded text note (kind 1, 11, 12).
+class Note {
+  String id;
   String pubkey;
   int createdAt;
   Thread? thread;
@@ -104,8 +110,8 @@ class TextNote {
   String? quoteRepostId;
   String? groupId;
 
-  TextNote(
-    this.nodeId,
+  Note(
+    this.id,
     this.pubkey,
     this.createdAt,
     this.thread,
@@ -115,3 +121,5 @@ class TextNote {
     this.groupId,
   );
 }
+
+typedef TextNote = Nip1;

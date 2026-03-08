@@ -54,7 +54,7 @@ void main() {
             "nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhhytnc9e3k7mgpz4mhxue69uhkg6nzv9ejuumpv34kytnrdaksjlyr9p");
 
     expect(x.prefix, Nip19Prefix.nprofile);
-    expect(x.special,
+    expect(x.data,
         '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d');
     expect(x.relays[0], 'wss://r.x.com');
     expect(x.relays[1], 'wss://djbas.sadkb.com');
@@ -63,7 +63,7 @@ void main() {
   test('encode nprofile', () {
     final y = Nip19.encodeShareableIdentifiers(
       prefix: Nip19Prefix.nprofile,
-      special:
+      data:
           '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d',
       relays: ['wss://r.x.com', 'wss://djbas.sadkb.com'],
     );

@@ -9,7 +9,7 @@ class Schnorr {
     required String message,
     String? aux,
   }) {
-    aux ??= generate64RandomHexChars();
+    aux ??= generateRandomHex();
 
     if (hex.decode(secretKey).length != 32) {
       throw Exception("secretKey must be 32-bytes hex encoded");
