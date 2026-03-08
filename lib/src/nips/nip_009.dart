@@ -1,12 +1,10 @@
 import 'package:nostr/nostr.dart';
 
-/// Event Deletion
+/// Event Deletion Request (NIP-09)
 ///
-/// A special event with kind 5, meaning "deletion request," is defined as having a list of one or more tags referencing events the author is requesting to delete.
-/// Each tag entry should follow this format:
-/// - ["e", "event ID"] for referencing events by ID.
-/// - ["a", "kind:pubkey:d-identifier"] for replaceable events up to the deletion timestamp.
-/// The `content` field may contain a reason for the deletion.
+/// A kind 5 event requesting deletion of previously published events.
+/// Tags may reference events by ID ("e"), addressable events ("a"),
+/// and optionally indicate the kinds being deleted ("k").
 ///
 /// Example:
 /// ```json
@@ -15,101 +13,110 @@ import 'package:nostr/nostr.dart';
 ///   "pubkey": "32-bytes hex-encoded public key",
 ///   "tags": [
 ///     ["e", "dcd59..464a2"],
-///     ["e", "968c5..ad7a4"],
-///     ["a", "kind:pubkey:d-identifier"]
+///     ["a", "30023:pubkey:d-identifier"],
+///     ["k", "1"]
 ///   ],
 ///   "content": "these posts were published by accident"
 /// }
 /// ```
 class Nip9 {
-  /// Converts a list of event IDs into a list of tags with "e" entries.
-  ///
-  /// ```dart
-  /// List<String> events = ["event1", "event2"];
-  /// List<List<String>> tags = Nip9.toTags(events);
-  /// ```
+  /// Converts a list of event IDs to `["e", id]` tags.
   static List<List<String>> toTags(List<String> events) {
-    final List<List<String>> result = [];
-    for (final event in events) {
-      result.add(["e", event]);
-    }
-    return result;
+    return events.map((id) => ["e", id]).toList();
   }
 
-  /// Encodes a deletion request event from event IDs, reason, and keys.
+  /// Converts a list of addressable event coordinates to `["a", coord]` tags.
+  static List<List<String>> toATags(List<String> coords) {
+    return coords.map((coord) => ["a", coord]).toList();
+  }
+
+  /// Converts a list of kind numbers to `["k", kind]` tags.
+  static List<List<String>> toKTags(List<int> kinds) {
+    return kinds.map((k) => ["k", k.toString()]).toList();
+  }
+
+  /// Encodes a deletion request event.
   ///
-  /// ```dart
-  /// Event event = Nip9.encode(["event1", "event2"], "Reason", "pubkey", "privkey");
-  /// ```
+  /// [eventIds] references regular events by ID.
+  /// [addressableCoords] references replaceable/addressable events by coordinate.
+  /// [kinds] optionally indicates which kinds are being deleted.
   static Event encode(
     List<String> eventIds,
     String content,
-    String pubkey,
-    String privkey,
-  ) {
+    String secretKey, {
+    List<String> addressableCoords = const [],
+    List<int> kinds = const [],
+  }) {
     return Event.from(
       kind: 5,
-      tags: toTags(eventIds),
+      tags: [
+        ...toTags(eventIds),
+        ...toATags(addressableCoords),
+        ...toKTags(kinds),
+      ],
       content: content,
-      pubkey: pubkey,
-      privkey: privkey,
+      secretKey: secretKey,
     );
   }
 
-  /// Converts an Event to a Nip9DeletionRequest instance.
-  ///
-  /// ```dart
-  /// Nip9DeletionRequest deleteEvent = Nip9.toDeleteEvent(event);
-  /// ```
-  static Nip9DeletionRequest toDeleteEvent(Event event) {
-    return Nip9DeletionRequest(
+  /// Extracts event IDs from `e` tags.
+  static List<String> tagsToList(List<List<String>> tags) {
+    return tags
+        .where((tag) => tag[0] == "e")
+        .map((tag) => tag[1])
+        .toList();
+  }
+
+  /// Extracts addressable event coordinates from `a` tags.
+  static List<String> tagsToAddressableCoords(List<List<String>> tags) {
+    return tags
+        .where((tag) => tag[0] == "a")
+        .map((tag) => tag[1])
+        .toList();
+  }
+
+  /// Converts an Event to a [DeletionRequest] model.
+  static DeletionRequest toDeleteEvent(Event event) {
+    return DeletionRequest(
       event.pubkey,
       tagsToList(event.tags),
+      tagsToAddressableCoords(event.tags),
       event.content,
       event.createdAt,
     );
   }
 
-  /// Extracts event IDs from tags.
-  ///
-  /// ```dart
-  /// List<List<String>> tags = [["e", "event1"], ["e", "event2"]];
-  /// List<String> eventIds = Nip9.tagsToList(tags);
-  /// ```
-  static List<String> tagsToList(List<List<String>> tags) {
-    final List<String> deleteEvents = [];
-    for (final tag in tags) {
-      if (tag[0] == "e") deleteEvents.add(tag[1]);
-    }
-    return deleteEvents;
-  }
-
-  /// Decodes a deletion request event into a Nip9DeletionRequest.
-  ///
-  /// ```dart
-  /// Nip9DeletionRequest deleteEvent = Nip9.decode(event);
-  /// ```
-  static Nip9DeletionRequest decode(Event event) {
+  /// Decodes a kind-5 event into a [DeletionRequest].
+  static DeletionRequest decode(Event event) {
     if (event.kind == 5) return toDeleteEvent(event);
     throw Exception("${event.kind} is not nip9 compatible");
   }
 }
 
-/// Represents a deletion request event.
-class Nip9DeletionRequest {
+/// Represents a NIP-09 deletion request event.
+class DeletionRequest {
   /// Public key of the deletion request author.
   String pubkey;
 
-  /// List of event IDs requested for deletion.
-  List<String> deleteEvents;
+  /// Event IDs requested for deletion (from `e` tags).
+  List<String> eventIds;
 
-  /// Reason for deletion (may be empty).
+  /// Addressable event coordinates requested for deletion (from `a` tags).
+  List<String> addressableCoords;
+
+  /// Optional human-readable reason for deletion.
   String reason;
 
-  /// Timestamp of the deletion request.
-  int deleteTime;
+  /// Unix timestamp of the deletion request.
+  int createdAt;
 
-  /// Constructor for Nip9DeletionRequest.
-  Nip9DeletionRequest(
-      this.pubkey, this.deleteEvents, this.reason, this.deleteTime);
+  DeletionRequest(
+    this.pubkey,
+    this.eventIds,
+    this.addressableCoords,
+    this.reason,
+    this.createdAt,
+  );
 }
+
+typedef Deletion = Nip9;

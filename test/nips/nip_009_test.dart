@@ -3,59 +3,83 @@ import 'package:test/test.dart';
 
 const privkey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+// pubkey derived from privkey above
 const pubkey =
-    '0ba0206887bd61579bf65ec09d7806bea32c64be1cf2c978cf031a811cd238db';
+    '981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b';
 
-/// Unit Tests for Nip9
 void main() {
-  test('toTags should convert event IDs to tags', () {
-    final List<String> eventIds = ["event1", "event2"];
-    final List<List<String>> expectedTags = [
-      ["e", "event1"],
-      ["e", "event2"]
-    ];
-    expect(Nip9.toTags(eventIds), equals(expectedTags));
+  test('toTags converts event IDs to e tags', () {
+    final tags = Nip9.toTags(["event1", "event2"]);
+    expect(tags, equals([["e", "event1"], ["e", "event2"]]));
   });
 
-  test('tagsToList should extract event IDs from tags', () {
-    final List<List<String>> tags = [
-      ["e", "event1"],
-      ["e", "event2"]
-    ];
-    final List<String> expectedEventIds = ["event1", "event2"];
-    expect(Nip9.tagsToList(tags), equals(expectedEventIds));
+  test('toATags converts coordinates to a tags', () {
+    final tags = Nip9.toATags(["30023:$pubkey:my-article"]);
+    expect(tags, equals([["a", "30023:$pubkey:my-article"]]));
   });
 
-  test('encode should create a valid Event object', () {
-    final List<String> eventIds = ["event1", "event2"];
-    const String content = "Reason";
+  test('toKTags converts kind numbers to k tags', () {
+    final tags = Nip9.toKTags([1, 30023]);
+    expect(tags, equals([["k", "1"], ["k", "30023"]]));
+  });
 
-    final Event event = Nip9.encode(eventIds, content, pubkey, privkey);
+  test('tagsToList extracts event IDs from e tags', () {
+    final tags = [
+      ["e", "event1"],
+      ["a", "30023:$pubkey:d"],
+      ["e", "event2"],
+    ];
+    expect(Nip9.tagsToList(tags), equals(["event1", "event2"]));
+  });
+
+  test('tagsToAddressableCoords extracts coords from a tags', () {
+    final tags = [
+      ["e", "event1"],
+      ["a", "30023:$pubkey:article"],
+    ];
+    expect(Nip9.tagsToAddressableCoords(tags),
+        equals(["30023:$pubkey:article"]));
+  });
+
+  test('encode creates a valid deletion event with e tags only', () {
+    final event = Nip9.encode(["event1", "event2"], "Reason", privkey);
     expect(event.kind, equals(5));
-    expect(
-        event.tags,
-        equals([
-          ["e", "event1"],
-          ["e", "event2"]
-        ]));
-    expect(event.content, equals(content));
-    expect(event.pubkey, equals(pubkey));
+    expect(event.tags, equals([["e", "event1"], ["e", "event2"]]));
+    expect(event.content, equals("Reason"));
   });
 
-  test('decode should convert a valid Event to a DeleteEvent', () {
-    final Event event = Event.from(
+  test('encode supports a tags and k tags', () {
+    final coord = "30023:$pubkey:my-post";
+    final event = Nip9.encode(
+      ["event1"],
+      "Reason",
+      privkey,
+      addressableCoords: [coord],
+      kinds: [1, 30023],
+    );
+    expect(event.kind, equals(5));
+    expect(event.tags[0], equals(["e", "event1"]));
+    expect(event.tags[1], equals(["a", coord]));
+    expect(event.tags[2], equals(["k", "1"]));
+    expect(event.tags[3], equals(["k", "30023"]));
+  });
+
+  test('decode converts a valid event to DeletionRequest', () {
+    final coord = "30023:$pubkey:my-post";
+    final event = Event.from(
       kind: 5,
       tags: [
         ["e", "event1"],
-        ["e", "event2"]
+        ["e", "event2"],
+        ["a", coord],
       ],
       content: "Reason",
-      pubkey: pubkey,
-      privkey: privkey,
+      secretKey: privkey,
     );
-    final Nip9DeletionRequest deleteEvent = Nip9.decode(event);
-    expect(deleteEvent.pubkey, equals(pubkey));
-    expect(deleteEvent.deleteEvents, equals(["event1", "event2"]));
-    expect(deleteEvent.reason, equals("Reason"));
+    final DeletionRequest req = Nip9.decode(event);
+    expect(req.pubkey, equals(pubkey));
+    expect(req.eventIds, equals(["event1", "event2"]));
+    expect(req.addressableCoords, equals([coord]));
+    expect(req.reason, equals("Reason"));
   });
 }
