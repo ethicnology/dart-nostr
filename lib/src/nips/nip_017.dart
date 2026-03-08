@@ -3,10 +3,10 @@ import 'package:nostr/nostr.dart';
 class Nip17 {
   static Future<Event> encode({
     required String message,
-    required String authorPrivkey,
+    required String authorSecretKey,
     required String receiverPubkey,
   }) async {
-    final authorPubkey = Keys(authorPrivkey).public;
+    final authorPubkey = Keys(authorSecretKey).public;
 
     final rumor = Event.partial(
       pubkey: authorPubkey,
@@ -23,18 +23,18 @@ class Nip17 {
 
     return Nip59.wrap(
       rumor: rumor,
-      authorPrivkey: authorPrivkey,
+      authorSecretKey: authorSecretKey,
       recipientPubkey: receiverPubkey,
     );
   }
 
   static Future<Event> decode({
     required Event giftWrap,
-    required String receiverPrivkey,
+    required String receiverSecretKey,
   }) async {
     final dm = await Nip59.unwrap(
       giftWrap: giftWrap,
-      recipientPrivkey: receiverPrivkey,
+      recipientSecretKey: receiverSecretKey,
     );
 
     if (dm.kind != 14) {
@@ -44,3 +44,5 @@ class Nip17 {
     return dm;
   }
 }
+
+typedef DirectMessage = Nip17;

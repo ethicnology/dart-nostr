@@ -13,7 +13,7 @@ void main() async {
   const message = 'Hola, que tal?';
 
   final dm = await Nip17.encode(
-    authorPrivkey: author.secret,
+    authorSecretKey: author.secret,
     receiverPubkey: recipient.public,
     message: message,
   );
@@ -32,7 +32,7 @@ void main() async {
     test('decode a direct message', () async {
       final x = await Nip17.decode(
         giftWrap: dm,
-        receiverPrivkey: recipient.secret,
+        receiverSecretKey: recipient.secret,
       );
 
       expect(x.kind, 14);

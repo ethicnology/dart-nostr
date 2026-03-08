@@ -51,7 +51,7 @@ void main() {
         kind: kind,
         tags: tags,
         content: content,
-        privkey: privkey,
+        secretKey: privkey,
       );
 
       expect(
@@ -74,7 +74,7 @@ void main() {
         kind: 1,
         tags: [],
         content: "",
-        privkey:
+        secretKey:
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
       expect(event.createdAt != 0, isTrue);

@@ -91,7 +91,7 @@ void main() {
       final ChannelMessageHidden channelMessageHidden =
           Nip28.getMessageHidden(event);
 
-      expect(channelMessageHidden.operator,
+      expect(channelMessageHidden.pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(channelMessageHidden.messageId,
           'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9');
@@ -106,7 +106,7 @@ void main() {
           privkey);
       final ChannelUserMuted channelUserMuted = Nip28.getUserMuted(event);
 
-      expect(channelUserMuted.operator,
+      expect(channelUserMuted.pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(channelUserMuted.userPubkey,
           'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9');
