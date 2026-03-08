@@ -4,45 +4,42 @@ import 'package:elliptic/ecdh.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:nostr/nostr.dart';
 
-/// The NIP introduces a new data format for keypair-based encryption. This NIP is versioned to allow multiple algorithm choices to exist simultaneously. This format may be used for many things, but MUST be used in the context of a signed event as described in NIP-01.
+/// Versioned keypair-based encryption (NIP-44 v2).
+///
+/// Uses secp256k1 ECDH + HKDF-extract("nip44-v2") as conversation key,
+/// then ChaCha20 + HMAC-SHA256 for per-message encryption.
+///
+/// This format MUST be used in the context of a signed event (NIP-01).
 class Nip44 {
   static Future<String> encrypt({
     required String plaintext,
     required String senderSecretKey,
     required String recipientPublicKey,
     List<int>? customNonce,
-    List<int>? customConversationKey,
+    // Optional pre-computed conversation key (for testing with spec vectors).
+    // When provided, the ECDH + HKDF derivation steps are skipped entirely.
+    List<int>? conversationKey,
   }) async {
-    // Step 1: Compute Shared Secret
-    final sharedSecret = customConversationKey ??
-        computeSharedSecret(
-          secretKeyHex: senderSecretKey,
-          publicKeyHex: recipientPublicKey,
+    // Derive conversation key unless a pre-computed one is provided (test hook)
+    final convKey = conversationKey ??
+        deriveConversationKey(
+          sharedSecret: computeSharedSecret(
+            secretKeyHex: senderSecretKey,
+            publicKeyHex: recipientPublicKey,
+          ),
         );
 
-    // Step 2: Derive Conversation Key
-    final conversationKey = customConversationKey ??
-        deriveConversationKey(sharedSecret: sharedSecret);
-
-    // Step 3: Generate or Use Custom Nonce
     final nonce = customNonce ?? Uint8List.fromList(generateRandomBytes(32));
 
-    // Step 4: Derive Message Keys
-    final keys = deriveMessageKeys(conversationKey, nonce);
+    final keys = deriveMessageKeys(convKey, nonce);
     final chachaKey = keys['chachaKey']!;
     final chachaNonce = keys['chachaNonce']!;
     final hmacKey = keys['hmacKey']!;
 
-    // Step 5: Pad Plaintext
     final paddedPlaintext = pad(utf8.encode(plaintext));
-
-    // Step 6: Encrypt
     final ciphertext = chacha20(chachaKey, chachaNonce, paddedPlaintext, true);
-
-    // Step 7: Calculate MAC
     final mac = calculateMac(hmacKey, nonce, ciphertext);
 
-    // Step 8: Construct Payload
     return constructPayload(nonce, ciphertext, mac);
   }
 
@@ -50,38 +47,32 @@ class Nip44 {
     required String payload,
     required String recipientSecretKey,
     required String senderPublicKey,
-    List<int>? customConversationKey,
+    // Optional pre-computed conversation key (for testing with spec vectors).
+    // When provided, the ECDH + HKDF derivation steps are skipped entirely.
+    List<int>? conversationKey,
   }) async {
-    // Step 1: Compute Shared Secret
-    final sharedSecret = customConversationKey ??
-        computeSharedSecret(
-          secretKeyHex: recipientSecretKey,
-          publicKeyHex: senderPublicKey,
+    // Derive conversation key unless a pre-computed one is provided (test hook)
+    final convKey = conversationKey ??
+        deriveConversationKey(
+          sharedSecret: computeSharedSecret(
+            secretKeyHex: recipientSecretKey,
+            publicKeyHex: senderPublicKey,
+          ),
         );
 
-    // Step 2: Derive Conversation Key
-    final conversationKey = customConversationKey ??
-        deriveConversationKey(sharedSecret: sharedSecret);
-
-    // Step 3: Parse Payload
     final parsed = parsePayload(payload);
     final nonce = parsed['nonce'];
     final ciphertext = parsed['ciphertext'];
     final mac = parsed['mac'];
 
-    // Step 4: Derive Message Keys
-    final keys = deriveMessageKeys(conversationKey, nonce);
+    final keys = deriveMessageKeys(convKey, nonce);
     final chachaKey = keys['chachaKey']!;
     final chachaNonce = keys['chachaNonce']!;
     final hmacKey = keys['hmacKey']!;
 
-    // Step 5: Verify MAC
     verifyMac(hmacKey, nonce, ciphertext, mac);
 
-    // Step 6: Decrypt
     final paddedPlaintext = chacha20(chachaKey, chachaNonce, ciphertext, false);
-
-    // Step 7: Unpad Plaintext
     final plaintextBytes = unpad(paddedPlaintext);
 
     return utf8.decode(plaintextBytes);
@@ -94,18 +85,15 @@ class Nip44 {
     final ec = getS256();
     final secretKey = PrivateKey.fromHex(ec, secretKeyHex);
     final publicKey = PublicKey.fromHex(ec, checkPublicKey(publicKeyHex));
-    final sec = computeSecret(secretKey, publicKey);
-    return sec;
+    return computeSecret(secretKey, publicKey);
   }
 
   static List<int> deriveConversationKey({required List<int> sharedSecret}) {
-    final salt = utf8.encode('nip44-v2');
-
-    final conversationKey = hkdfExtract(
+    return hkdfExtract(
       ikm: sharedSecret,
-      salt: Uint8List.fromList(salt),
+      salt: Uint8List.fromList(utf8.encode('nip44-v2')),
     );
-
-    return conversationKey;
   }
 }
+
+typedef Encryption = Nip44;

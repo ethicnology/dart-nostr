@@ -4,11 +4,11 @@ import 'package:test/test.dart';
 void main() {
   group('NIP-59 Gift Wrap Tests', () {
     // Example from the spec
-    const authorPrivkey =
+    const authorSecretKey =
         '0beebd062ec8735f4243466049d7747ef5d6594ee838de147f8aab842b15e273';
-    const recipientPrivkey =
+    const recipientSecretKey =
         'e108399bd8424357a710b606ae0c13166d853d327e47a6e5e038197346bdbf45';
-    const ephemeralPrivkey =
+    const ephemeralSecretKey =
         '4f02eac59266002db5801adc5270700ca69d5b8f761d8732fab2fbf233c90cbd';
 
     const rumorContent = 'Are you going to the party tonight?';
@@ -30,12 +30,12 @@ void main() {
       // 2) Wrap the rumor:
       //    - Seal => kind=13 => signed by author
       //    - GiftWrap => kind=1059 => signed by ephemeral
-      //    We'll explicitly specify ephemeralPrivkey from the spec.
+      //    We'll explicitly specify ephemeralSecretKey from the spec.
       final giftWrap = await Nip59.wrap(
         rumor: rumor,
-        authorPrivkey: authorPrivkey,
-        recipientPubkey: Keys(recipientPrivkey).public,
-        ephemeralPrivkey: ephemeralPrivkey,
+        authorSecretKey: authorSecretKey,
+        recipientPubkey: Keys(recipientSecretKey).public,
+        ephemeralSecretKey: ephemeralSecretKey,
         createdAt: 1703021488,
       );
 
@@ -56,7 +56,7 @@ void main() {
       // 3) The recipient unwraps
       final unwrappedRumor = await Nip59.unwrap(
         giftWrap: giftWrap,
-        recipientPrivkey: recipientPrivkey,
+        recipientSecretKey: recipientSecretKey,
       );
 
       // The unwrapped rumor should be kind=1, no signature, same content
@@ -65,6 +65,25 @@ void main() {
       expect(unwrappedRumor.sig, isEmpty, reason: 'Rumor must remain unsigned');
       expect(unwrappedRumor.id, isEmpty,
           reason: 'Rumor is never broadcast as itself');
+    });
+
+    test('gift wrap created_at is within the past 2 days', () async {
+      final rumor = Event.partial(
+        tags: [],
+        content: 'test',
+        createdAt: 1691518405,
+        pubkey: rumorPubkey,
+      );
+      final giftWrap = await Nip59.wrap(
+        rumor: rumor,
+        authorSecretKey: authorSecretKey,
+        recipientPubkey: Keys(recipientSecretKey).public,
+        ephemeralSecretKey: ephemeralSecretKey,
+      );
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      const twoDays = 2 * 24 * 3600;
+      expect(giftWrap.createdAt, lessThanOrEqualTo(now));
+      expect(giftWrap.createdAt, greaterThanOrEqualTo(now - twoDays));
     });
   });
 }

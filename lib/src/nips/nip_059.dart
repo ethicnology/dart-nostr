@@ -17,11 +17,11 @@ class Nip59 {
   /// `rumor`         A Nostr event without a signature. If it has .sig or .id,
   ///                 we will forcibly remove them to preserve "unsigned rumor."
   ///
-  /// `authorPrivkey` The real author's secret key (hex-encoded, 32 bytes).
+  /// `authorSecretKey` The real author's secret key (hex-encoded, 32 bytes).
   ///
   /// `recipientPubkey` The final recipient's pubkey (hex-encoded, 32 bytes).
   ///
-  /// `ephemeralPrivkey` Optionally specify the ephemeral key used for the gift wrap.
+  /// `ephemeralSecretKey` Optionally specify the ephemeral key used for the gift wrap.
   ///                    If null, it is randomly generated.
   ///
   /// `createdAt`     Optionally override 'created_at' for the final gift wrap.
@@ -32,13 +32,13 @@ class Nip59 {
   /// Returns a `kind=1059` event that you broadcast. The seal is inside the `content`.
   static Future<Event> wrap({
     required Event rumor,
-    required String authorPrivkey,
+    required String authorSecretKey,
     required String recipientPubkey,
-    String? ephemeralPrivkey,
+    String? ephemeralSecretKey,
     int? createdAt,
     List<List<String>>? extraTags,
   }) async {
-    final authorPubkey = Keys(authorPrivkey).public;
+    final authorPubkey = Keys(authorSecretKey).public;
 
     if (rumor.pubkey != authorPubkey) {
       throw Exception(
@@ -58,11 +58,11 @@ class Nip59 {
 
     final rumorJson = unsignedRumor.toJson();
 
-    // Encrypt rumor with (authorPrivkey, recipientPubkey)
+    // Encrypt rumor with (authorSecretKey, recipientPubkey)
     final sealCiphertext = await Nip44.encrypt(
       plaintext: rumorJson,
       recipientPublicKey: recipientPubkey,
-      senderSecretKey: authorPrivkey,
+      senderSecretKey: authorSecretKey,
     );
 
     // Build the seal event (kind=13, empty tags, .content = ciphertext)
@@ -73,13 +73,13 @@ class Nip59 {
       tags: [], // Per NIP-59, MUST always be empty
       content: sealCiphertext,
       pubkey: authorPubkey,
-      privkey: authorPrivkey,
+      secretKey: authorSecretKey,
       createdAt: _randomPastTimestamp(),
     );
 
     // Create a "gift wrap" (kind=1059) by encrypting the seal using an ephemeral key.
     // Then sign with ephemeral key. If ephemeral key not specified, generate it
-    final ephemeral = ephemeralPrivkey ?? Keys.generate().secret;
+    final ephemeral = ephemeralSecretKey ?? Keys.generate().secret;
     final ephemeralPubkey = Keys(ephemeral).public;
 
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
@@ -100,7 +100,7 @@ class Nip59 {
       tags: tags,
       content: wrapCiphertext,
       pubkey: ephemeralPubkey,
-      privkey: ephemeral, // ephemeral signing key
+      secretKey: ephemeral, // ephemeral signing key
       createdAt: createdAt ?? _randomPastTimestamp(),
     );
 
@@ -113,23 +113,23 @@ class Nip59 {
   /// then decrypt that seal to get the underlying rumor.
   ///
   /// `giftWrap` must be a `kind=1059` event posted by ephemeral key.
-  /// `recipientPrivkey` is the real recipient's secret key.
+  /// `recipientSecretKey` is the real recipient's secret key.
   ///
   /// Returns the final "rumor" (an **unsigned** event), which you can parse or show.
   static Future<Event> unwrap({
     required Event giftWrap,
-    required String recipientPrivkey,
+    required String recipientSecretKey,
   }) async {
     if (giftWrap.kind != 1059) {
       throw Exception('Not a gift wrap event (expected kind=1059)');
     }
 
     // Decrypt the gift wrap to recover the "seal" (kind=13)
-    // with (ephemeralPub = giftWrap.pubkey, recipientPrivkey)
+    // with (ephemeralPub = giftWrap.pubkey, recipientSecretKey)
     final sealJsonStr = await Nip44.decrypt(
       payload: giftWrap.content,
       senderPublicKey: giftWrap.pubkey,
-      recipientSecretKey: recipientPrivkey,
+      recipientSecretKey: recipientSecretKey,
     );
 
     // Reconstruct the seal event
@@ -140,11 +140,11 @@ class Nip59 {
     }
 
     // Decrypt the seal to recover the rumor
-    // with (authorPub = seal.pubkey, recipientPrivkey)
+    // with (authorPub = seal.pubkey, recipientSecretKey)
     final rumorJsonStr = await Nip44.decrypt(
       payload: seal.content,
       senderPublicKey: seal.pubkey,
-      recipientSecretKey: recipientPrivkey,
+      recipientSecretKey: recipientSecretKey,
     );
 
     final rumorMap = json.decode(rumorJsonStr) as Map<String, dynamic>;
@@ -180,10 +180,16 @@ class Nip59 {
     return rumor;
   }
 
-  /// Timestamps SHOULD be in the past (two days)
+  /// Timestamps SHOULD be randomized within the past 2 days to prevent
+  /// time-correlation attacks per the NIP-59 specification.
   static int _randomPastTimestamp() {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final offset = DateTime.now().millisecondsSinceEpoch % (2 * 24 * 3600);
-    return now - (offset ~/ 1000);
+    const twoDays = 2 * 24 * 3600; // 172800 seconds
+    final randomBytes = generateRandomBytes(4);
+    final randomOffset =
+        randomBytes.fold<int>(0, (a, b) => (a << 8) | b) % twoDays;
+    return now - randomOffset;
   }
 }
+
+typedef GiftWrap = Nip59;
