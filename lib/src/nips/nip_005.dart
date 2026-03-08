@@ -81,7 +81,7 @@ class Nip5 {
       if (resolvedPubkey == null) return false;
 
       return resolvedPubkey.toLowerCase() == pubkey.toLowerCase();
-    } catch (_) {
+    } on Exception {
       return false;
     }
   }

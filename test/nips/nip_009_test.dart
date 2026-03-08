@@ -49,7 +49,7 @@ void main() {
   });
 
   test('encode supports a tags and k tags', () {
-    final coord = "30023:$pubkey:my-post";
+    const coord = "30023:$pubkey:my-post";
     final event = Nip9.encode(
       ["event1"],
       "Reason",
@@ -65,7 +65,7 @@ void main() {
   });
 
   test('decode converts a valid event to DeletionRequest', () {
-    final coord = "30023:$pubkey:my-post";
+    const coord = "30023:$pubkey:my-post";
     final event = Event.from(
       kind: 5,
       tags: [
