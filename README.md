@@ -16,12 +16,10 @@ flutter pub add nostr
 ## [NIPS](https://github.com/nostr-protocol/nips)
 - [x] [NIP 01 Basic protocol flow description](https://github.com/nostr-protocol/nips/blob/master/01.md)
 - [x] [NIP 02 Contact List and Petnames](https://github.com/nostr-protocol/nips/blob/master/02.md)
-- [x] [NIP 04 Encrypted Direct Message](https://github.com/nostr-protocol/nips/blob/master/04.md)
 - [x] [NIP 05 Mapping Nostr keys to DNS-based internet identifiers](https://github.com/nostr-protocol/nips/blob/master/05.md)
 - [x] [NIP 09 Event Deletion Request](https://github.com/nostr-protocol/nips/blob/master/09.md)
 - [x] [NIP 10 Conventions for clients' use of e and p tags in text events](https://github.com/nostr-protocol/nips/blob/master/10.md)
 - [x] [NIP 13 Proof of Work](https://github.com/nostr-protocol/nips/blob/master/13.md)
-- [x] [NIP 15 End of Stored Events Notice](https://github.com/nostr-protocol/nips/blob/master/15.md)
 - [x] [NIP 17 Private Direct Messages (Partial)](https://github.com/nostr-protocol/nips/blob/master/17.md)
 - [x] [NIP 19 bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [x] [NIP 20 Command Results](https://github.com/nostr-protocol/nips/blob/master/20.md)
@@ -92,7 +90,7 @@ void main() async {
     kind: 1,
     tags: [],
     content: "vi veri universum vivus vici",
-    privkey:
+    secretKey:
         "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12", // DO NOT REUSE THIS PRIVATE KEY
   );
 
@@ -128,7 +126,7 @@ import 'package:nostr/nostr.dart';
 
 void main() async {
 // Create a subscription message request with one or many filters
-  Request requestWithFilter = Request(generate64RandomHexChars(), [
+  Request requestWithFilter = Request(subscriptionId: generateRandomHex(), filters: [
     Filter(
       kinds: [0, 1, 2, 7],
       since: 1674063680,
@@ -163,14 +161,14 @@ void main() async {
 import 'package:nostr/nostr.dart';
 
 void main() async {
-  String subscriptionId = generate64RandomHexChars();
+  String subscriptionId = generateRandomHex();
   var close1 = Close(subscriptionId);
   assert(close1.subscriptionId == subscriptionId);
 
   var close2 = Close(subscriptionId);
   assert(close2.serialize() == '["CLOSE","$subscriptionId"]');
 
-  var close3 = Close.deserialize(["CLOSE", subscriptionId]);
+  var close3 = Close.deserialize('["CLOSE","$subscriptionId"]');
   assert(close3.subscriptionId == subscriptionId);
 }
 ```
@@ -228,19 +226,19 @@ void main() {
       ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"],
     ],
     content: "",
-    privkey: "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+    secretKey: "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
 
   List<Profile> someProfiles = Nip2.decode(event);
-  assert(someProfiles[0].key == "91cf9..4e5ca");
+  assert(someProfiles[0].pubkey == "91cf9..4e5ca");
   assert(someProfiles[1].relay == "wss://bobrelay.com/nostr");
   assert(someProfiles[2].petname == "carol");
 
   // Instantiate a new nip2 profile
-  String key = "91cf9..4e5ca";
+  String pubkey = "91cf9..4e5ca";
   String relay = "wss://alicerelay.com/";
   String petname = "alice";
-  var alice = Profile(key, relay, petname);
+  var alice = Profile(pubkey, relay, petname);
 
   List<Profile> profiles = [
     alice,

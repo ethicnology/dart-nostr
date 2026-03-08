@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:nostr/nostr.dart';
 
 void main() async {
-  final String subscriptionId = generate64RandomHexChars();
+  final String subscriptionId = generateRandomHex();
   final close1 = Close(subscriptionId);
   assert(close1.subscriptionId == subscriptionId);
 
