@@ -32,7 +32,7 @@ class Request {
       [
         "REQ",
         subscriptionId,
-        if (filters.isEmpty) Filter() else ...theFilters,
+        if (filters.isEmpty) const Filter() else ...theFilters,
       ],
     );
   }

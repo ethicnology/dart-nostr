@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 void main() {
   group('Request', () {
     test('Constructor.toJson', () {
-      final Filter myFilter = Filter(
+      const Filter myFilter = Filter(
         ids: [
           "047663d895d56aefa3f528935c7ce7dc8939eb721a0ec76ef2e558a8257955d2"
         ],

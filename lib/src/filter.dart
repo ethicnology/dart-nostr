@@ -5,37 +5,37 @@
 /// as they arrive.
 class Filter {
   /// A list of event ids or prefixes to match.
-  List<String>? ids;
+  final List<String>? ids;
 
   /// A list of pubkeys or prefixes; the pubkey of an event must be one of these.
-  List<String>? authors;
+  final List<String>? authors;
 
   /// A list of event kind numbers to match.
-  List<int>? kinds;
+  final List<int>? kinds;
 
   /// A list of event ids that are referenced in an "e" tag.
-  List<String>? eTags;
+  final List<String>? eTags;
 
   /// A list of event ids that are referenced in an "a" tag.
-  List<String>? aTags;
+  final List<String>? aTags;
 
   /// A list of pubkeys that are referenced in a "p" tag.
-  List<String>? pTags;
+  final List<String>? pTags;
 
   /// A unix timestamp; events must be newer than this to pass.
-  int? since;
+  final int? since;
 
   /// A unix timestamp; events must be older than this to pass.
-  int? until;
+  final int? until;
 
   /// Maximum number of events to be returned in the initial query.
-  int? limit;
+  final int? limit;
 
   /// NIP-50 full-text search term.
-  String? search;
+  final String? search;
 
   /// Creates a [Filter] with the given optional constraints.
-  Filter({
+  const Filter({
     this.ids,
     this.authors,
     this.kinds,
@@ -49,18 +49,20 @@ class Filter {
   });
 
   /// Deserializes a [Filter] from a JSON map.
-  Filter.fromJson(Map<String, dynamic> json) {
-    ids = json['ids'] == null ? null : List<String>.from(json['ids']);
-    authors =
-        json['authors'] == null ? null : List<String>.from(json['authors']);
-    kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
-    eTags = json['#e'] == null ? null : List<String>.from(json['#e']);
-    aTags = json['#a'] == null ? null : List<String>.from(json['#a']);
-    pTags = json['#p'] == null ? null : List<String>.from(json['#p']);
-    since = json['since'];
-    until = json['until'];
-    limit = json['limit'];
-    search = json['search'];
+  factory Filter.fromJson(Map<String, dynamic> json) {
+    return Filter(
+      ids: json['ids'] == null ? null : List<String>.from(json['ids']),
+      authors:
+          json['authors'] == null ? null : List<String>.from(json['authors']),
+      kinds: json['kinds'] == null ? null : List<int>.from(json['kinds']),
+      eTags: json['#e'] == null ? null : List<String>.from(json['#e']),
+      aTags: json['#a'] == null ? null : List<String>.from(json['#a']),
+      pTags: json['#p'] == null ? null : List<String>.from(json['#p']),
+      since: json['since'],
+      until: json['until'],
+      limit: json['limit'],
+      search: json['search'],
+    );
   }
 
   /// Serializes this filter to a JSON-compatible map.

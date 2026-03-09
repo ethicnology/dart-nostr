@@ -78,9 +78,8 @@ class Nip1 {
   /// Extracts hashtag values from event tags.
   ///
   /// Returns a list of strings from all `t` tags, or null if none.
-  static List<String>? extractHashTags(List<List<String>> tags) {
-    final result = findAllTagValues(tags, 't');
-    return result.isNotEmpty ? result : null;
+  static List<String> extractHashTags(List<List<String>> tags) {
+    return findAllTagValues(tags, 't');
   }
 
   /// Returns the quote-repost event ID from a `q` tag, or null if absent.
@@ -131,7 +130,7 @@ class Note {
   final String content;
 
   /// Hashtag values extracted from `t` tags.
-  final List<String>? hashTags;
+  final List<String> hashTags;
 
   /// The quote-repost event ID from a `q` tag, if present.
   final String? quoteRepostId;
@@ -146,7 +145,7 @@ class Note {
     required this.createdAt,
     required this.content,
     this.thread,
-    this.hashTags,
+    this.hashTags = const [],
     this.quoteRepostId,
     this.groupId,
   });

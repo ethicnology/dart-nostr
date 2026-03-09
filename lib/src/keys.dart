@@ -49,11 +49,6 @@ class Keys {
     }
   }
 
-  /// Named-parameter variant of the default constructor.
-  factory Keys.from({required String secretKey}) {
-    return Keys(secretKey);
-  }
-
   /// Generates a new random key pair.
   Keys.generate() {
     secret = generateRandomHex();

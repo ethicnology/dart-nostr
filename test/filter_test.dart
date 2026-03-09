@@ -76,7 +76,7 @@ void main() {
     });
 
     test('toJson serializes tag filters with # prefix', () {
-      final filter = Filter(
+      const filter = Filter(
         eTags: ['abc123'],
         pTags: ['def456'],
         aTags: ['30023:pk:id'],

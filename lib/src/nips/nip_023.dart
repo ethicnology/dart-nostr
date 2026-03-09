@@ -84,19 +84,17 @@ class Nip23Article {
   /// Unix timestamp of the first publication (optional).
   final int? publishedAt;
 
-  /// List of topics (hashtags) (optional).
-  final List<String>? topics;
+  /// List of topics (hashtags).
+  final List<String> topics;
 
-  /// Extra tags for metadata (optional).
-  final List<List<String>>? additionalTags;
+  /// Extra tags for metadata.
+  final List<List<String>> additionalTags;
 
   /// The event kind, should be either [Nip23.kindArticle] or [Nip23.kindDraft].
   final int kind;
 
-  /// Constructs a [Nip23Article].
-  ///
-  /// Throws [InvalidKindException] if [kind] is not [Nip23.kindArticle] or [Nip23.kindDraft].
-  Nip23Article({
+  /// Creates a [Nip23Article] with the given fields.
+  const Nip23Article({
     required this.content,
     required this.pubkey,
     required this.createdAt,
@@ -105,14 +103,10 @@ class Nip23Article {
     this.image,
     this.summary,
     this.publishedAt,
-    this.topics,
-    this.additionalTags,
+    this.topics = const [],
+    this.additionalTags = const [],
     this.kind = Nip23.kindArticle,
-  }) {
-    if (kind != Nip23.kindArticle && kind != Nip23.kindDraft) {
-      throw InvalidKindException(kind, [Nip23.kindArticle, Nip23.kindDraft]);
-    }
-  }
+  });
 
   /// Factory constructor to create a [Nip23Article] from an [Event] instance.
   ///
@@ -132,15 +126,13 @@ class Nip23Article {
     final image = findTagValue(event.tags, 'image');
     final summary = findTagValue(event.tags, 'summary');
     final publishedAtStr = findTagValue(event.tags, 'published_at');
-    final topicValues = findAllTagValues(event.tags, 't');
-    final List<String>? topics = topicValues.isNotEmpty ? topicValues : null;
+    final topics = findAllTagValues(event.tags, 't');
 
-    // Extract additional tags by excluding known event.tags
-    List<List<String>>? additionalTags = event.tags.where((tag) {
+    // Extract additional tags by excluding known tag types
+    final additionalTags = event.tags.where((tag) {
       return !['d', 'title', 'image', 'summary', 'published_at', 't']
           .contains(tag[0]);
     }).toList();
-    if (additionalTags.isEmpty) additionalTags = null;
 
     return Nip23Article(
       content: event.content,

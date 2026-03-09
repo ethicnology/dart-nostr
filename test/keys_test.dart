@@ -17,7 +17,7 @@ void main() {
     test('Keys from NIP19 nsec', () {
       const nsec =
           "nsec1tmsusqq2k28d6exhff7e2xkzm42es9yg0vdeuxk8chufa9sjtsfq8z3spp";
-      final keys = Keys.from(secretKey: nsec);
+      final keys = Keys(nsec);
       expect(keys.secret,
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12');
     });

@@ -5,7 +5,7 @@ void main() async {
 // Create a subscription message request with one or many filters
   final requestWithFilter =
       Request(subscriptionId: generateRandomHex(), filters: [
-    Filter(
+    const Filter(
       kinds: [0, 1, 2, 7],
       since: 1674063680,
       limit: 450,
