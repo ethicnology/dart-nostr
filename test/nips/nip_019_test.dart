@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -58,6 +61,50 @@ void main() {
         '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d');
     expect(x.relays[0], 'wss://r.x.com');
     expect(x.relays[1], 'wss://djbas.sadkb.com');
+  });
+
+  group('rust-nostr cross-implementation vectors', () {
+    late Map<String, dynamic> vectors;
+
+    setUpAll(() {
+      vectors = json.decode(
+          File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+    });
+
+    test('nsec encode/decode matches rust-nostr', () {
+      final nip19 = vectors['nip19']['nsec'];
+      final encoded = Nip19.encode(prefix: Nip19Prefix.nsec, data: nip19['hex']);
+      expect(encoded, nip19['bech32']);
+      final decoded = Nip19.decode(payload: nip19['bech32']);
+      expect(decoded.data, nip19['hex']);
+      expect(decoded.prefix, Nip19Prefix.nsec);
+    });
+
+    test('npub encode/decode matches rust-nostr', () {
+      final nip19 = vectors['nip19']['npub'];
+      final encoded = Nip19.encode(prefix: Nip19Prefix.npub, data: nip19['hex']);
+      expect(encoded, nip19['bech32']);
+      final decoded = Nip19.decode(payload: nip19['bech32']);
+      expect(decoded.data, nip19['hex']);
+      expect(decoded.prefix, Nip19Prefix.npub);
+    });
+
+    test('note encode/decode matches rust-nostr', () {
+      final nip19 = vectors['nip19']['note'];
+      final encoded = Nip19.encode(prefix: Nip19Prefix.note, data: nip19['hex']);
+      expect(encoded, nip19['bech32']);
+      final decoded = Nip19.decode(payload: nip19['bech32']);
+      expect(decoded.data, nip19['hex']);
+      expect(decoded.prefix, Nip19Prefix.note);
+    });
+
+    test('nprofile decode matches rust-nostr', () {
+      final nip19 = vectors['nip19']['nprofile'];
+      final decoded = Nip19.decodeShareableIdentifiers(payload: nip19['bech32']);
+      expect(decoded.prefix, Nip19Prefix.nprofile);
+      expect(decoded.data, nip19['pubkey']);
+      expect(decoded.relays, nip19['relays'].cast<String>());
+    });
   });
 
   test('encode nprofile', () {

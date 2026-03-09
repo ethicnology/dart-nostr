@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:elliptic/elliptic.dart' as elliptic;
@@ -274,6 +275,57 @@ void assertConversationKeyGenerationPub(
 }
 
 void main() {
+  group('rust-nostr NIP-44 vectors from JSON', () {
+    late Map<String, dynamic> vectors;
+
+    setUpAll(() {
+      vectors = json.decode(
+          File('test/fixtures/nip44.vectors.json').readAsStringSync());
+    });
+
+    test('calc_padded_len matches all 24 vectors', () {
+      final paddingVectors = vectors['v2']['valid']['calc_padded_len'] as List;
+      for (final v in paddingVectors) {
+        final input = v[0] as int;
+        final expected = v[1] as int;
+        expect(calcPaddedLen(input), expected,
+            reason: 'calcPaddedLen($input) should be $expected');
+      }
+    });
+
+    test('conversation key derivation matches all vectors', () async {
+      final convKeyVectors =
+          vectors['v2']['valid']['get_conversation_key'] as List;
+      for (final v in convKeyVectors) {
+        await assertConversationKeyGeneration(
+          v['sec1'],
+          v['pub2'],
+          v['conversation_key'],
+        );
+      }
+    });
+
+    test('encrypt_decrypt matches all vectors', () async {
+      final cryptVectors =
+          vectors['v2']['valid']['encrypt_decrypt'] as List;
+      for (final v in cryptVectors) {
+        final ec = elliptic.getS256();
+        final sk2 = elliptic.PrivateKey.fromHex(ec, v['sec2']);
+        final pk2Hex = sk2.publicKey.toHex();
+
+        final nonce = hexToBytes(v['nonce']);
+        final encrypted = await Nip44.encrypt(
+          plaintext: v['plaintext'],
+          senderSecretKey: v['sec1'],
+          recipientPublicKey: pk2Hex,
+          customNonce: nonce,
+        );
+        expect(encrypted, v['ciphertext'],
+            reason: 'Failed encrypt for: ${v['plaintext']}');
+      }
+    });
+  });
+
   test('TestCryptPriv001', () async {
     await assertCryptPriv(
       '0000000000000000000000000000000000000000000000000000000000000001',

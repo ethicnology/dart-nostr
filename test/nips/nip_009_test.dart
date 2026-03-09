@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -81,5 +84,21 @@ void main() {
     expect(req.eventIds, equals(["event1", "event2"]));
     expect(req.addressableCoords, equals([coord]));
     expect(req.reason, equals("Reason"));
+  });
+
+  test('rust-nostr deletion vector', () {
+    final vectors = json.decode(
+        File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+    final nip09 = vectors['nip09'];
+    final event = Nip9.encode(
+      eventIds: [nip09['event_id']],
+      addressableCoords: [nip09['coordinate']],
+      content: nip09['reason'],
+      secretKey: secretKey,
+    );
+    expect(event.kind, 5);
+    expect(event.tags[0], ['e', nip09['event_id']]);
+    expect(event.tags[1], ['a', nip09['coordinate']]);
+    expect(event.content, nip09['reason']);
   });
 }

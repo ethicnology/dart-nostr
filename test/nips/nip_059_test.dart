@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -65,6 +68,39 @@ void main() {
       expect(unwrappedRumor.sig, isEmpty, reason: 'Rumor must remain unsigned');
       expect(unwrappedRumor.id, isEmpty,
           reason: 'Rumor is never broadcast as itself');
+    });
+
+    test('wrap/unwrap with rust-nostr test keys', () async {
+      final vectors = json.decode(
+          File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+      final nip59 = vectors['nip59'];
+
+      final senderSecret = nip59['sender_secret'] as String;
+      final receiverSecret = nip59['receiver_secret'] as String;
+      final receiverPubkey = Keys(receiverSecret).public;
+
+      final rumor = Event.partial(
+        content: 'cross-impl test',
+        createdAt: 1700000000,
+        pubkey: Keys(senderSecret).public,
+      );
+
+      final giftWrap = await Nip59.wrap(
+        rumor: rumor,
+        authorSecretKey: senderSecret,
+        recipientPubkey: receiverPubkey,
+      );
+
+      expect(giftWrap.kind, 1059);
+
+      final unwrapped = await Nip59.unwrap(
+        giftWrap: giftWrap,
+        recipientSecretKey: receiverSecret,
+      );
+
+      expect(unwrapped.content, 'cross-impl test');
+      expect(unwrapped.pubkey, Keys(senderSecret).public);
+      expect(unwrapped.sig, isEmpty);
     });
 
     test('gift wrap created_at is within the past 2 days', () async {

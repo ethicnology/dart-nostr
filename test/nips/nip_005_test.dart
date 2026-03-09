@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -84,6 +87,14 @@ void main() {
             '0000000000000000000000000000000000000000000000000000000000000000',
       );
       expect(result, isFalse);
+    });
+
+    test('rust-nostr verificationUrl vector', () {
+      final vectors = json.decode(
+          File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+      final nip05 = vectors['nip05'];
+      final url = Nip5.verificationUrl(nip05['identifier']);
+      expect(url.toString(), nip05['expected_url']);
     });
 
     test('verify with non-existent name returns false (live DNS)', () async {

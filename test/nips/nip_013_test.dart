@@ -1,7 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
-/// Unit Tests for Nip13
 void main() {
   test('countLeadingZeroes calculates correct difficulty for IDs', () {
     expect(
@@ -12,5 +14,25 @@ void main() {
     );
     expect(Nip13.countLeadingZeroes("002f"), equals(10));
     expect(Nip13.countLeadingZeroes("f0"), equals(0));
+  });
+
+  group('rust-nostr cross-implementation vectors', () {
+    late List<dynamic> vectors;
+
+    setUpAll(() {
+      final data = json.decode(
+          File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+      vectors = data['nip13']['leading_zeros'];
+    });
+
+    test('leading zero bits match rust-nostr', () {
+      for (final v in vectors) {
+        expect(
+          Nip13.countLeadingZeroes(v['hex']),
+          v['bits'],
+          reason: 'Failed for ${v['hex']}',
+        );
+      }
+    });
   });
 }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +39,28 @@ void main() {
         () => Nip21.encode('nsec1tmsusqq2k28d6exhff7e2xkzm42es9yg0vdeuxk8chufa9sjtsfq8z3spp'),
         throwsA(isA<Exception>()),
       );
+    });
+  });
+
+  group('rust-nostr cross-implementation vectors', () {
+    late Map<String, dynamic> vectors;
+
+    setUpAll(() {
+      final data = json.decode(
+          File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
+      vectors = data['nip21'];
+    });
+
+    test('valid URIs decode correctly', () {
+      for (final v in vectors['valid']) {
+        expect(Nip21.decode(v['uri']), v['decoded']);
+      }
+    });
+
+    test('nsec URI is rejected by encode', () {
+      final nsecUri = vectors['invalid_nsec'] as String;
+      final nsecPayload = nsecUri.replaceFirst('nostr:', '');
+      expect(() => Nip21.encode(nsecPayload), throwsA(isA<NostrException>()));
     });
   });
 }
