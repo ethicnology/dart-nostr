@@ -26,7 +26,7 @@ class Nip20 {
   final String message;
 
   /// Creates a [Nip20] with the given [eventId], [status], and [message].
-  Nip20(this.eventId, this.status, this.message);
+  const Nip20(this.eventId, this.status, this.message);
 
   /// Serialize to nostr OK message.
   ///

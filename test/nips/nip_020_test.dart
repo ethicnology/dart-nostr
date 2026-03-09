@@ -10,7 +10,7 @@ void main() {
           "b1a649ebe8b435ec71d3784793f3bbf4b93e64e17568a741aecd4c7ddeafce30";
       const status = true;
       const message = "";
-      final nip20 = Nip20(eventId, status, message);
+      const nip20 = Nip20(eventId, status, message);
       expect(nip20.eventId, eventId);
       expect(nip20.status, status);
       expect(nip20.message, message);
@@ -22,7 +22,7 @@ void main() {
       const status = true;
       const message = "";
       const stringNip20 = '["OK","$eventId",$status,"$message"]';
-      final nip20 = Nip20(eventId, status, message);
+      const nip20 = Nip20(eventId, status, message);
       expect(nip20.serialize(), stringNip20);
     });
 

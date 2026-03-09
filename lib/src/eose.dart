@@ -9,7 +9,7 @@ import 'package:nostr/src/error.dart';
 /// new events will be transmitted for the subscription.
 class Eose {
   /// Creates an [Eose] message for the given [subscriptionId].
-  Eose(this.subscriptionId);
+  const Eose(this.subscriptionId);
 
   /// The subscription identifier that this EOSE message refers to.
   final String subscriptionId;

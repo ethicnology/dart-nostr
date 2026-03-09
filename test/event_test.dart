@@ -43,7 +43,7 @@ void main() {
       const int kind = 1;
       final List<List<String>> tags = [];
       const String content = "Ceci est une analyse du websocket";
-      const String privkey =
+      const String secretKey =
           "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12";
 
       final Event event = Event.from(
@@ -51,7 +51,7 @@ void main() {
         kind: kind,
         tags: tags,
         content: content,
-        secretKey: privkey,
+        secretKey: secretKey,
       );
 
       expect(

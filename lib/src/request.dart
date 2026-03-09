@@ -19,7 +19,7 @@ class Request {
   final List<Filter> filters;
 
   /// Creates a [Request] with the given [subscriptionId] and [filters].
-  Request({required this.subscriptionId, this.filters = const []});
+  const Request({required this.subscriptionId, this.filters = const []});
 
   /// Serializes this request to the Nostr wire format.
   ///

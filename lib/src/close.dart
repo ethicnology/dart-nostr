@@ -13,7 +13,7 @@ class Close {
   final String subscriptionId;
 
   /// Creates a [Close] message for the given [subscriptionId].
-  Close(this.subscriptionId);
+  const Close(this.subscriptionId);
 
   /// Serializes this close message to the Nostr wire format.
   ///

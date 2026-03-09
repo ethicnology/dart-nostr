@@ -24,7 +24,7 @@ void main() {
         search: "term",
       );
 
-      final req =
+      const req =
           Request(subscriptionId: "733209259899167", filters: [myFilter]);
 
       expect(req.subscriptionId, "733209259899167");
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('Request.serialize with empty filters', () {
-      final req = Request(subscriptionId: 'id');
+      const req = Request(subscriptionId: 'id');
       expect(
         req.serialize(),
         '["REQ","id",{}]',

@@ -1,9 +1,9 @@
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
-const privkey =
+const secretKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-// pubkey derived from privkey above
+// pubkey derived from secretKey above
 const pubkey =
     '981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b';
 
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('encode creates a valid deletion event with e tags only', () {
-    final event = Nip9.encode(eventIds: ["event1", "event2"], content: "Reason", secretKey: privkey);
+    final event = Nip9.encode(eventIds: ["event1", "event2"], content: "Reason", secretKey: secretKey);
     expect(event.kind, equals(5));
     expect(event.tags, equals([["e", "event1"], ["e", "event2"]]));
     expect(event.content, equals("Reason"));
@@ -53,7 +53,7 @@ void main() {
     final event = Nip9.encode(
       eventIds: ["event1"],
       content: "Reason",
-      secretKey: privkey,
+      secretKey: secretKey,
       addressableCoords: [coord],
       kinds: [1, 30023],
     );
@@ -74,7 +74,7 @@ void main() {
         ["a", coord],
       ],
       content: "Reason",
-      secretKey: privkey,
+      secretKey: secretKey,
     );
     final DeletionRequest req = Nip9.decode(event);
     expect(req.pubkey, equals(pubkey));
