@@ -193,17 +193,9 @@ class Nip51 {
 
   /// Decodes a NIP-51 list event into a [UserList].
   ///
-  /// Supports kinds 10000 (mute), 10001 (pin), 30000 (categorized people),
-  /// and 30001 (categorized bookmarks).
-  ///
-  /// Throws [InvalidKindException] if the event kind is not one of the above.
+  /// Accepts any list kind defined in the spec (10000-10102, 30000-39092, etc.).
+  /// The method extracts public tags and decrypts private content using NIP-44.
   static Future<UserList> getLists(Event event, String secretKey) async {
-    if (event.kind != 10000 &&
-        event.kind != 10001 &&
-        event.kind != 30000 &&
-        event.kind != 30001) {
-      throw InvalidKindException(event.kind, [10000, 10001, 30000, 30001]);
-    }
     String identifier = "";
     final List<Contact> contacts = [];
     final List<String> bookmarks = [];
@@ -220,15 +212,74 @@ class Nip51 {
       }
       if (tag[0] == "d") identifier = tag[1];
     }
+    // Extract additional tag types per spec
+    final List<String> hashtags = findAllTagValues(event.tags, 't');
+    final List<String> words = findAllTagValues(event.tags, 'word');
+    final List<String> coordinates = findAllTagValues(event.tags, 'a');
+
     final pubkey = Keys(secretKey).public;
-    final content =
-        await Nip51.fromContent(event.content, secretKey, pubkey);
-    contacts.addAll(content.contacts);
-    bookmarks.addAll(content.bookmarks);
+    if (event.content.isNotEmpty) {
+      // Try plaintext JSON first, then NIP-44 decryption.
+      final plaintext = _tryParsePlaintext(event.content);
+      if (plaintext != null) {
+        _extractFromTags(plaintext, contacts, bookmarks);
+      } else {
+        try {
+          final content =
+              await Nip51.fromContent(event.content, secretKey, pubkey);
+          contacts.addAll(content.contacts);
+          bookmarks.addAll(content.bookmarks);
+        } on Exception {
+          // Content is neither valid JSON nor valid NIP-44 ciphertext.
+        }
+      }
+    }
     if (event.kind == 10000) identifier = "Mute";
     if (event.kind == 10001) identifier = "Pin";
 
-    return UserList(event.pubkey, identifier, contacts, bookmarks);
+    return UserList(
+      owner: event.pubkey,
+      identifier: identifier,
+      contacts: contacts,
+      bookmarks: bookmarks,
+      hashtags: hashtags,
+      words: words,
+      coordinates: coordinates,
+    );
+  }
+
+  /// Tries to parse [content] as a plaintext JSON array of tags.
+  /// Returns the parsed list on success, or null if it's not valid JSON.
+  static List<List>? _tryParsePlaintext(String content) {
+    try {
+      final decoded = json.decode(content);
+      if (decoded is List) {
+        return decoded.cast<List>();
+      }
+    } on FormatException {
+      // Not valid JSON — likely NIP-44 ciphertext.
+    }
+    return null;
+  }
+
+  /// Extracts contacts and bookmarks from a list of decoded tags.
+  static void _extractFromTags(
+    List<List> tags,
+    List<Contact> contacts,
+    List<String> bookmarks,
+  ) {
+    for (final tag in tags) {
+      if (tag.isEmpty) continue;
+      if (tag[0] == 'p') {
+        contacts.add(Contact(
+          tag[1],
+          tag.length > 2 ? tag[2] : '',
+          tag.length > 3 ? tag[3] : '',
+        ));
+      } else if (tag[0] == 'e') {
+        bookmarks.add(tag[1]);
+      }
+    }
   }
 }
 
@@ -237,34 +288,51 @@ class Nip51 {
 /// Tag format: ["p", pubkey, relay?, petname?]
 class Contact {
   /// The hex-encoded public key of the contact.
-  String pubkey;
+  final String pubkey;
 
   /// The preferred relay URL for this contact (optional).
-  String? mainRelay;
+  final String? mainRelay;
 
   /// A local petname for this contact (optional).
-  String? petName;
+  final String? petName;
 
   /// Creates a [Contact] with the given [pubkey], [mainRelay], and [petName].
-  Contact(this.pubkey, this.mainRelay, this.petName);
+  const Contact(this.pubkey, this.mainRelay, this.petName);
 }
 
 /// The decoded contents of a NIP-51 list event.
 class UserList {
   /// The public key of the list owner.
-  String owner;
+  final String owner;
 
   /// The list identifier (category name, or "Mute"/"Pin" for non-categorized).
-  String identifier;
+  final String identifier;
 
-  /// The contacts in this list.
-  List<Contact> contacts;
+  /// The contacts in this list (from `p` tags).
+  final List<Contact> contacts;
 
-  /// The bookmarked event IDs in this list.
-  List<String> bookmarks;
+  /// The bookmarked event IDs (from `e` tags).
+  final List<String> bookmarks;
+
+  /// Hashtags in the list (from `t` tags, used in mute lists).
+  final List<String> hashtags;
+
+  /// Muted words (from `word` tags, used in mute lists).
+  final List<String> words;
+
+  /// Addressable event coordinates (from `a` tags, used in bookmark lists).
+  final List<String> coordinates;
 
   /// Creates a [UserList] with the given fields.
-  UserList(this.owner, this.identifier, this.contacts, this.bookmarks);
+  const UserList({
+    required this.owner,
+    required this.identifier,
+    this.contacts = const [],
+    this.bookmarks = const [],
+    this.hashtags = const [],
+    this.words = const [],
+    this.coordinates = const [],
+  });
 }
 
 typedef Lists = Nip51;

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -5,12 +8,12 @@ void main() {
   group('nip051', () {
     test('createCategorizedPeople', () async {
       final Keys user = Keys.generate();
-      final Contact publicFriend = Contact(
+      const Contact publicFriend = Contact(
         "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
         'wss://example.com',
         'alias',
       );
-      final Contact privateFriend = Contact(
+      const Contact privateFriend = Contact(
         "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
         'wss://example2.com',
         'bob',
@@ -45,12 +48,12 @@ void main() {
 
     test('createMutePeople', () async {
       final Keys user = Keys.generate();
-      final Contact publicFriend = Contact(
+      const Contact publicFriend = Contact(
         "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
         'wss://example.com',
         'alias',
       );
-      final Contact privateFriend = Contact(
+      const Contact privateFriend = Contact(
         "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
         'wss://example2.com',
         'bob',
@@ -80,6 +83,15 @@ void main() {
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.bookmarks[1],
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
+    });
+
+    test('real-world kind 10002 relay list parses as Event', () {
+      final fixtures = json.decode(
+          File('test/fixtures/samples_by_kind.json').readAsStringSync());
+      final eventMap = fixtures['10002'] as Map<String, dynamic>;
+      final event = Event.fromMap(eventMap);
+      expect(event.kind, 10002);
+      expect(event.pubkey, isNotEmpty);
     });
   });
 }
