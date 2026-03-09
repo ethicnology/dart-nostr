@@ -6,7 +6,7 @@ void main() async {
   final event = Message.deserialize(eventPayload);
   assert(event.type == "EVENT");
   assert(event.message.id ==
-      "a60679692533b308f1d862c2a5ca5c08a304e5157b1df5cde0ff0454b9920605");
+      "e695c81fa5099b9f3ef0d868d8143eae481954114681bbe4432b50e44e199927");
 
   const String requestPayload =
       '["REQ","22055752544101437",{"kinds":[0,1,2,7],"since":1674320733,"limit":450}]';
