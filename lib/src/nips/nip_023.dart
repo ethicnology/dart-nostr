@@ -3,13 +3,13 @@ import 'package:nostr/nostr.dart';
 /// Long-form content — [NIP-23](https://github.com/nostr-protocol/nips/blob/master/23.md)
 ///
 /// A utility class to handle Nostr long-form content a.k.a. Articles according to NIP-23.
-/// Provides decoding, and validation functionalities for Nostr articles.
+/// Provides creation, parsing, and validation functionalities for Nostr articles.
 ///
 /// Example usage:
 /// ```dart
-/// var article = Nip23.decode(event);
+/// var article = Article.parse(event);
 /// ```
-class Nip23 {
+class Article {
   /// Event kind for a published article.
   static const int kindArticle = 30023;
 
@@ -22,7 +22,7 @@ class Nip23 {
   /// [content] is the Markdown body.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [draft] creates a kind-30024 draft instead of a published article.
-  static Event encode({
+  static Event create({
     required String articleId,
     required String content,
     required String secretKey,
@@ -50,16 +50,16 @@ class Nip23 {
     );
   }
 
-  /// Returns a [Nip23Article] instance representing the decoded event.
+  /// Returns an [ArticleData] instance representing the parsed event.
   ///
   /// Throws [InvalidKindException] if the event is not a valid NIP-23 kind.
-  static Nip23Article decode(Event event) => Nip23Article.fromEvent(event);
+  static ArticleData parse(Event event) => ArticleData.fromEvent(event);
 }
 
 /// Represents a Nostr long-form content event according to NIP-23.
 ///
 /// Provides a structured way to handle article events instead of using raw Maps.
-class Nip23Article {
+class ArticleData {
   /// The article's content in Markdown format.
   final String content;
 
@@ -90,11 +90,11 @@ class Nip23Article {
   /// Extra tags for metadata.
   final List<List<String>> additionalTags;
 
-  /// The event kind, should be either [Nip23.kindArticle] or [Nip23.kindDraft].
+  /// The event kind, should be either [Article.kindArticle] or [Article.kindDraft].
   final int kind;
 
-  /// Creates a [Nip23Article] with the given fields.
-  const Nip23Article({
+  /// Creates an [ArticleData] with the given fields.
+  const ArticleData({
     required this.content,
     required this.pubkey,
     required this.createdAt,
@@ -105,16 +105,16 @@ class Nip23Article {
     this.publishedAt,
     this.topics = const [],
     this.additionalTags = const [],
-    this.kind = Nip23.kindArticle,
+    this.kind = Article.kindArticle,
   });
 
-  /// Factory constructor to create a [Nip23Article] from an [Event] instance.
+  /// Factory constructor to create an [ArticleData] from an [Event] instance.
   ///
   /// Throws [InvalidKindException] if the event kind is not valid for NIP-23.
   /// Throws [MissingTagException] if the required `d` tag is absent.
-  factory Nip23Article.fromEvent(Event event) {
-    if (event.kind != Nip23.kindArticle && event.kind != Nip23.kindDraft) {
-      throw InvalidKindException(event.kind, [Nip23.kindArticle, Nip23.kindDraft]);
+  factory ArticleData.fromEvent(Event event) {
+    if (event.kind != Article.kindArticle && event.kind != Article.kindDraft) {
+      throw InvalidKindException(event.kind, [Article.kindArticle, Article.kindDraft]);
     }
 
     final articleId = findTagValue(event.tags, 'd');
@@ -134,7 +134,7 @@ class Nip23Article {
           .contains(tag[0]);
     }).toList();
 
-    return Nip23Article(
+    return ArticleData(
       content: event.content,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -148,7 +148,6 @@ class Nip23Article {
       kind: event.kind,
     );
   }
-
 }
 
-typedef Article = Nip23;
+typedef Nip23 = Article;

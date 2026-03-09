@@ -10,7 +10,7 @@ const secretKey =
 void main() {
   group('nip025', () {
     test('encode like reaction with default content', () {
-      final event = Nip25.encode(
+      final event = Nip25.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,
@@ -23,7 +23,7 @@ void main() {
     });
 
     test('encode emoji reaction with relay and k tag', () {
-      final event = Nip25.encode(
+      final event = Nip25.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,
@@ -38,7 +38,7 @@ void main() {
     });
 
     test('encode reaction on addressable event includes a tag', () {
-      final event = Nip25.encode(
+      final event = Nip25.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,
@@ -60,7 +60,7 @@ void main() {
         content: '-',
         secretKey: secretKey,
       );
-      final reaction = Nip25.decode(event);
+      final reaction = Nip25.parse(event);
       expect(reaction.eventId, 'abc123');
       expect(reaction.reactedPubkey, 'def456');
       expect(reaction.reactedKind, 1);
@@ -77,7 +77,7 @@ void main() {
         content: '+',
         secretKey: secretKey,
       );
-      final reaction = Nip25.decode(event);
+      final reaction = Nip25.parse(event);
       expect(reaction.reactedKind, isNull);
     });
 
@@ -87,7 +87,7 @@ void main() {
       final eventMap = fixtures['7'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final reaction = Nip25.decode(event);
+      final reaction = Nip25.parse(event);
       expect(reaction.eventId, isNotEmpty);
       expect(reaction.reactedPubkey, isNotEmpty);
       expect(reaction.pubkey, event.pubkey);
@@ -95,14 +95,14 @@ void main() {
     });
 
     test('encode and decode round-trip', () {
-      final event = Nip25.encode(
+      final event = Nip25.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,
         content: '❤️',
         eventKind: 1,
       );
-      final reaction = Nip25.decode(event);
+      final reaction = Nip25.parse(event);
       expect(reaction.eventId, 'abc123');
       expect(reaction.reactedPubkey, 'def456');
       expect(reaction.reactedKind, 1);
@@ -110,7 +110,7 @@ void main() {
     });
 
     test('typedef Reactions works', () {
-      final event = Reactions.encode(
+      final event = Reactions.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,
@@ -125,7 +125,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      expect(() => Nip25.decode(event), throwsA(isA<InvalidKindException>()));
+      expect(() => Nip25.parse(event), throwsA(isA<InvalidKindException>()));
     });
   });
 }

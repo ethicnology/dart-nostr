@@ -10,7 +10,7 @@ const secretKey =
 void main() {
   group('nip065', () {
     test('encode relay list', () {
-      final event = Nip65.encode(
+      final event = Nip65.create(
         relays: [
           const RelayMetadata(url: 'wss://a.com', read: true, write: true),
           const RelayMetadata(url: 'wss://b.com', read: true, write: false),
@@ -35,7 +35,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      final relays = Nip65.decode(event);
+      final relays = Nip65.parse(event);
       expect(relays.length, 3);
       expect(relays[0].url, 'wss://a.com');
       expect(relays[0].read, isTrue);
@@ -57,7 +57,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      final relays = Nip65.decode(event);
+      final relays = Nip65.parse(event);
       expect(relays.length, 2);
     });
 
@@ -68,7 +68,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      expect(() => Nip65.decode(event), throwsA(isA<InvalidKindException>()));
+      expect(() => Nip65.parse(event), throwsA(isA<InvalidKindException>()));
     });
 
     test('encode and decode round-trip', () {
@@ -77,8 +77,8 @@ void main() {
         const RelayMetadata(url: 'wss://b.com', read: true, write: false),
         const RelayMetadata(url: 'wss://c.com', read: false, write: true),
       ];
-      final event = Nip65.encode(relays: relays, secretKey: secretKey);
-      final decoded = Nip65.decode(event);
+      final event = Nip65.create(relays: relays, secretKey: secretKey);
+      final decoded = Nip65.parse(event);
 
       expect(decoded.length, 3);
       expect(decoded[0].url, 'wss://a.com');
@@ -98,7 +98,7 @@ void main() {
       final eventMap = fixtures['10002'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final relays = Nip65.decode(event);
+      final relays = Nip65.parse(event);
       expect(relays, isNotEmpty);
       for (final relay in relays) {
         expect(relay.url, startsWith('ws'));
@@ -106,7 +106,7 @@ void main() {
     });
 
     test('typedef alias works', () {
-      final event = RelayList.encode(
+      final event = RelayList.create(
         relays: [const RelayMetadata(url: 'wss://a.com', read: true, write: true)],
         secretKey: secretKey,
       );

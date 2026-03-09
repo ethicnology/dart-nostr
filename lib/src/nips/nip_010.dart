@@ -3,7 +3,7 @@
 /// This NIP describes how to use "e" and "p" tags in text events,
 /// especially those that are replies to other text events.
 /// It helps clients thread the replies into a tree rooted at the original event.
-class Nip10 {
+class Threading {
   /// Parses `e` and `p` tags from an event into a [Thread].
   ///
   ///{
@@ -115,4 +115,4 @@ class Thread {
   const Thread({required this.root, this.etags = const [], this.ptags = const []});
 }
 
-typedef Threading = Nip10;
+typedef Nip10 = Threading;

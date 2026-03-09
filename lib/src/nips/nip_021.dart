@@ -4,7 +4,7 @@ import 'package:nostr/src/error.dart';
 ///
 /// A utility class to handle Nostr URIs according to NIP-21 specification.
 /// Provides encode, decode functionalities for Nostr URIs.
-class Nip21 {
+class NostrUri {
   static const String _prefix = 'nostr:';
 
   /// Parses a `nostr:` URI and extracts the identifier.
@@ -30,4 +30,4 @@ class Nip21 {
   }
 }
 
-typedef NostrUri = Nip21;
+typedef Nip21 = NostrUri;

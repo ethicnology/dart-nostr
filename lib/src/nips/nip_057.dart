@@ -13,14 +13,14 @@ import 'package:nostr/nostr.dart';
 /// which the Dart `bech32` package does not support. Additionally, the ECDH
 /// shared key derivation for private zaps has no cross-implementation test
 /// vectors to verify interoperability.
-class Nip57 {
+class Zap {
   /// Kind for zap request events.
   static const int zapRequestKind = 9734;
 
   /// Kind for zap receipt events.
   static const int zapReceiptKind = 9735;
 
-  /// Encodes a kind-9734 zap request event.
+  /// Creates a kind-9734 zap request event.
   ///
   /// [recipientPubkey] is the hex-encoded public key of the zap recipient.
   /// [relays] is the list of relay URLs where the receipt should be published.
@@ -30,7 +30,7 @@ class Nip57 {
   /// [addressableCoord] is a NIP-33 event coordinate (optional).
   /// [amount] is the amount in millisats the sender intends to pay (optional).
   /// [lnurl] is the bech32-encoded LNURL pay URL of the recipient (optional).
-  static Event encodeZapRequest({
+  static Event request({
     required String recipientPubkey,
     required List<String> relays,
     required String secretKey,
@@ -70,7 +70,7 @@ class Nip57 {
   }
 
 
-  /// Decodes a kind-9735 zap receipt event into a [ZapReceipt].
+  /// Decodes a kind-9735 zap receipt event into a [ZapReceiptData].
   ///
   /// Parses the `bolt11`, `description` (embedded zap request JSON),
   /// `preimage`, `p` (recipient), `P` (sender), `e`, and `a` tags.
@@ -78,7 +78,7 @@ class Nip57 {
   /// Throws [InvalidKindException] if the event kind is not 9735.
   /// Throws [MissingTagException] if the required `bolt11`, `description`,
   /// or `p` tag is missing.
-  static ZapReceipt decodeZapReceipt(Event event) {
+  static ZapReceiptData parseReceipt(Event event) {
     if (event.kind != zapReceiptKind) {
       throw InvalidKindException(event.kind, [zapReceiptKind]);
     }
@@ -104,16 +104,16 @@ class Nip57 {
     final addressableCoord = findTagValue(event.tags, 'a');
 
     // Parse embedded zap request from the description tag
-    ZapRequest? embeddedRequest;
+    ZapRequestData? embeddedRequest;
     try {
       final map = json.decode(description) as Map<String, dynamic>;
       final zapRequestEvent = Event.fromMap(map, verify: false);
-      embeddedRequest = _parseZapRequest(zapRequestEvent);
+      embeddedRequest = _parseZapRequestData(zapRequestEvent);
     } on Exception catch (_) {
       // If parsing fails, leave embeddedRequest as null
     }
 
-    return ZapReceipt(
+    return ZapReceiptData(
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -128,19 +128,19 @@ class Nip57 {
     );
   }
 
-  /// Decodes a kind-9734 zap request event into a [ZapRequest].
+  /// Decodes a kind-9734 zap request event into a [ZapRequestData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 9734.
   /// Throws [MissingTagException] if required tags are missing.
-  static ZapRequest decodeZapRequest(Event event) {
+  static ZapRequestData parseRequest(Event event) {
     if (event.kind != zapRequestKind) {
       throw InvalidKindException(event.kind, [zapRequestKind]);
     }
-    return _parseZapRequest(event);
+    return _parseZapRequestData(event);
   }
 
   /// Parses a zap request event (kind check should be done by caller).
-  static ZapRequest _parseZapRequest(Event event) {
+  static ZapRequestData _parseZapRequestData(Event event) {
     final recipientPubkey = findTagValue(event.tags, 'p');
     if (recipientPubkey == null) {
       throw MissingTagException('p');
@@ -160,7 +160,7 @@ class Nip57 {
     final amount = amountStr != null ? int.tryParse(amountStr) : null;
     final lnurl = findTagValue(event.tags, 'lnurl');
 
-    return ZapRequest(
+    return ZapRequestData(
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -186,7 +186,7 @@ class Nip57 {
 }
 
 /// A decoded zap request (kind 9734).
-class ZapRequest {
+class ZapRequestData {
   /// The event ID.
   final String id;
 
@@ -217,8 +217,8 @@ class ZapRequest {
   /// The bech32-encoded LNURL from the `lnurl` tag.
   final String? lnurl;
 
-  /// Creates a [ZapRequest] with the given fields.
-  const ZapRequest({
+  /// Creates a [ZapRequestData] with the given fields.
+  const ZapRequestData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -233,7 +233,7 @@ class ZapRequest {
 }
 
 /// A decoded zap receipt (kind 9735).
-class ZapReceipt {
+class ZapReceiptData {
   /// The event ID.
   final String id;
 
@@ -265,10 +265,10 @@ class ZapReceipt {
   final String? addressableCoord;
 
   /// The parsed embedded zap request from the `description` tag, if valid.
-  final ZapRequest? embeddedRequest;
+  final ZapRequestData? embeddedRequest;
 
-  /// Creates a [ZapReceipt] with the given fields.
-  const ZapReceipt({
+  /// Creates a [ZapReceiptData] with the given fields.
+  const ZapReceiptData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -283,4 +283,7 @@ class ZapReceipt {
   });
 }
 
-typedef Zaps = Nip57;
+typedef Nip57 = Zap;
+typedef Zaps = Zap;
+typedef ZapRequest = ZapRequestData;
+typedef ZapReceipt = ZapReceiptData;

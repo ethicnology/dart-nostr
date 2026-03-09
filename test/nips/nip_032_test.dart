@@ -20,7 +20,7 @@ void main() {
         ],
       );
 
-      final label = Nip32.decode(event);
+      final label = Nip32.parse(event);
 
       expect(label.namespaces, ['social.ontolo.categories']);
       expect(label.labels.length, 2);
@@ -53,7 +53,7 @@ void main() {
         content: 'review',
       );
 
-      final label = Nip32.decode(event);
+      final label = Nip32.parse(event);
 
       expect(label.namespaces, ['com.example.rating', 'com.example.topic']);
       expect(label.labels.length, 2);
@@ -76,7 +76,7 @@ void main() {
         ],
       );
 
-      final label = Nip32.decode(event);
+      final label = Nip32.parse(event);
 
       expect(label.namespaces, isEmpty);
       expect(label.labels.length, 1);
@@ -88,7 +88,7 @@ void main() {
       final event = Event.partial();
 
       expect(
-        () => Nip32.decode(event),
+        () => Nip32.parse(event),
         throwsA(isA<InvalidKindException>()),
       );
     });
@@ -105,7 +105,7 @@ void main() {
     test('encode label event', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip32.encode(
+      final event = Nip32.create(
         labels: [
           const LabelEntry(value: 'Technology', namespace: 'social.ontolo.categories'),
           const LabelEntry(value: 'spam'),
@@ -125,14 +125,14 @@ void main() {
     test('encode and decode round-trip', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip32.encode(
+      final event = Nip32.create(
         labels: [
           const LabelEntry(value: 'en', namespace: 'ISO-639-1'),
         ],
         targetPubkeys: ['def456'],
         secretKey: secretKey,
       );
-      final label = Nip32.decode(event);
+      final label = Nip32.parse(event);
       expect(label.namespaces, ['ISO-639-1']);
       expect(label.labels[0].value, 'en');
       expect(label.labels[0].namespace, 'ISO-639-1');
@@ -145,7 +145,7 @@ void main() {
       final eventMap = fixtures['1985'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final label = Nip32.decode(event);
+      final label = Nip32.parse(event);
       expect(label.namespaces, contains('ISO-639-1'));
       expect(label.labels.length, 1);
       expect(label.labels[0].value, 'en');
@@ -155,7 +155,7 @@ void main() {
     });
 
     test('typedef alias works', () {
-      expect(Labels.kindLabel, 1985);
+      expect(Nip32.kindLabel, 1985);
     });
   });
 }

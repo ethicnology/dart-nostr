@@ -23,7 +23,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": ""
 /// }
 /// ```
-class Nip53 {
+class LiveActivity {
   /// Event kind for live streaming events.
   static const int kindLiveEvent = 30311;
 
@@ -35,7 +35,7 @@ class Nip53 {
   /// [identifier] is the unique `d` tag value.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [status] should be "planned", "live", or "ended".
-  static Event encode({
+  static Event create({
     required String identifier,
     required String secretKey,
     String? title,
@@ -73,11 +73,11 @@ class Nip53 {
     );
   }
 
-  /// Decodes a kind-30311 event into a [LiveActivity].
+  /// Decodes a kind-30311 event into a [LiveActivityData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 30311.
   /// Throws [MissingTagException] if the `d` tag is absent.
-  static LiveActivity decode(Event event) {
+  static LiveActivityData parse(Event event) {
     if (event.kind != kindLiveEvent) {
       throw InvalidKindException(event.kind, [kindLiveEvent]);
     }
@@ -116,7 +116,7 @@ class Nip53 {
       }
     }
 
-    return LiveActivity(
+    return LiveActivityData(
       identifier: identifier,
       title: title,
       summary: summary,
@@ -164,7 +164,7 @@ class LiveParticipant {
 }
 
 /// Represents a NIP-53 live activity event (kind 30311).
-class LiveActivity {
+class LiveActivityData {
   /// The unique identifier (from `d` tag).
   final String identifier;
 
@@ -210,8 +210,8 @@ class LiveActivity {
   /// Unix timestamp of the event.
   final int createdAt;
 
-  /// Creates a [LiveActivity] with the given fields.
-  const LiveActivity({
+  /// Creates a [LiveActivityData] with the given fields.
+  const LiveActivityData({
     required this.identifier,
     required this.pubkey,
     required this.createdAt,
@@ -230,4 +230,5 @@ class LiveActivity {
   });
 }
 
-typedef LiveActivities = Nip53;
+typedef Nip53 = LiveActivity;
+typedef LiveActivities = LiveActivity;

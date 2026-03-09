@@ -10,14 +10,14 @@ import 'package:nostr/nostr.dart';
 /// Kind 4550: moderation approval — references a community via `a` tag
 /// and the approved post via `e` or `a` tag. Content may contain the
 /// JSON-stringified approved event.
-class Nip72 {
+class ModeratedCommunity {
   /// Kind for community definition events.
   static const int communityKind = 34550;
 
   /// Kind for community approval events.
   static const int approvalKind = 4550;
 
-  /// Encodes a kind-34550 community definition event.
+  /// Creates a kind-34550 community definition event.
   ///
   /// [id] is the community identifier (`d` tag).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
@@ -28,7 +28,7 @@ class Nip72 {
   /// [rules] is the community rules text (optional).
   /// [moderators] is a list of moderator pubkeys (optional).
   /// [relays] is a list of preferred relays with optional markers (optional).
-  static Event encodeCommunity({
+  static Event community({
     required String id,
     required String secretKey,
     String? name,
@@ -83,11 +83,11 @@ class Nip72 {
     );
   }
 
-  /// Decodes a kind-34550 event into a [Community].
+  /// Decodes a kind-34550 event into a [CommunityData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 34550.
   /// Throws [MissingTagException] if the `d` tag is absent.
-  static Community decodeCommunity(Event event) {
+  static CommunityData parseCommunity(Event event) {
     if (event.kind != communityKind) {
       throw InvalidKindException(event.kind, [communityKind]);
     }
@@ -136,7 +136,7 @@ class Nip72 {
       }
     }
 
-    return Community(
+    return CommunityData(
       id: id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -150,7 +150,7 @@ class Nip72 {
     );
   }
 
-  /// Encodes a kind-4550 community approval event.
+  /// Creates a kind-4550 community approval event.
   ///
   /// [communityCoord] is the community `a` tag coordinate
   /// (e.g. "34550:pubkey:community-id").
@@ -160,7 +160,7 @@ class Nip72 {
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [approvedEventJson] is the optional JSON-stringified approved event
   /// to include in the content.
-  static Event encodeApproval({
+  static Event approval({
     required String communityCoord,
     required String approvedEventId,
     required String approvedEventPubkey,
@@ -181,11 +181,11 @@ class Nip72 {
     );
   }
 
-  /// Decodes a kind-4550 event into a [CommunityApproval].
+  /// Decodes a kind-4550 event into a [CommunityApprovalData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 4550.
   /// Throws [MissingTagException] if the `a` tag is absent.
-  static CommunityApproval decodeApproval(Event event) {
+  static CommunityApprovalData parseApproval(Event event) {
     if (event.kind != approvalKind) {
       throw InvalidKindException(event.kind, [approvalKind]);
     }
@@ -213,7 +213,7 @@ class Nip72 {
       }
     }
 
-    return CommunityApproval(
+    return CommunityApprovalData(
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -227,7 +227,7 @@ class Nip72 {
 }
 
 /// A decoded community definition (kind 34550).
-class Community {
+class CommunityData {
   /// The community identifier from the `d` tag.
   final String id;
 
@@ -258,8 +258,8 @@ class Community {
   /// Preferred relays from `relay` tags, with optional markers.
   final List<CommunityRelay> relays;
 
-  /// Creates a [Community] with the given fields.
-  const Community({
+  /// Creates a [CommunityData] with the given fields.
+  const CommunityData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -308,7 +308,7 @@ class CommunityRelay {
 }
 
 /// A decoded community approval event (kind 4550).
-class CommunityApproval {
+class CommunityApprovalData {
   /// The event ID.
   final String id;
 
@@ -333,8 +333,8 @@ class CommunityApproval {
   /// The parsed approved event from content, if valid JSON was provided.
   final Event? approvedEvent;
 
-  /// Creates a [CommunityApproval] with the given fields.
-  const CommunityApproval({
+  /// Creates a [CommunityApprovalData] with the given fields.
+  const CommunityApprovalData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -346,4 +346,7 @@ class CommunityApproval {
   });
 }
 
-typedef ModeratedCommunities = Nip72;
+typedef Nip72 = ModeratedCommunity;
+typedef ModeratedCommunities = ModeratedCommunity;
+typedef Community = CommunityData;
+typedef CommunityApproval = CommunityApprovalData;

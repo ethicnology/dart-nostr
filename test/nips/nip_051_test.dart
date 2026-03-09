@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('nip051', () {
-    test('createCategorizedPeople', () async {
+    test('categorizedPeople', () async {
       final Keys user = Keys.generate();
       const Contact publicFriend = Contact(
         "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
@@ -18,10 +18,10 @@ void main() {
         'wss://example2.com',
         'bob',
       );
-      final Event event = await Nip51.createCategorizedPeople(
+      final Event event = await NostrList.categorizedPeople(
           "friends", [publicFriend], [privateFriend], user.secret, user.public);
 
-      final UserList list = await Nip51.getLists(event, user.secret);
+      final UserListData list = await NostrList.parse(event, user.secret);
       expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.contacts[0].petName, 'alias');
@@ -30,23 +30,23 @@ void main() {
       expect(list.contacts[1].petName, 'bob');
     });
 
-    test('createCategorizedBookmarks', () async {
+    test('categorizedBookmarks', () async {
       final Keys user = Keys.generate();
       const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
       const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      final Event event = await Nip51.createCategorizedBookmarks("bookmarks",
+      final Event event = await NostrList.categorizedBookmarks("bookmarks",
           [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      final UserList list = await Nip51.getLists(event, user.secret);
+      final UserListData list = await NostrList.parse(event, user.secret);
       expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.bookmarks[1],
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
     });
 
-    test('createMutePeople', () async {
+    test('mutePeople', () async {
       final Keys user = Keys.generate();
       const Contact publicFriend = Contact(
         "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
@@ -58,9 +58,9 @@ void main() {
         'wss://example2.com',
         'bob',
       );
-      final Event event = await Nip51.createMutePeople(
+      final Event event = await NostrList.mutePeople(
           [publicFriend], [privateFriend], user.secret, user.public);
-      final UserList list = await Nip51.getLists(event, user.secret);
+      final UserListData list = await NostrList.parse(event, user.secret);
       expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.contacts[0].petName, 'alias');
@@ -69,16 +69,16 @@ void main() {
       expect(list.contacts[1].petName, 'bob');
     });
 
-    test('createPinEvent', () async {
+    test('pinEvent', () async {
       final Keys user = Keys.generate();
       const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
       const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      final Event event = await Nip51.createPinEvent(
+      final Event event = await NostrList.pinEvent(
           [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      final UserList list = await Nip51.getLists(event, user.secret);
+      final UserListData list = await NostrList.parse(event, user.secret);
       expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.bookmarks[1],

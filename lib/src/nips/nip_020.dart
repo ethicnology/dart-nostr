@@ -12,7 +12,7 @@ import 'package:nostr/src/error.dart';
 /// On rejection, the message follows the format `prefix: human-readable explanation`
 /// with standardized prefixes: `duplicate`, `pow`, `blocked`, `rate-limited`,
 /// `invalid`, `restricted`, `mute`, `error`.
-class Nip20 {
+class CommandResult {
   /// The event ID this result refers to.
   final String eventId;
 
@@ -25,8 +25,8 @@ class Nip20 {
   /// When [status] is `false`, follows the format `prefix: explanation`.
   final String message;
 
-  /// Creates a [Nip20] with the given [eventId], [status], and [message].
-  const Nip20(this.eventId, this.status, this.message);
+  /// Creates a [CommandResult] with the given [eventId], [status], and [message].
+  const CommandResult(this.eventId, this.status, this.message);
 
   /// Serialize to nostr OK message.
   ///
@@ -38,13 +38,13 @@ class Nip20 {
   /// Format: `["OK", "event_id", true|false, "message"]`
   ///
   /// Throws [DeserializationException] if the payload is not a valid OK message.
-  factory Nip20.deserialize(String payload) {
+  factory CommandResult.deserialize(String payload) {
     final data = json.decode(payload);
     if (data.length != 4) {
       throw const DeserializationException('Invalid OK message length');
     }
-    return Nip20(data[1], data[2], data[3]);
+    return CommandResult(data[1], data[2], data[3]);
   }
 }
 
-typedef CommandResult = Nip20;
+typedef Nip20 = CommandResult;

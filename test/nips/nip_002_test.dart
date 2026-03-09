@@ -50,7 +50,7 @@ void main() {
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
 
-      final List<Profile> profiles = Nip2.decode(event);
+      final List<Profile> profiles = Nip2.parse(event);
       expect(profiles[0].pubkey, "91cf9..4e5ca");
       expect(profiles[1].relay, "wss://bobrelay.com/nostr");
       expect(profiles[2].petname, "carol");
@@ -64,7 +64,7 @@ void main() {
         secretKey:
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
-      expect(() => Nip2.decode(event), throwsException);
+      expect(() => Nip2.parse(event), throwsException);
     });
   });
 }

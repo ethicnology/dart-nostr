@@ -11,14 +11,14 @@ void main() {
     const String walletPubkey =
         '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245';
 
-    test('decodeInfo parses capabilities from content', () {
+    test('parseInfo parses capabilities from content', () {
       final event = Event.from(
         kind: 13194,
         tags: [],
         content: 'pay_invoice get_balance make_invoice list_transactions',
         secretKey: secretKey,
       );
-      final info = Nip47.decodeInfo(event);
+      final info = WalletConnect.parseInfo(event);
       expect(info.capabilities, [
         'pay_invoice',
         'get_balance',
@@ -28,7 +28,7 @@ void main() {
       expect(info.pubkey, event.pubkey);
     });
 
-    test('decodeInfo parses encryption and notification tags', () {
+    test('parseInfo parses encryption and notification tags', () {
       final event = Event.from(
         kind: 13194,
         tags: [
@@ -39,35 +39,35 @@ void main() {
         content: 'pay_invoice',
         secretKey: secretKey,
       );
-      final info = Nip47.decodeInfo(event);
+      final info = WalletConnect.parseInfo(event);
       expect(info.encryption, ['nip44_v2', 'nip04']);
       expect(info.notifications, ['payment_received']);
     });
 
-    test('decodeInfo throws InvalidKindException for wrong kind', () {
+    test('parseInfo throws InvalidKindException for wrong kind', () {
       final event = Event.from(
         kind: 1,
         tags: [],
         content: 'pay_invoice',
         secretKey: secretKey,
       );
-      expect(
-          () => Nip47.decodeInfo(event), throwsA(isA<InvalidKindException>()));
+      expect(() => WalletConnect.parseInfo(event),
+          throwsA(isA<InvalidKindException>()));
     });
 
-    test('decodeInfo handles empty content', () {
+    test('parseInfo handles empty content', () {
       final event = Event.from(
         kind: 13194,
         tags: [],
         content: '',
         secretKey: secretKey,
       );
-      final info = Nip47.decodeInfo(event);
+      final info = WalletConnect.parseInfo(event);
       expect(info.capabilities, isEmpty);
     });
 
-    test('encodeRequest creates a kind 23194 event', () {
-      final event = Nip47.encodeRequest(
+    test('request creates a kind 23194 event', () {
+      final event = WalletConnect.request(
         encryptedContent: 'encrypted-request',
         walletServicePubkey: walletPubkey,
         secretKey: secretKey,
@@ -77,10 +77,10 @@ void main() {
       expect(event.tags[0], ['p', walletPubkey]);
     });
 
-    test('encodeResponse creates a kind 23195 event with e tag', () {
+    test('response creates a kind 23195 event with e tag', () {
       const requestId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-      final event = Nip47.encodeResponse(
+      final event = WalletConnect.response(
         encryptedContent: 'encrypted-response',
         clientPubkey: walletPubkey,
         requestEventId: requestId,
@@ -92,69 +92,71 @@ void main() {
       expect(event.tags[1], ['e', requestId]);
     });
 
-    test('decode parses a request event', () {
-      final event = Nip47.encodeRequest(
+    test('parse parses a request event', () {
+      final event = WalletConnect.request(
         encryptedContent: 'encrypted-payload',
         walletServicePubkey: walletPubkey,
         secretKey: secretKey,
       );
-      final decoded = Nip47.decode(event);
-      expect(decoded.kind, 23194);
-      expect(decoded.targetPubkey, walletPubkey);
-      expect(decoded.encryptedContent, 'encrypted-payload');
-      expect(decoded.requestEventId, isNull);
+      final parsed = WalletConnect.parse(event);
+      expect(parsed.kind, 23194);
+      expect(parsed.targetPubkey, walletPubkey);
+      expect(parsed.encryptedContent, 'encrypted-payload');
+      expect(parsed.requestEventId, isNull);
     });
 
-    test('decode parses a response event', () {
+    test('parse parses a response event', () {
       const requestId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-      final event = Nip47.encodeResponse(
+      final event = WalletConnect.response(
         encryptedContent: 'encrypted-result',
         clientPubkey: walletPubkey,
         requestEventId: requestId,
         secretKey: secretKey,
       );
-      final decoded = Nip47.decode(event);
-      expect(decoded.kind, 23195);
-      expect(decoded.targetPubkey, walletPubkey);
-      expect(decoded.requestEventId, requestId);
-      expect(decoded.encryptedContent, 'encrypted-result');
+      final parsed = WalletConnect.parse(event);
+      expect(parsed.kind, 23195);
+      expect(parsed.targetPubkey, walletPubkey);
+      expect(parsed.requestEventId, requestId);
+      expect(parsed.encryptedContent, 'encrypted-result');
     });
 
-    test('decode throws for info kind (use decodeInfo instead)', () {
+    test('parse throws for info kind (use parseInfo instead)', () {
       final event = Event.from(
         kind: 13194,
         tags: [],
         content: 'pay_invoice',
         secretKey: secretKey,
       );
-      expect(() => Nip47.decode(event), throwsA(isA<InvalidKindException>()));
+      expect(() => WalletConnect.parse(event),
+          throwsA(isA<InvalidKindException>()));
     });
 
-    test('decode throws InvalidKindException for unrelated kind', () {
+    test('parse throws InvalidKindException for unrelated kind', () {
       final event = Event.from(
         kind: 1,
         tags: [],
         content: 'hello',
         secretKey: secretKey,
       );
-      expect(() => Nip47.decode(event), throwsA(isA<InvalidKindException>()));
+      expect(() => WalletConnect.parse(event),
+          throwsA(isA<InvalidKindException>()));
     });
 
-    test('decodeInfo real-world kind 13194 from nos.lol', () {
+    test('parseInfo real-world kind 13194 from nos.lol', () {
       final fixtures = json.decode(
           File('test/fixtures/samples_by_kind.json').readAsStringSync());
       final eventMap = fixtures['13194'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final info = Nip47.decodeInfo(event);
+      final info = WalletConnect.parseInfo(event);
       expect(info.capabilities, contains('pay_invoice'));
       expect(info.capabilities, contains('get_balance'));
       expect(info.pubkey, event.pubkey);
     });
 
-    test('typedef WalletConnect works', () {
-      final event = WalletConnect.encodeRequest(
+    test('typedef Nip47 works', () {
+      final event = Nip47.request(
         encryptedContent: 'test',
         walletServicePubkey: walletPubkey,
         secretKey: secretKey,

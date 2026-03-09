@@ -10,7 +10,7 @@ import 'package:nostr/src/nips/nip_019_utils.dart';
 /// ids and other information in clients. These formats are not meant to be used anywhere
 /// in the core protocol, they are only meant for displaying to users, copy-pasting,
 /// sharing, rendering QR codes and inputting data.
-class Nip19 {
+class Bech32Entity {
   static const _shareableIdentifiersPrefixes = [
     Nip19Prefix.nprofile,
     Nip19Prefix.nevent,
@@ -27,7 +27,7 @@ class Nip19 {
   static ({Nip19Prefix prefix, String data}) decode({required String payload}) {
     final decoded = bech32Decode(payload);
     if (_shareableIdentifiersPrefixes.contains(decoded.prefix)) {
-      throw NostrException('use ${Nip19.decodeShareableIdentifiers} instead');
+      throw NostrException('use ${Bech32Entity.decodeShareableIdentifiers} instead');
     }
     return decoded;
   }
@@ -44,7 +44,7 @@ class Nip19 {
     required String data,
   }) {
     if (_shareableIdentifiersPrefixes.contains(prefix)) {
-      throw NostrException('use ${Nip19.encodeShareableIdentifiers} instead');
+      throw NostrException('use ${Bech32Entity.encodeShareableIdentifiers} instead');
     }
     return bech32Encode(prefix, data);
   }
@@ -136,7 +136,7 @@ class Nip19 {
   /// - for nevent, optionally, the 32-bit unsigned integer of the kind, big-endian
   ///
   /// Throws [DeserializationException] if the payload cannot be decoded.
-  static ShareableIdentifiers decodeShareableIdentifiers({
+  static ShareableIdentifierData decodeShareableIdentifiers({
     required String payload,
   }) {
     try {
@@ -169,7 +169,7 @@ class Nip19 {
         }
       }
 
-      return ShareableIdentifiers(
+      return ShareableIdentifierData(
         prefix: decoded.prefix,
         data: data,
         relays: relays,
@@ -214,7 +214,7 @@ enum Nip19Prefix {
 /// When sharing a profile or an event, an app may decide to include relay information
 /// and other metadata such that other apps can locate and display these entities
 /// more easily.
-class ShareableIdentifiers {
+class ShareableIdentifierData {
   /// The NIP-19 prefix indicating the entity type.
   final Nip19Prefix prefix;
 
@@ -230,8 +230,8 @@ class ShareableIdentifiers {
   /// The event kind (for nevent and naddr).
   final int? kind;
 
-  /// Creates a [ShareableIdentifiers] with the given fields.
-  const ShareableIdentifiers({
+  /// Creates a [ShareableIdentifierData] with the given fields.
+  const ShareableIdentifierData({
     required this.prefix,
     required this.data,
     this.relays = const [],
@@ -240,4 +240,6 @@ class ShareableIdentifiers {
   });
 }
 
-typedef Bech32Entities = Nip19;
+typedef Nip19 = Bech32Entity;
+typedef Bech32Entities = Bech32Entity;
+typedef ShareableIdentifiers = ShareableIdentifierData;

@@ -6,7 +6,7 @@ import 'package:nostr/nostr.dart';
 /// The client responds with a kind 22242 ephemeral event containing the
 /// challenge and relay URL. The authenticated session is valid for the
 /// remainder of the WebSocket connection.
-class Nip42 {
+class Auth {
   /// Event kind for authentication.
   static const int kindAuth = 22242;
 
@@ -21,7 +21,7 @@ class Nip42 {
   /// - created_at is within ~10 minutes of current time
   /// - the challenge tag matches the one sent
   /// - the relay tag matches its own URL
-  static Event encode({
+  static Event create({
     required String challenge,
     required String relayUrl,
     required String secretKey,
@@ -59,4 +59,4 @@ class Nip42 {
   }
 }
 
-typedef Auth = Nip42;
+typedef Nip42 = Auth;

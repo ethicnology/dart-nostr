@@ -8,11 +8,11 @@ import 'dart:math';
 /// An ID `000000000e9d97a1ab09fc381030b346cdd7a142ad57e6df0b46dc9bef6c7e2d` has a difficulty of `36` with 36 leading zero bits.
 ///
 /// Mining involves generating an ID with a desired difficulty by iteratively modifying a `nonce` tag.
-class Nip13 {
+class ProofOfWork {
   /// Calculates the number of leading zero bits in a hexadecimal string.
   ///
   /// ```dart
-  /// int difficulty = Nip13.countLeadingZeroes("000000000e9d97a1ab09fc381030b346cdd7a142ad57e6df0b46dc9bef6c7e2d");
+  /// int difficulty = ProofOfWork.countLeadingZeroes("000000000e9d97a1ab09fc381030b346cdd7a142ad57e6df0b46dc9bef6c7e2d");
   /// print(difficulty); // 36
   /// ```
   static int countLeadingZeroes(String hex) {
@@ -30,4 +30,4 @@ class Nip13 {
   }
 }
 
-typedef ProofOfWork = Nip13;
+typedef Nip13 = ProofOfWork;

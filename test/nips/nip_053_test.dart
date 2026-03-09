@@ -32,7 +32,7 @@ void main() {
         ],
       );
 
-      final activity = Nip53.decode(event);
+      final activity = Nip53.parse(event);
 
       expect(activity.identifier, 'live-stream-123');
       expect(activity.title, 'My Live Stream');
@@ -74,7 +74,7 @@ void main() {
         ],
       );
 
-      final activity = Nip53.decode(event);
+      final activity = Nip53.parse(event);
 
       expect(activity.identifier, 'minimal-stream');
       expect(activity.title, isNull);
@@ -93,7 +93,7 @@ void main() {
       final event = Event.partial();
 
       expect(
-        () => Nip53.decode(event),
+        () => Nip53.parse(event),
         throwsA(isA<InvalidKindException>()),
       );
     });
@@ -104,7 +104,7 @@ void main() {
       );
 
       expect(
-        () => Nip53.decode(event),
+        () => Nip53.parse(event),
         throwsA(isA<MissingTagException>()),
       );
     });
@@ -122,7 +122,7 @@ void main() {
     test('encode live activity', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip53.encode(
+      final event = Nip53.create(
         identifier: 'my-stream',
         secretKey: secretKey,
         title: 'Test Stream',
@@ -141,14 +141,14 @@ void main() {
     test('encode and decode round-trip', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip53.encode(
+      final event = Nip53.create(
         identifier: 'roundtrip',
         secretKey: secretKey,
         title: 'My Stream',
         status: 'planned',
         starts: 1700000000,
       );
-      final activity = Nip53.decode(event);
+      final activity = Nip53.parse(event);
       expect(activity.identifier, 'roundtrip');
       expect(activity.title, 'My Stream');
       expect(activity.status, 'planned');
@@ -161,7 +161,7 @@ void main() {
       final eventMap = fixtures['30311'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final activity = Nip53.decode(event);
+      final activity = Nip53.parse(event);
       expect(activity.identifier, isNotEmpty);
       expect(activity.pubkey, event.pubkey);
     });

@@ -23,7 +23,7 @@ void main() {
         content: 'This is a comment on an event.',
       );
 
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
 
       expect(comment.rootId, 'root-event-id-hex');
       expect(comment.rootKind, 1);
@@ -52,7 +52,7 @@ void main() {
         content: 'Comment on an article.',
       );
 
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
 
       expect(comment.rootId, '30023:author-pubkey:article-id');
       expect(comment.rootKind, 30023);
@@ -76,7 +76,7 @@ void main() {
         content: 'Commenting on external content.',
       );
 
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
 
       expect(comment.rootId, 'https://example.com/article');
       expect(comment.parentId, 'https://example.com/article');
@@ -87,7 +87,7 @@ void main() {
       final event = Event.partial();
 
       expect(
-        () => Nip22.decode(event),
+        () => Nip22.parse(event),
         throwsA(isA<InvalidKindException>()),
       );
     });
@@ -102,7 +102,7 @@ void main() {
         content: 'A bare comment.',
       );
 
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
 
       expect(comment.rootId, isNull);
       expect(comment.rootKind, isNull);
@@ -114,7 +114,7 @@ void main() {
     test('encode comment on event', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip22.encode(
+      final event = Nip22.create(
         content: 'Great post!',
         secretKey: secretKey,
         rootTag: ['E', 'root-id', 'wss://relay.example.com', 'root-pubkey'],
@@ -137,7 +137,7 @@ void main() {
     test('encode and decode round-trip', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip22.encode(
+      final event = Nip22.create(
         content: 'Hello',
         secretKey: secretKey,
         rootTag: ['E', 'root-id'],
@@ -145,7 +145,7 @@ void main() {
         parentTag: ['e', 'parent-id'],
         parentKind: '1111',
       );
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
       expect(comment.content, 'Hello');
       expect(comment.rootId, 'root-id');
       expect(comment.rootKind, 1);
@@ -159,7 +159,7 @@ void main() {
       final eventMap = fixtures['1111'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final comment = Nip22.decode(event);
+      final comment = Nip22.parse(event);
       expect(comment.content, isNotEmpty);
       expect(comment.pubkey, event.pubkey);
       // This real event uses I/i tags (external URL) with K="web"
@@ -170,8 +170,8 @@ void main() {
     });
 
     test('typedef alias works', () {
-      // Comments is an alias for Nip22
-      expect(Comments.kindComment, 1111);
+      // Nip22 is an alias for Comment
+      expect(Nip22.kindComment, 1111);
     });
   });
 }

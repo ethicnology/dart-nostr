@@ -14,7 +14,7 @@ void main() {
         'wss://relay.example.com',
         'wss://relay2.example.com'
       ];
-      final Event event = Nip5.encode(
+      final Event event = Nip5.create(
           name: 'name',
           domain: 'example.com',
           relays: relays,
@@ -22,14 +22,14 @@ void main() {
       expect(event.kind, 0);
 
       expect(
-          () => Nip5.encode(
+          () => Nip5.create(
               name: 'name',
               domain: 'example',
               relays: relays,
               secretKey: user.secret),
           throwsException);
       expect(
-          () => Nip5.encode(
+          () => Nip5.create(
               name: 'name!',
               domain: 'example.com',
               relays: relays,
@@ -63,7 +63,7 @@ void main() {
         secretKey:
             "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
       );
-      final DNS? dns = await Nip5.decode(event);
+      final DNS? dns = await Nip5.parse(event);
       expect(dns!.name, 'name');
       expect(dns.domain, 'example.com');
       expect(dns.pubkey, event.pubkey);

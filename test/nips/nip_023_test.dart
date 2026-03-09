@@ -4,8 +4,8 @@ import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('Nip23.decode', () {
-    test('should decode a valid event map into a Nip23Article', () {
+  group('Nip23.parse', () {
+    test('should parse a valid event map into an ArticleData', () {
       // Arrange
       final Map<String, dynamic> map = {
         'id': '',
@@ -27,7 +27,7 @@ void main() {
       };
 
       final event = Event.fromMap(map, verify: false);
-      final article = Nip23.decode(event);
+      final article = Nip23.parse(event);
 
       // Assert
       expect(article.kind, equals(Nip23.kindArticle));

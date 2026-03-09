@@ -13,12 +13,12 @@ void main() {
     content: 'pay_invoice get_balance make_invoice',
     secretKey: secretKey,
   );
-  final info = Nip47.decodeInfo(infoEvent);
+  final info = Nip47.parseInfo(infoEvent);
   assert(info.capabilities.contains('pay_invoice'));
   print('Wallet capabilities: ${info.capabilities}');
 
   // Encode a request (kind 23194)
-  final request = Nip47.encodeRequest(
+  final request = Nip47.request(
     encryptedContent: 'encrypted-payload',
     walletServicePubkey: walletPubkey,
     secretKey: secretKey,

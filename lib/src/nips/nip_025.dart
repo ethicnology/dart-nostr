@@ -4,7 +4,7 @@ import 'package:nostr/nostr.dart';
 ///
 /// A kind 7 event used to react to other events. The content field indicates
 /// the reaction value: `+` for like, `-` for dislike, or an emoji.
-class Nip25 {
+class Reaction {
   /// Creates a kind 7 reaction event.
   ///
   /// [eventId] is the ID of the event being reacted to.
@@ -13,7 +13,7 @@ class Nip25 {
   /// [relay] is an optional relay hint for the referenced event.
   /// [eventKind] is the kind of the event being reacted to (`k` tag per spec).
   /// [addressableCoord] is the NIP-33 coordinate for addressable events (`a` tag).
-  static Event encode({
+  static Event create({
     required String eventId,
     required String eventPubkey,
     required String secretKey,
@@ -37,10 +37,10 @@ class Nip25 {
     );
   }
 
-  /// Decodes a kind 7 event into a [Reaction].
+  /// Parses a kind 7 event into a [ReactionData].
   ///
   /// Throws [InvalidKindException] if the event is not kind 7.
-  static Reaction decode(Event event) {
+  static ReactionData parse(Event event) {
     if (event.kind != 7) {
       throw InvalidKindException(event.kind, [7]);
     }
@@ -49,7 +49,7 @@ class Nip25 {
     final kindStr = findTagValue(event.tags, 'k');
     final reactedKind = kindStr != null ? int.tryParse(kindStr) : null;
 
-    return Reaction(
+    return ReactionData(
       eventId: eventId,
       reactedPubkey: reactedPubkey,
       reactedKind: reactedKind,
@@ -61,7 +61,7 @@ class Nip25 {
 }
 
 /// A decoded reaction (kind 7).
-class Reaction {
+class ReactionData {
   /// The ID of the event being reacted to.
   final String eventId;
 
@@ -80,7 +80,7 @@ class Reaction {
   /// Unix timestamp in seconds.
   final int createdAt;
 
-  Reaction({
+  const ReactionData({
     required this.eventId,
     required this.reactedPubkey,
     required this.content,
@@ -90,4 +90,5 @@ class Reaction {
   });
 }
 
-typedef Reactions = Nip25;
+typedef Nip25 = Reaction;
+typedef Reactions = Reaction;

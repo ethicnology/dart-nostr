@@ -19,7 +19,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": "This is a comment."
 /// }
 /// ```
-class Nip22 {
+class Comment {
   /// Event kind for comments.
   static const int kindComment = 1111;
 
@@ -36,7 +36,7 @@ class Nip22 {
   ///
   /// Example — commenting on an event:
   /// ```dart
-  /// Nip22.encode(
+  /// Comment.create(
   ///   content: 'Great post!',
   ///   secretKey: mySecretKey,
   ///   rootTag: ['E', rootEventId, relay, rootAuthorPubkey],
@@ -45,7 +45,7 @@ class Nip22 {
   ///   parentKind: '1111',
   /// );
   /// ```
-  static Event encode({
+  static Event create({
     required String content,
     required String secretKey,
     required List<String> rootTag,
@@ -72,10 +72,10 @@ class Nip22 {
     );
   }
 
-  /// Decodes a kind-1111 event into a [Comment].
+  /// Parses a kind-1111 event into a [CommentData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 1111.
-  static Comment decode(Event event) {
+  static CommentData parse(Event event) {
     if (event.kind != kindComment) {
       throw InvalidKindException(event.kind, [kindComment]);
     }
@@ -104,7 +104,7 @@ class Nip22 {
     final rootPubkey = findTagValue(event.tags, 'P');
     final parentPubkey = findTagValue(event.tags, 'p');
 
-    return Comment(
+    return CommentData(
       rootId: rootId,
       rootKind: rootKindStr != null ? int.tryParse(rootKindStr) : null,
       rootPubkey: rootPubkey,
@@ -119,7 +119,7 @@ class Nip22 {
 }
 
 /// Represents a NIP-22 comment event.
-class Comment {
+class CommentData {
   /// The root scope identifier (from `E`, `A`, or `I` tag).
   final String? rootId;
 
@@ -147,8 +147,8 @@ class Comment {
   /// Unix timestamp of the comment.
   final int createdAt;
 
-  /// Creates a [Comment] with the given fields.
-  const Comment({
+  /// Creates a [CommentData] with the given fields.
+  const CommentData({
     required this.content,
     required this.pubkey,
     required this.createdAt,
@@ -161,4 +161,4 @@ class Comment {
   });
 }
 
-typedef Comments = Nip22;
+typedef Nip22 = Comment;

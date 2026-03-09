@@ -18,7 +18,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": ""
 /// }
 /// ```
-class Nip32 {
+class Label {
   /// Event kind for label events.
   static const int kindLabel = 1985;
 
@@ -28,7 +28,7 @@ class Nip32 {
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// At least one target must be provided (per spec).
   /// [content] is an optional explanation for why the labels were applied.
-  static Event encode({
+  static Event create({
     required List<LabelEntry> labels,
     required String secretKey,
     List<String> targetEvents = const [],
@@ -85,10 +85,10 @@ class Nip32 {
     );
   }
 
-  /// Decodes a kind-1985 event into a [Label].
+  /// Parses a kind-1985 event into a [LabelData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 1985.
-  static Label decode(Event event) {
+  static LabelData parse(Event event) {
     if (event.kind != kindLabel) {
       throw InvalidKindException(event.kind, [kindLabel]);
     }
@@ -113,7 +113,7 @@ class Nip32 {
     final targetUrls = findAllTagValues(event.tags, 'r');
     final targetTopics = findAllTagValues(event.tags, 't');
 
-    return Label(
+    return LabelData(
       namespaces: namespaces,
       labels: labels,
       targetEvents: targetEvents,
@@ -145,7 +145,7 @@ class LabelEntry {
 }
 
 /// Represents a NIP-32 label event.
-class Label {
+class LabelData {
   /// Label namespaces (from `L` tags).
   final List<String> namespaces;
 
@@ -176,8 +176,8 @@ class Label {
   /// Unix timestamp of the label event.
   final int createdAt;
 
-  /// Creates a [Label] with the given fields.
-  const Label({
+  /// Creates a [LabelData] with the given fields.
+  const LabelData({
     required this.pubkey,
     required this.createdAt,
     this.namespaces = const [],
@@ -191,4 +191,4 @@ class Label {
   });
 }
 
-typedef Labels = Nip32;
+typedef Nip32 = Label;

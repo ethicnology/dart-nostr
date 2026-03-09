@@ -13,7 +13,7 @@ void main() {
     secretKey: "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
 
-  final someProfiles = Nip2.decode(event);
+  final someProfiles = Nip2.parse(event);
   assert(someProfiles[0].pubkey == "91cf9..4e5ca");
   assert(someProfiles[1].relay == "wss://bobrelay.com/nostr");
   assert(someProfiles[2].petname == "carol");

@@ -1,15 +1,15 @@
 import 'package:nostr/nostr.dart';
 
 /// Private direct messages — [NIP-17](https://github.com/nostr-protocol/nips/blob/master/17.md)
-class Nip17 {
-  /// Encodes a private direct message as a gift-wrapped event.
+class DirectMessage {
+  /// Creates a private direct message as a gift-wrapped event.
   ///
   /// [message] is the plaintext message body.
   /// [authorSecretKey] is the sender's hex-encoded secret key.
   /// [receiverPubkey] is the recipient's hex-encoded public key.
   ///
   /// Returns a kind-1059 gift wrap event ready for broadcast.
-  static Future<Event> encode({
+  static Future<Event> create({
     required String message,
     required String authorSecretKey,
     required String receiverPubkey,
@@ -36,14 +36,14 @@ class Nip17 {
     );
   }
 
-  /// Decodes a gift-wrapped private direct message.
+  /// Parses a gift-wrapped private direct message.
   ///
   /// [giftWrap] is the kind-1059 event to unwrap.
   /// [receiverSecretKey] is the recipient's hex-encoded secret key.
   ///
   /// Returns the inner kind-14 rumor event.
   /// Throws [InvalidKindException] if the unwrapped event is not kind 14.
-  static Future<Event> decode({
+  static Future<Event> parse({
     required Event giftWrap,
     required String receiverSecretKey,
   }) async {
@@ -60,4 +60,4 @@ class Nip17 {
   }
 }
 
-typedef DirectMessage = Nip17;
+typedef Nip17 = DirectMessage;

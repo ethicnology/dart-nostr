@@ -11,14 +11,14 @@ void main() {
     secretKey: secretKey,
   );
 
-  final repost = Nip18.encode(
+  final repost = Nip18.create(
     originalEvent: original,
     secretKey: secretKey,
     relay: 'wss://relay.example.com',
   );
   assert(repost.kind == 6);
 
-  final decoded = Nip18.decode(repost);
+  final decoded = Nip18.parse(repost);
   assert(decoded.eventId == original.id);
   print('Reposted event: ${decoded.eventId}');
 }

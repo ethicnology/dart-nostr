@@ -22,46 +22,91 @@
 | `MessageType.name` | `MessageType.label` |
 | `generate64RandomHexChars()` | `generateRandomHex()` |
 
-**NIP model renames:**
+**NIP classes renamed — domain name is now the primary class, `Nip*` is the alias:**
+
+| Before | After | Alias |
+|--------|-------|-------|
+| `Nip1` | `Note` | `typedef Nip1 = Note` |
+| `Nip2` | `FollowList` | `typedef Nip2 = FollowList` |
+| `Nip5` | `DnsIdentifier` | `typedef Nip5 = DnsIdentifier` |
+| `Nip9` | `Deletion` | `typedef Nip9 = Deletion` |
+| `Nip10` | `Threading` | `typedef Nip10 = Threading` |
+| `Nip13` | `ProofOfWork` | `typedef Nip13 = ProofOfWork` |
+| `Nip17` | `DirectMessage` | `typedef Nip17 = DirectMessage` |
+| `Nip18` | `Repost` | `typedef Nip18 = Repost` |
+| `Nip19` | `Bech32Entity` | `typedef Nip19 = Bech32Entity` |
+| `Nip20` | `CommandResult` | `typedef Nip20 = CommandResult` |
+| `Nip21` | `NostrUri` | `typedef Nip21 = NostrUri` |
+| `Nip22` | `Comment` | `typedef Nip22 = Comment` |
+| `Nip23` | `Article` | `typedef Nip23 = Article` |
+| `Nip25` | `Reaction` | `typedef Nip25 = Reaction` |
+| `Nip28` | `PublicChat` | `typedef Nip28 = PublicChat` |
+| `Nip29` | `Group` | `typedef Nip29 = Group` |
+| `Nip32` | `Label` | `typedef Nip32 = Label` |
+| `Nip38` | `UserStatus` | `typedef Nip38 = UserStatus` |
+| `Nip42` | `Auth` | `typedef Nip42 = Auth` |
+| `Nip44` | `Encryption` | `typedef Nip44 = Encryption` |
+| `Nip46` | `NostrConnect` | `typedef Nip46 = NostrConnect` |
+| `Nip47` | `WalletConnect` | `typedef Nip47 = WalletConnect` |
+| `Nip51` | `NostrList` | `typedef Nip51 = NostrList` |
+| `Nip53` | `LiveActivity` | `typedef Nip53 = LiveActivity` |
+| `Nip57` | `Zap` | `typedef Nip57 = Zap` |
+| `Nip59` | `GiftWrap` | `typedef Nip59 = GiftWrap` |
+| `Nip65` | `RelayList` | `typedef Nip65 = RelayList` |
+| `Nip72` | `ModeratedCommunity` | `typedef Nip72 = ModeratedCommunity` |
+| `Nip89` | `AppHandler` | `typedef Nip89 = AppHandler` |
+
+**Methods renamed — `encode()`→`create()`, `decode()`→`parse()`, spec-aligned verbs:**
 
 | Before | After |
 |--------|-------|
-| `TextNote` (model) | `Note` |
-| `TextNote.nodeId` | `Note.id` |
-| `Profile.key` | `Profile.pubkey` |
-| `Nip9DeletionRequest` | `DeletionRequest` |
-| `ShareableIdentifiers.special` | `ShareableIdentifiers.data` |
-| `People` | `Contact` |
-| `People.aliasPubKey` | Removed (not in spec) |
-| `Lists` (model) | `UserList` |
-| `ChannelMessage.sender` | `ChannelMessage.pubkey` |
-| `ChannelMessage.createTime` | `ChannelMessage.createdAt` |
+| `Nip1.encodeTextNote()` | `Note.create()` |
+| `Nip1.encodeSetMetadata()` | `Note.setMetadata()` |
+| `Nip1.decodeTextNote()` | `Note.parse()` |
+| `Nip2.encode()` | `FollowList.create()` |
+| `Nip2.decode()` | `FollowList.parse()` |
+| `Nip5.encode()` | `DnsIdentifier.create()` |
+| `Nip5.decode()` | `DnsIdentifier.parse()` |
+| `Nip9.encode()` | `Deletion.requestDeletion()` |
+| `Nip9.decode()` | `Deletion.parse()` |
+| `Nip25.encode()` | `Reaction.create()` |
+| `Nip25.decode()` | `Reaction.parse()` |
+| `Nip28.createChannel()` | `PublicChat.channel()` |
+| `Nip28.getChannelCreation()` | `PublicChat.parseChannel()` |
+| `Nip47.encodeRequest()` | `WalletConnect.request()` |
+| `Nip47.decodeInfo()` | `WalletConnect.parseInfo()` |
+| `Nip51.createMutePeople()` | `NostrList.mutePeople()` |
+| `Nip51.getLists()` | `NostrList.parse()` |
+| `Nip57.encodeZapRequest()` | `Zap.request()` |
+| `Nip57.decodeZapReceipt()` | `Zap.parseReceipt()` |
 
-**Model classes now use named `const` constructors with `final` fields:**
+**All model classes renamed with `Data` suffix:**
 
 | Before | After |
 |--------|-------|
-| `Profile(pubkey, relay, petname)` | `Profile(pubkey: ..., relay: ..., petname: ...)` |
-| `ETag(eventId, relay, marker)` | `ETag(eventId: ..., relayURL: ..., marker: ...)` |
-| `PTag(pubkey, relay)` | `PTag(pubkey: ..., relayURL: ...)` |
-| `Thread(root, etags, ptags)` | `Thread(root: ..., etags: ..., ptags: ...)` |
-| `DNS(name, domain, pubkey, relays)` | `DNS(name: ..., domain: ..., pubkey: ..., relays: ...)` |
-| `DeletionRequest(pubkey, ids, coords, reason, ts)` | `DeletionRequest(pubkey: ..., eventIds: ..., ...)` |
-| `Note(id, pubkey, ...)` | `Note(id: ..., pubkey: ..., ...)` |
-| `Nip9.encode(ids, content, secretKey, ...)` | `Nip9.encode(eventIds: ..., secretKey: ..., ...)` |
+| `Note` | `NoteData` |
+| `Profile` | `ProfileData` |
+| `DNS` | `DnsData` |
+| `DeletionRequest` | `DeletionRequestData` |
+| `Reaction` (model) | `ReactionData` |
+| `Repost` (model) | `RepostData` |
+| `Comment` (model) | `CommentData` |
+| `Nip23Article` | `ArticleData` |
+| `Channel` | `ChannelData` |
+| `UserStatus` (model) | `UserStatusData` |
+| `LiveActivity` (model) | `LiveActivityData` |
+| `ZapRequest` / `ZapReceipt` | `ZapRequestData` / `ZapReceiptData` |
+| `ShareableIdentifiers` | `ShareableIdentifierData` |
+| `UserList` | `UserListData` |
 
 **Other breaking changes:**
 
 | Before | After |
 |--------|-------|
-| `Nip9.toDeleteEvent(event)` | Removed — use `Nip9.decode(event)` |
 | `Keys.from(secretKey: ...)` | Removed — use `Keys(secretKey)` |
-| `Filter.fromJson(...)` (named ctor) | `Filter.fromJson(...)` (factory ctor, fields now `final`) |
-| `RelayMetadata(url: ..., read: true)` | `RelayMetadata(url: ..., read: true, write: true)` (both required) |
-| `Community.relays` (`List<String>`) | `Community.relays` (`List<CommunityRelay>`) |
-| `AppHandler.platforms` (`Map<String, String>`) | `AppHandler.platforms` (`List<PlatformHandler>`) |
-| `Nip23Article.topics` (`List<String>?`) | `Nip23Article.topics` (`List<String>`, defaults to `[]`) |
-| `Note.hashTags` (`List<String>?`) | `Note.hashTags` (`List<String>`, defaults to `[]`) |
+| `Nip9.toDeleteEvent(event)` | Removed — use `Deletion.parse(event)` |
+| `Filter` fields mutable | `Filter` fields `final`, constructor `const` |
+| All model positional ctors | All model named `const` constructors |
 
 ### New Features
 

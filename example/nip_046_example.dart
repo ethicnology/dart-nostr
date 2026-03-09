@@ -6,14 +6,14 @@ void main() {
   const targetPubkey =
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245';
 
-  final event = Nip46.encode(
+  final event = Nip46.create(
     encryptedContent: '{"id":"1","method":"sign_event","params":[]}',
     targetPubkey: targetPubkey,
     secretKey: secretKey,
   );
   assert(event.kind == 24133);
 
-  final decoded = Nip46.decode(event);
+  final decoded = Nip46.parse(event);
   assert(decoded.targetPubkey == targetPubkey);
   print('Nostr Connect to: ${decoded.targetPubkey}');
 }

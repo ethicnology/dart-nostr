@@ -10,7 +10,7 @@ import 'package:nostr/nostr.dart';
 /// then ChaCha20 + HMAC-SHA256 for per-message encryption.
 ///
 /// This format MUST be used in the context of a signed event (NIP-01).
-class Nip44 {
+class Encryption {
   /// Encrypts [plaintext] from sender to recipient using NIP-44 v2.
   ///
   /// [senderSecretKey] is the sender's hex-encoded secret key.
@@ -120,4 +120,4 @@ class Nip44 {
   }
 }
 
-typedef Encryption = Nip44;
+typedef Nip44 = Encryption;

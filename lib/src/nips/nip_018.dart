@@ -4,13 +4,13 @@ import 'package:nostr/nostr.dart';
 ///
 /// Kind 6 for text note reposts (kind 1 only), kind 16 for generic reposts
 /// (any other kind). The content is the stringified JSON of the reposted event.
-class Nip18 {
+class Repost {
   /// Creates a repost event.
   ///
   /// Uses kind 6 if the original event is kind 1, otherwise kind 16.
   /// The [relay] hint MUST be included per spec for the `e` tag.
   /// The content is set to the JSON-serialized original event.
-  static Event encode({
+  static Event create({
     required Event originalEvent,
     required String secretKey,
     required String relay,
@@ -32,10 +32,10 @@ class Nip18 {
     );
   }
 
-  /// Decodes a kind 6 or kind 16 repost event into a [Repost].
+  /// Parses a kind 6 or kind 16 repost event into a [RepostData].
   ///
   /// Throws [InvalidKindException] if the event is not kind 6 or 16.
-  static Repost decode(Event event) {
+  static RepostData parse(Event event) {
     if (event.kind != 6 && event.kind != 16) {
       throw InvalidKindException(event.kind, [6, 16]);
     }
@@ -51,7 +51,7 @@ class Nip18 {
       }
     }
 
-    return Repost(
+    return RepostData(
       eventId: eventId,
       repostedPubkey: repostedPubkey,
       originalEvent: originalEvent,
@@ -62,7 +62,7 @@ class Nip18 {
 }
 
 /// A decoded repost (kind 6 or 16).
-class Repost {
+class RepostData {
   /// The ID of the reposted event.
   final String eventId;
 
@@ -78,7 +78,8 @@ class Repost {
   /// Unix timestamp in seconds.
   final int createdAt;
 
-  Repost({
+  /// Creates a [RepostData] with the given fields.
+  const RepostData({
     required this.eventId,
     required this.repostedPubkey,
     required this.pubkey,
@@ -87,4 +88,5 @@ class Repost {
   });
 }
 
-typedef Reposts = Nip18;
+typedef Nip18 = Repost;
+typedef Reposts = Repost;

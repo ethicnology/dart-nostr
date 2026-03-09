@@ -11,7 +11,7 @@ void main() {
 
     group('handler info', () {
       test('encodes a handler info event with all fields', () {
-        final event = Nip89.encodeHandlerInfo(
+        final event = Nip89.handlerInfo(
           id: 'my-app',
           secretKey: secretKey,
           supportedKinds: [1, 30023],
@@ -51,7 +51,7 @@ void main() {
       });
 
       test('encodes a minimal handler info event', () {
-        final event = Nip89.encodeHandlerInfo(
+        final event = Nip89.handlerInfo(
           id: 'minimal',
           secretKey: secretKey,
           supportedKinds: [1],
@@ -63,7 +63,7 @@ void main() {
       });
 
       test('decodes a handler info event', () {
-        final event = Nip89.encodeHandlerInfo(
+        final event = Nip89.handlerInfo(
           id: 'decoder-test',
           secretKey: secretKey,
           supportedKinds: [1, 6, 30023],
@@ -83,7 +83,7 @@ void main() {
             'picture': 'https://example.com/pic.jpg',
           },
         );
-        final handler = Nip89.decodeHandlerInfo(event);
+        final handler = Nip89.parseHandlerInfo(event);
         expect(handler.id, 'decoder-test');
         expect(handler.supportedKinds, [1, 6, 30023]);
         expect(handler.platforms.length, 2);
@@ -99,12 +99,12 @@ void main() {
       });
 
       test('decodes handler with empty content', () {
-        final event = Nip89.encodeHandlerInfo(
+        final event = Nip89.handlerInfo(
           id: 'no-meta',
           secretKey: secretKey,
           supportedKinds: [1],
         );
-        final handler = Nip89.decodeHandlerInfo(event);
+        final handler = Nip89.parseHandlerInfo(event);
         expect(handler.metadata, isNull);
       });
 
@@ -118,7 +118,7 @@ void main() {
           content: 'not valid json',
           secretKey: secretKey,
         );
-        final handler = Nip89.decodeHandlerInfo(event);
+        final handler = Nip89.parseHandlerInfo(event);
         expect(handler.metadata, isNull);
         expect(handler.id, 'bad-json');
       });
@@ -132,7 +132,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip89.decodeHandlerInfo(event),
+        expect(() => Nip89.parseHandlerInfo(event),
             throwsA(isA<InvalidKindException>()));
       });
 
@@ -143,7 +143,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip89.decodeHandlerInfo(event),
+        expect(() => Nip89.parseHandlerInfo(event),
             throwsA(isA<MissingTagException>()));
       });
 
@@ -159,14 +159,14 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        final handler = Nip89.decodeHandlerInfo(event);
+        final handler = Nip89.parseHandlerInfo(event);
         expect(handler.supportedKinds, [1, 30023]);
       });
     });
 
     group('handler recommendation', () {
       test('encodes a recommendation event', () {
-        final event = Nip89.encodeRecommendation(
+        final event = Nip89.recommendation(
           eventKind: 1,
           handlerCoords: [
             '31990:pubkey1:app1',
@@ -181,12 +181,12 @@ void main() {
       });
 
       test('decodes a recommendation event', () {
-        final event = Nip89.encodeRecommendation(
+        final event = Nip89.recommendation(
           eventKind: 30023,
           handlerCoords: ['31990:pubkey:handler'],
           secretKey: secretKey,
         );
-        final rec = Nip89.decodeRecommendation(event);
+        final rec = Nip89.parseRecommendation(event);
         expect(rec.eventKind, 30023);
         expect(rec.handlerCoords, ['31990:pubkey:handler']);
         expect(rec.pubkey, event.pubkey);
@@ -201,7 +201,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip89.decodeRecommendation(event),
+        expect(() => Nip89.parseRecommendation(event),
             throwsA(isA<InvalidKindException>()));
       });
 
@@ -212,7 +212,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip89.decodeRecommendation(event),
+        expect(() => Nip89.parseRecommendation(event),
             throwsA(isA<MissingTagException>()));
       });
     });
@@ -223,7 +223,7 @@ void main() {
       final eventMap = fixtures['31990'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final handler = Nip89.decodeHandlerInfo(event);
+      final handler = Nip89.parseHandlerInfo(event);
       expect(handler.id, isNotEmpty);
       expect(handler.supportedKinds, contains(100));
       expect(handler.metadata, isNotNull);
@@ -232,7 +232,7 @@ void main() {
     });
 
     test('typedef AppHandlers works', () {
-      final event = AppHandlers.encodeHandlerInfo(
+      final event = AppHandlers.handlerInfo(
         id: 'test',
         secretKey: secretKey,
         supportedKinds: [1],

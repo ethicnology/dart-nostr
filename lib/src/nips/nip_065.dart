@@ -4,15 +4,15 @@ import 'package:nostr/nostr.dart';
 ///
 /// A kind 10002 replaceable event advertising a user's preferred relays
 /// with optional read/write markers.
-class Nip65 {
+class RelayList {
   /// Creates a kind 10002 relay list event.
   ///
-  /// Each [RelayMetadata] entry becomes an `r` tag:
+  /// Each [RelayMetadataData] entry becomes an `r` tag:
   /// - `["r", url]` if both read and write
   /// - `["r", url, "read"]` if read-only
   /// - `["r", url, "write"]` if write-only
-  static Event encode({
-    required List<RelayMetadata> relays,
+  static Event create({
+    required List<RelayMetadataData> relays,
     required String secretKey,
   }) {
     final tags = relays.map((r) {
@@ -29,23 +29,23 @@ class Nip65 {
     );
   }
 
-  /// Decodes a kind 10002 event into a list of [RelayMetadata].
+  /// Decodes a kind 10002 event into a list of [RelayMetadataData].
   ///
   /// Throws [InvalidKindException] if the event is not kind 10002.
-  static List<RelayMetadata> decode(Event event) {
+  static List<RelayMetadataData> parse(Event event) {
     if (event.kind != 10002) {
       throw InvalidKindException(event.kind, [10002]);
     }
-    final List<RelayMetadata> relays = [];
+    final List<RelayMetadataData> relays = [];
     for (final tag in event.tags) {
       if (tag[0] != 'r' || tag.length < 2) continue;
       final url = tag[1];
       if (tag.length == 2) {
-        relays.add(RelayMetadata(url: url, read: true, write: true));
+        relays.add(RelayMetadataData(url: url, read: true, write: true));
       } else if (tag[2] == 'read') {
-        relays.add(RelayMetadata(url: url, read: true, write: false));
+        relays.add(RelayMetadataData(url: url, read: true, write: false));
       } else if (tag[2] == 'write') {
-        relays.add(RelayMetadata(url: url, read: false, write: true));
+        relays.add(RelayMetadataData(url: url, read: false, write: true));
       }
     }
     return relays;
@@ -53,7 +53,7 @@ class Nip65 {
 }
 
 /// A relay entry with read/write capabilities.
-class RelayMetadata {
+class RelayMetadataData {
   /// The relay WebSocket URL.
   final String url;
 
@@ -63,12 +63,13 @@ class RelayMetadata {
   /// Whether to write events to this relay.
   final bool write;
 
-  /// Creates a [RelayMetadata].
-  const RelayMetadata({
+  /// Creates a [RelayMetadataData].
+  const RelayMetadataData({
     required this.url,
     required this.read,
     required this.write,
   });
 }
 
-typedef RelayList = Nip65;
+typedef Nip65 = RelayList;
+typedef RelayMetadata = RelayMetadataData;

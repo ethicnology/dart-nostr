@@ -6,7 +6,7 @@ void main() {
   const relay = 'wss://relay.example.com';
   const challenge = 'random-challenge-string';
 
-  final event = Nip42.encode(
+  final event = Nip42.create(
     challenge: challenge,
     relayUrl: relay,
     secretKey: secretKey,

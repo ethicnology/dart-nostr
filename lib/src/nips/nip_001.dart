@@ -8,12 +8,12 @@ import 'package:nostr/nostr.dart';
 ///
 /// 1: text_note: the content is set to the plaintext content of a note
 /// (anything the user wants to say).
-class Nip1 {
-  /// Encodes a kind-0 set_metadata event.
+class Note {
+  /// Creates a kind-0 set_metadata event.
   ///
   /// [content] is a JSON-stringified object with `name`, `about`, `picture`.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
-  static Event encodeSetMetadata({
+  static Event setMetadata({
     required String content,
     required String secretKey,
   }) {
@@ -25,7 +25,7 @@ class Nip1 {
     );
   }
 
-  /// Encodes a kind-1 text note event with optional threading.
+  /// Creates a kind-1 text note event with optional threading.
   ///
   /// [content] is the plaintext note body.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
@@ -36,7 +36,7 @@ class Nip1 {
   /// [replyUsers] is a list of pubkeys to tag (optional).
   /// [replyUserRelays] is a list of relay URLs for the tagged users (optional).
   /// [hashTags] is a list of hashtag strings (optional).
-  static Event encodeTextNote({
+  static Event create({
     required String content,
     required String secretKey,
     String? rootEvent,
@@ -92,12 +92,12 @@ class Nip1 {
     return findTagValue(tags, 'h');
   }
 
-  /// Decodes a kind 1, 11, or 12 event into a [Note].
+  /// Parses a kind 1, 11, or 12 event into a [NoteData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 1, 11, or 12.
-  static Note decodeTextNote(Event event) {
+  static NoteData parse(Event event) {
     if (event.kind == 1 || event.kind == 11 || event.kind == 12) {
-      return Note(
+      return NoteData(
         id: event.id,
         pubkey: event.pubkey,
         createdAt: event.createdAt,
@@ -113,7 +113,7 @@ class Nip1 {
 }
 
 /// A decoded text note (kind 1, 11, 12).
-class Note {
+class NoteData {
   /// The event ID.
   final String id;
 
@@ -138,8 +138,8 @@ class Note {
   /// The group ID from an `h` tag, if present.
   final String? groupId;
 
-  /// Creates a [Note] with the given fields.
-  const Note({
+  /// Creates a [NoteData] with the given fields.
+  const NoteData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -151,4 +151,5 @@ class Note {
   });
 }
 
-typedef TextNote = Nip1;
+typedef Nip1 = Note;
+typedef TextNote = Note;

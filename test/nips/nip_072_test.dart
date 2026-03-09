@@ -10,7 +10,7 @@ void main() {
 
     group('community definition', () {
       test('encodes a community with all fields', () {
-        final event = Nip72.encodeCommunity(
+        final event = Nip72.community(
           id: 'my-community',
           secretKey: secretKey,
           name: 'My Community',
@@ -41,7 +41,7 @@ void main() {
       });
 
       test('encodes a minimal community', () {
-        final event = Nip72.encodeCommunity(
+        final event = Nip72.community(
           id: 'minimal',
           secretKey: secretKey,
         );
@@ -51,7 +51,7 @@ void main() {
       });
 
       test('decodes a community definition', () {
-        final event = Nip72.encodeCommunity(
+        final event = Nip72.community(
           id: 'test-community',
           secretKey: secretKey,
           name: 'Test',
@@ -64,7 +64,7 @@ void main() {
             const CommunityRelay(url: 'wss://relay2.com', marker: 'approvals'),
           ],
         );
-        final community = Nip72.decodeCommunity(event);
+        final community = Nip72.parseCommunity(event);
         expect(community.id, 'test-community');
         expect(community.name, 'Test');
         expect(community.description, 'Desc');
@@ -89,7 +89,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip72.decodeCommunity(event),
+        expect(() => Nip72.parseCommunity(event),
             throwsA(isA<InvalidKindException>()));
       });
 
@@ -100,14 +100,14 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip72.decodeCommunity(event),
+        expect(() => Nip72.parseCommunity(event),
             throwsA(isA<MissingTagException>()));
       });
     });
 
     group('community approval', () {
       test('encodes an approval event', () {
-        final event = Nip72.encodeApproval(
+        final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
           approvedEventId:
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -131,7 +131,7 @@ void main() {
           content: 'Hello community!',
           secretKey: secretKey,
         );
-        final event = Nip72.encodeApproval(
+        final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
           approvedEventId: approvedEvent.id,
           approvedEventPubkey: approvedEvent.pubkey,
@@ -143,7 +143,7 @@ void main() {
       });
 
       test('decodes an approval event', () {
-        final event = Nip72.encodeApproval(
+        final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
           approvedEventId:
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -151,7 +151,7 @@ void main() {
           approvedEventKind: 1111,
           secretKey: secretKey,
         );
-        final approval = Nip72.decodeApproval(event);
+        final approval = Nip72.parseApproval(event);
         expect(approval.communityCoord,
             '34550:$moderatorPubkey:my-community');
         expect(approval.approvedEventId,
@@ -167,7 +167,7 @@ void main() {
           content: 'Post content',
           secretKey: secretKey,
         );
-        final event = Nip72.encodeApproval(
+        final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
           approvedEventId: approvedEvent.id,
           approvedEventPubkey: approvedEvent.pubkey,
@@ -175,7 +175,7 @@ void main() {
           secretKey: secretKey,
           approvedEventJson: approvedEvent.toJson(),
         );
-        final approval = Nip72.decodeApproval(event);
+        final approval = Nip72.parseApproval(event);
         expect(approval.approvedEvent, isNotNull);
         expect(approval.approvedEvent!.content, 'Post content');
       });
@@ -189,7 +189,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip72.decodeApproval(event),
+        expect(() => Nip72.parseApproval(event),
             throwsA(isA<InvalidKindException>()));
       });
 
@@ -200,13 +200,13 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip72.decodeApproval(event),
+        expect(() => Nip72.parseApproval(event),
             throwsA(isA<MissingTagException>()));
       });
     });
 
     test('typedef ModeratedCommunities works', () {
-      final event = ModeratedCommunities.encodeCommunity(
+      final event = ModeratedCommunities.community(
         id: 'test',
         secretKey: secretKey,
       );

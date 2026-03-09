@@ -6,14 +6,14 @@ Future<void> main() async {
   const bob =
       'e108399bd8424357a710b606ae0c13166d853d327e47a6e5e038197346bdbf45';
 
-  final giftWrap = await Nip17.encode(
+  final giftWrap = await Nip17.create(
     message: 'Hey Bob, how are you?',
     authorSecretKey: alice,
     receiverPubkey: Keys(bob).public,
   );
   assert(giftWrap.kind == 1059);
 
-  final dm = await Nip17.decode(
+  final dm = await Nip17.parse(
     giftWrap: giftWrap,
     receiverSecretKey: bob,
   );

@@ -12,7 +12,7 @@ import 'package:nostr/nostr.dart';
 ///
 /// Encrypted kinds carry NIP-44 (or NIP-04) payloads; this class exposes
 /// the event structure without performing decryption.
-class Nip47 {
+class WalletConnect {
   /// Kind for the wallet info event.
   static const int infoKind = 13194;
 
@@ -37,11 +37,11 @@ class Nip47 {
     notificationKind,
   ];
 
-  /// Decodes a kind-13194 info event into a [WalletInfo].
+  /// Parses a kind-13194 info event into a [WalletInfoData].
   ///
   /// The content contains space-separated supported method names.
   /// Throws [InvalidKindException] if the event kind is not 13194.
-  static WalletInfo decodeInfo(Event event) {
+  static WalletInfoData parseInfo(Event event) {
     if (event.kind != infoKind) {
       throw InvalidKindException(event.kind, [infoKind]);
     }
@@ -53,7 +53,7 @@ class Nip47 {
     final encryption = findAllTagValues(event.tags, 'encryption');
     final notifications = findAllTagValues(event.tags, 'notifications');
 
-    return WalletInfo(
+    return WalletInfoData(
       pubkey: event.pubkey,
       capabilities: capabilities,
       encryption: encryption,
@@ -61,12 +61,12 @@ class Nip47 {
     );
   }
 
-  /// Decodes an encrypted NWC event (kinds 23194, 23195, 23196, 23197)
-  /// into a [WalletEvent].
+  /// Parses an encrypted NWC event (kinds 23194, 23195, 23196, 23197)
+  /// into a [WalletEventData].
   ///
   /// The content remains encrypted — decryption requires the shared secret.
   /// Throws [InvalidKindException] if the event kind is not a valid NWC kind.
-  static WalletEvent decode(Event event) {
+  static WalletEventData parse(Event event) {
     if (!_allKinds.contains(event.kind)) {
       throw InvalidKindException(event.kind, _allKinds);
     }
@@ -84,7 +84,7 @@ class Nip47 {
     final requestEventId = findTagValue(event.tags, 'e');
     final encryption = findTagValue(event.tags, 'encryption');
 
-    return WalletEvent(
+    return WalletEventData(
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -96,12 +96,12 @@ class Nip47 {
     );
   }
 
-  /// Encodes a kind-23194 NWC request event.
+  /// Creates a kind-23194 NWC request event.
   ///
   /// [encryptedContent] is the NIP-44 encrypted JSON-RPC request payload.
   /// [walletServicePubkey] is the wallet service's public key.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
-  static Event encodeRequest({
+  static Event request({
     required String encryptedContent,
     required String walletServicePubkey,
     required String secretKey,
@@ -116,13 +116,13 @@ class Nip47 {
     );
   }
 
-  /// Encodes a kind-23195 NWC response event.
+  /// Creates a kind-23195 NWC response event.
   ///
   /// [encryptedContent] is the NIP-44 encrypted JSON-RPC response payload.
   /// [clientPubkey] is the requesting client's public key.
   /// [requestEventId] is the event ID of the request being answered.
   /// [secretKey] is the hex-encoded secret key used to sign the event.
-  static Event encodeResponse({
+  static Event response({
     required String encryptedContent,
     required String clientPubkey,
     required String requestEventId,
@@ -140,8 +140,8 @@ class Nip47 {
   }
 }
 
-/// Decoded wallet info from a kind-13194 event.
-class WalletInfo {
+/// Parsed wallet info from a kind-13194 event.
+class WalletInfoData {
   /// The wallet service's public key.
   final String pubkey;
 
@@ -154,8 +154,8 @@ class WalletInfo {
   /// Supported notification types from `notifications` tags.
   final List<String> notifications;
 
-  /// Creates a [WalletInfo] with the given fields.
-  const WalletInfo({
+  /// Creates a [WalletInfoData] with the given fields.
+  const WalletInfoData({
     required this.pubkey,
     required this.capabilities,
     this.encryption = const [],
@@ -163,11 +163,11 @@ class WalletInfo {
   });
 }
 
-/// A decoded encrypted NWC event (kinds 23194, 23195, 23196, 23197).
+/// A parsed encrypted NWC event (kinds 23194, 23195, 23196, 23197).
 ///
 /// The [encryptedContent] remains opaque — decryption requires the
 /// shared secret between client and wallet service.
-class WalletEvent {
+class WalletEventData {
   /// The event ID.
   final String id;
 
@@ -192,8 +192,8 @@ class WalletEvent {
   /// The encrypted content payload.
   final String encryptedContent;
 
-  /// Creates a [WalletEvent] with the given fields.
-  const WalletEvent({
+  /// Creates a [WalletEventData] with the given fields.
+  const WalletEventData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -205,4 +205,4 @@ class WalletEvent {
   });
 }
 
-typedef WalletConnect = Nip47;
+typedef Nip47 = WalletConnect;

@@ -3,13 +3,13 @@ import 'package:http/http.dart' as http;
 import 'package:nostr/nostr.dart';
 
 /// DNS-based internet identifiers — [NIP-05](https://github.com/nostr-protocol/nips/blob/master/05.md)
-class Nip5 {
-  /// Decode a kind-0 (set_metadata) event and extract its NIP-05 identity.
+class DnsIdentifier {
+  /// Parses a kind-0 (set_metadata) event and extracts its NIP-05 identity.
   ///
   /// Returns null if the event has no `nip05` field in its content.
   /// Throws [InvalidKindException] if the event kind is not 0.
   /// Throws [DeserializationException] if the content cannot be parsed.
-  static Future<DNS?> decode(Event event) async {
+  static Future<DnsData?> parse(Event event) async {
     if (event.kind == 0) {
       try {
         final Map map = json.decode(event.content);
@@ -19,7 +19,7 @@ class Nip5 {
         final String name = parts[0];
         final String domain = parts[1];
         final List<dynamic> relays = map['relays'] ?? [];
-        return DNS(
+        return DnsData(
             name: name,
             domain: domain,
             pubkey: event.pubkey,
@@ -31,7 +31,7 @@ class Nip5 {
     throw InvalidKindException(event.kind, [0]);
   }
 
-  /// Encode a kind-0 set_metadata event with NIP-05 identity.
+  /// Creates a kind-0 set_metadata event with NIP-05 identity.
   ///
   /// [name] is the local part of the identifier (before the @).
   /// [domain] is the domain part of the identifier (after the @).
@@ -39,7 +39,7 @@ class Nip5 {
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   ///
   /// Throws [NostrException] if the name or domain is invalid.
-  static Event encode({
+  static Event create({
     required String name,
     required String domain,
     required List<String> relays,
@@ -141,7 +141,7 @@ class Nip5 {
 }
 
 /// A resolved NIP-05 DNS identity.
-class DNS {
+class DnsData {
   /// The local part of the identifier (before the @).
   final String name;
 
@@ -154,8 +154,8 @@ class DNS {
   /// Relay URLs where events from this identity can be found.
   final List<String> relays;
 
-  /// Creates a [DNS] with the given fields.
-  const DNS({
+  /// Creates a [DnsData] with the given fields.
+  const DnsData({
     required this.name,
     required this.domain,
     required this.pubkey,
@@ -163,4 +163,5 @@ class DNS {
   });
 }
 
-typedef DnsIdentifier = Nip5;
+typedef Nip5 = DnsIdentifier;
+typedef DNS = DnsData;

@@ -12,7 +12,7 @@ void main() {
         '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245';
     group('zap request encoding', () {
       test('encodes a basic zap request with required fields', () {
-        final event = Nip57.encodeZapRequest(
+        final event = Nip57.request(
           recipientPubkey: recipientPubkey,
           relays: ['wss://relay1.com', 'wss://relay2.com'],
           secretKey: secretKey,
@@ -26,7 +26,7 @@ void main() {
       });
 
       test('encodes a zap request with all optional fields', () {
-        final event = Nip57.encodeZapRequest(
+        final event = Nip57.request(
           recipientPubkey: recipientPubkey,
           relays: ['wss://relay.com'],
           secretKey: secretKey,
@@ -61,14 +61,14 @@ void main() {
 
     group('zap request decoding', () {
       test('decodes a zap request event', () {
-        final event = Nip57.encodeZapRequest(
+        final event = Nip57.request(
           recipientPubkey: recipientPubkey,
           relays: ['wss://relay1.com', 'wss://relay2.com'],
           secretKey: secretKey,
           content: 'Nice!',
           amount: 5000,
         );
-        final request = Nip57.decodeZapRequest(event);
+        final request = Nip57.parseRequest(event);
         expect(request.recipientPubkey, recipientPubkey);
         expect(request.relays, ['wss://relay1.com', 'wss://relay2.com']);
         expect(request.content, 'Nice!');
@@ -85,7 +85,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip57.decodeZapRequest(event),
+        expect(() => Nip57.parseRequest(event),
             throwsA(isA<InvalidKindException>()));
       });
     });
@@ -93,7 +93,7 @@ void main() {
     group('zap receipt decoding', () {
       test('decodes a zap receipt with embedded request', () {
         // Create a zap request first
-        final zapRequest = Nip57.encodeZapRequest(
+        final zapRequest = Nip57.request(
           recipientPubkey: recipientPubkey,
           relays: ['wss://relay.com'],
           secretKey: secretKey,
@@ -118,7 +118,7 @@ void main() {
           secretKey: secretKey,
         );
 
-        final receipt = Nip57.decodeZapReceipt(receiptEvent);
+        final receipt = Nip57.parseReceipt(receiptEvent);
         expect(receipt.recipientPubkey, recipientPubkey);
         expect(receipt.bolt11, 'lnbc10u1p3...');
         expect(receipt.preimage, 'abcdef1234567890');
@@ -131,7 +131,7 @@ void main() {
       });
 
       test('decodes a zap receipt with P (sender) tag', () {
-        final zapRequest = Nip57.encodeZapRequest(
+        final zapRequest = Nip57.request(
           recipientPubkey: recipientPubkey,
           relays: ['wss://relay.com'],
           secretKey: secretKey,
@@ -149,7 +149,7 @@ void main() {
           secretKey: secretKey,
         );
 
-        final receipt = Nip57.decodeZapReceipt(receiptEvent);
+        final receipt = Nip57.parseReceipt(receiptEvent);
         expect(receipt.senderPubkey, zapRequest.pubkey);
       });
 
@@ -160,7 +160,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip57.decodeZapReceipt(event),
+        expect(() => Nip57.parseReceipt(event),
             throwsA(isA<InvalidKindException>()));
       });
 
@@ -174,7 +174,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip57.decodeZapReceipt(event),
+        expect(() => Nip57.parseReceipt(event),
             throwsA(isA<MissingTagException>()));
       });
 
@@ -188,7 +188,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        expect(() => Nip57.decodeZapReceipt(event),
+        expect(() => Nip57.parseReceipt(event),
             throwsA(isA<MissingTagException>()));
       });
 
@@ -203,7 +203,7 @@ void main() {
           content: '',
           secretKey: secretKey,
         );
-        final receipt = Nip57.decodeZapReceipt(event);
+        final receipt = Nip57.parseReceipt(event);
         expect(receipt.embeddedRequest, isNull);
         expect(receipt.bolt11, 'lnbc1...');
       });
@@ -215,7 +215,7 @@ void main() {
       final eventMap = fixtures['9735'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final receipt = Nip57.decodeZapReceipt(event);
+      final receipt = Nip57.parseReceipt(event);
       expect(receipt.bolt11, startsWith('lnbc'));
       expect(receipt.recipientPubkey, isNotEmpty);
       expect(receipt.senderPubkey, isNotEmpty);
@@ -228,7 +228,7 @@ void main() {
     });
 
     test('typedef Zaps works', () {
-      final event = Zaps.encodeZapRequest(
+      final event = Zaps.request(
         recipientPubkey: recipientPubkey,
         relays: ['wss://relay.com'],
         secretKey: secretKey,

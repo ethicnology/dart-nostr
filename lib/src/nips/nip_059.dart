@@ -13,7 +13,7 @@ import 'package:nostr/nostr.dart';
 /// Decryption by the recipient:
 ///   1) unwrap gift => returns the "seal" event
 ///   2) unseal => returns the original rumor
-class Nip59 {
+class GiftWrap {
   /// Create a full "gift wrap" (kind=1059) that hides an underlying rumor.
   ///
   /// [rumor] is a Nostr event without a signature. If it has .sig or .id,
@@ -57,7 +57,7 @@ class Nip59 {
     final rumorJson = unsignedRumor.toJson();
 
     // Encrypt rumor with (authorSecretKey, recipientPubkey)
-    final sealCiphertext = await Nip44.encrypt(
+    final sealCiphertext = await Encryption.encrypt(
       plaintext: rumorJson,
       recipientPublicKey: recipientPubkey,
       senderSecretKey: authorSecretKey,
@@ -81,7 +81,7 @@ class Nip59 {
     final ephemeralPubkey = Keys(ephemeral).public;
 
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
-    final wrapCiphertext = await Nip44.encrypt(
+    final wrapCiphertext = await Encryption.encrypt(
       plaintext: seal.toJson(),
       recipientPublicKey: recipientPubkey,
       senderSecretKey: ephemeral,
@@ -126,7 +126,7 @@ class Nip59 {
 
     // Decrypt the gift wrap to recover the "seal" (kind=13)
     // with (ephemeralPub = giftWrap.pubkey, recipientSecretKey)
-    final sealJsonStr = await Nip44.decrypt(
+    final sealJsonStr = await Encryption.decrypt(
       payload: giftWrap.content,
       senderPublicKey: giftWrap.pubkey,
       recipientSecretKey: recipientSecretKey,
@@ -141,7 +141,7 @@ class Nip59 {
 
     // Decrypt the seal to recover the rumor
     // with (authorPub = seal.pubkey, recipientSecretKey)
-    final rumorJsonStr = await Nip44.decrypt(
+    final rumorJsonStr = await Encryption.decrypt(
       payload: seal.content,
       senderPublicKey: seal.pubkey,
       recipientSecretKey: recipientSecretKey,
@@ -192,4 +192,4 @@ class Nip59 {
   }
 }
 
-typedef GiftWrap = Nip59;
+typedef Nip59 = GiftWrap;

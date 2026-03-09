@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('nip038', () {
-    test('decode general status', () {
+    test('parse general status', () {
       final event = Event.partial(
         kind: 30315,
         pubkey:
@@ -20,7 +20,7 @@ void main() {
         content: 'Working on dart-nostr',
       );
 
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
 
       expect(status.statusType, 'general');
       expect(status.content, 'Working on dart-nostr');
@@ -31,7 +31,7 @@ void main() {
       expect(status.createdAt, 1700000000);
     });
 
-    test('decode music status', () {
+    test('parse music status', () {
       final event = Event.partial(
         kind: 30315,
         pubkey:
@@ -45,7 +45,7 @@ void main() {
         content: 'Dark Side of the Moon - Pink Floyd',
       );
 
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
 
       expect(status.statusType, 'music');
       expect(status.content, 'Dark Side of the Moon - Pink Floyd');
@@ -53,7 +53,7 @@ void main() {
       expect(status.expiration, 1700003600);
     });
 
-    test('decode status without optional fields', () {
+    test('parse status without optional fields', () {
       final event = Event.partial(
         kind: 30315,
         pubkey:
@@ -65,7 +65,7 @@ void main() {
         content: 'Just chilling',
       );
 
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
 
       expect(status.statusType, 'general');
       expect(status.content, 'Just chilling');
@@ -73,7 +73,7 @@ void main() {
       expect(status.expiration, isNull);
     });
 
-    test('decode empty content clears status', () {
+    test('parse empty content clears status', () {
       final event = Event.partial(
         kind: 30315,
         pubkey:
@@ -84,21 +84,21 @@ void main() {
         ],
       );
 
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
 
       expect(status.content, '');
     });
 
-    test('decode throws InvalidKindException for wrong kind', () {
+    test('parse throws InvalidKindException for wrong kind', () {
       final event = Event.partial();
 
       expect(
-        () => Nip38.decode(event),
+        () => UserStatus.parse(event),
         throwsA(isA<InvalidKindException>()),
       );
     });
 
-    test('decode throws MissingTagException for missing d tag', () {
+    test('parse throws MissingTagException for missing d tag', () {
       final event = Event.partial(
         kind: 30315,
         tags: [],
@@ -106,15 +106,15 @@ void main() {
       );
 
       expect(
-        () => Nip38.decode(event),
+        () => UserStatus.parse(event),
         throwsA(isA<MissingTagException>()),
       );
     });
 
-    test('encode status with all fields', () {
+    test('create status with all fields', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip38.encode(
+      final event = UserStatus.create(
         statusType: 'music',
         content: 'Listening to Pink Floyd',
         secretKey: secretKey,
@@ -128,45 +128,46 @@ void main() {
       expect(event.tags[2], ['expiration', '1700100000']);
     });
 
-    test('encode and decode round-trip', () {
+    test('create and parse round-trip', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip38.encode(
+      final event = UserStatus.create(
         statusType: 'general',
         content: 'Coding',
         secretKey: secretKey,
       );
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
       expect(status.statusType, 'general');
       expect(status.content, 'Coding');
       expect(status.url, isNull);
       expect(status.expiration, isNull);
     });
 
-    test('encode clear status with empty content', () {
+    test('create clear status with empty content', () {
       const secretKey =
           '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      final event = Nip38.encode(
+      final event = UserStatus.create(
         statusType: 'general',
         content: '',
         secretKey: secretKey,
       );
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
       expect(status.content, '');
     });
 
-    test('decode real-world kind 30315 status from nos.lol', () {
+    test('parse real-world kind 30315 status from nos.lol', () {
       final fixtures = json.decode(
           File('test/fixtures/samples_by_kind.json').readAsStringSync());
       final eventMap = fixtures['30315'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final status = Nip38.decode(event);
+      final status = UserStatus.parse(event);
       expect(status.statusType, isNotEmpty);
       expect(status.pubkey, event.pubkey);
     });
 
-    test('typedef alias works', () {
+    test('typedef aliases work', () {
+      expect(Nip38.kindUserStatus, 30315);
       expect(UserStatuses.kindUserStatus, 30315);
     });
   });

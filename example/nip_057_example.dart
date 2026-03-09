@@ -7,7 +7,7 @@ void main() {
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245';
 
   // Encode a zap request (kind 9734)
-  final zapRequest = Nip57.encodeZapRequest(
+  final zapRequest = Nip57.request(
     recipientPubkey: recipientPubkey,
     relays: ['wss://relay.damus.io', 'wss://nos.lol'],
     secretKey: secretKey,
@@ -20,7 +20,7 @@ void main() {
   assert(findTagValue(zapRequest.tags, 'amount') == '21000');
 
   // Decode a zap request
-  final decoded = Nip57.decodeZapRequest(zapRequest);
+  final decoded = Nip57.parseRequest(zapRequest);
   assert(decoded.recipientPubkey == recipientPubkey);
   assert(decoded.amount == 21000);
   assert(decoded.content == 'Great post!');

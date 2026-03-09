@@ -6,8 +6,8 @@ const secretKey =
 
 void main() {
   group('nip042', () {
-    test('encode creates kind 22242 with relay and challenge tags', () {
-      final event = Nip42.encode(
+    test('create produces kind 22242 with relay and challenge tags', () {
+      final event = Auth.create(
         challenge: 'abc123challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
@@ -19,8 +19,8 @@ void main() {
       expect(event.isValid(), isTrue);
     });
 
-    test('encode creates event with recent timestamp', () {
-      final event = Nip42.encode(
+    test('create produces event with recent timestamp', () {
+      final event = Auth.create(
         challenge: 'test',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
@@ -31,13 +31,13 @@ void main() {
     });
 
     test('validate returns true for matching event', () {
-      final event = Nip42.encode(
+      final event = Auth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Nip42.validate(
+        Auth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'my-challenge',
@@ -47,13 +47,13 @@ void main() {
     });
 
     test('validate returns false for wrong relay', () {
-      final event = Nip42.encode(
+      final event = Auth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Nip42.validate(
+        Auth.validate(
           event: event,
           relayUrl: 'wss://other-relay.com',
           challenge: 'my-challenge',
@@ -63,13 +63,13 @@ void main() {
     });
 
     test('validate returns false for wrong challenge', () {
-      final event = Nip42.encode(
+      final event = Auth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Nip42.validate(
+        Auth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'wrong-challenge',
@@ -89,7 +89,7 @@ void main() {
         secretKey: secretKey,
       );
       expect(
-        Nip42.validate(
+        Auth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'test',
@@ -98,8 +98,8 @@ void main() {
       );
     });
 
-    test('typedef Auth works', () {
-      final event = Auth.encode(
+    test('typedef Nip42 works', () {
+      final event = Nip42.create(
         challenge: 'test',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,

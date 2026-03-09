@@ -9,7 +9,7 @@ void main() {
       '7c579328cf9028a4548d5117afa4f8448fb510ca9023f576b7bc90fc5be6ce7e';
 
   // Encode a like reaction
-  final like = Nip25.encode(
+  final like = Nip25.create(
     eventId: eventId,
     eventPubkey: eventPubkey,
     secretKey: secretKey,
@@ -18,7 +18,7 @@ void main() {
   assert(like.content == '+');
 
   // Encode a custom reaction
-  final custom = Nip25.encode(
+  final custom = Nip25.create(
     eventId: eventId,
     eventPubkey: eventPubkey,
     secretKey: secretKey,
@@ -27,7 +27,7 @@ void main() {
   assert(custom.content == '🤙');
 
   // Decode a reaction
-  final reaction = Nip25.decode(like);
+  final reaction = Nip25.parse(like);
   assert(reaction.eventId == eventId);
   assert(reaction.reactedPubkey == eventPubkey);
   assert(reaction.content == '+');

@@ -16,7 +16,7 @@ void main() {
         content: 'hello world',
         secretKey: secretKey,
       );
-      final repost = Nip18.encode(
+      final repost = Nip18.create(
         originalEvent: original,
         secretKey: secretKey,
         relay: 'wss://relay.example.com',
@@ -36,7 +36,7 @@ void main() {
         content: 'article body',
         secretKey: secretKey,
       );
-      final repost = Nip18.encode(
+      final repost = Nip18.create(
         originalEvent: original,
         secretKey: secretKey,
         relay: 'wss://relay.example.com',
@@ -52,12 +52,12 @@ void main() {
         content: 'test',
         secretKey: secretKey,
       );
-      final repostEvent = Nip18.encode(
+      final repostEvent = Nip18.create(
         originalEvent: original,
         secretKey: secretKey,
         relay: 'wss://relay.example.com',
       );
-      final repost = Nip18.decode(repostEvent);
+      final repost = Nip18.parse(repostEvent);
       expect(repost.eventId, original.id);
       expect(repost.originalEvent, isNotNull);
       expect(repost.originalEvent!.content, 'test');
@@ -73,7 +73,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      final repost = Nip18.decode(event);
+      final repost = Nip18.parse(event);
       expect(repost.eventId, 'abc123');
       expect(repost.repostedPubkey, 'def456');
       expect(repost.originalEvent, isNull);
@@ -89,7 +89,7 @@ void main() {
         content: 'not json at all',
         secretKey: secretKey,
       );
-      final repost = Nip18.decode(event);
+      final repost = Nip18.parse(event);
       expect(repost.originalEvent, isNull);
     });
 
@@ -99,7 +99,7 @@ void main() {
       final eventMap = fixtures['6'] as Map<String, dynamic>;
       final event = Event.fromMap(eventMap);
 
-      final repost = Nip18.decode(event);
+      final repost = Nip18.parse(event);
       expect(repost.eventId, isNotEmpty);
       expect(repost.repostedPubkey, isNotEmpty);
       expect(repost.pubkey, event.pubkey);
@@ -117,7 +117,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      final repost = Reposts.decode(event);
+      final repost = Reposts.parse(event);
       expect(repost.eventId, 'abc123');
     });
 
@@ -128,7 +128,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      expect(() => Nip18.decode(event), throwsA(isA<InvalidKindException>()));
+      expect(() => Nip18.parse(event), throwsA(isA<InvalidKindException>()));
     });
   });
 }

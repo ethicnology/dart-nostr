@@ -19,7 +19,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": "Listening to Dark Side of the Moon"
 /// }
 /// ```
-class Nip38 {
+class UserStatus {
   /// Event kind for user status.
   static const int kindUserStatus = 30315;
 
@@ -30,7 +30,7 @@ class Nip38 {
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [url] is an optional reference URL (`r` tag).
   /// [expiration] is an optional Unix timestamp when the status expires.
-  static Event encode({
+  static Event create({
     required String statusType,
     required String content,
     required String secretKey,
@@ -51,11 +51,11 @@ class Nip38 {
     );
   }
 
-  /// Decodes a kind-30315 event into a [UserStatus].
+  /// Parses a kind-30315 event into a [UserStatusData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 30315.
   /// Throws [MissingTagException] if the `d` tag is absent.
-  static UserStatus decode(Event event) {
+  static UserStatusData parse(Event event) {
     if (event.kind != kindUserStatus) {
       throw InvalidKindException(event.kind, [kindUserStatus]);
     }
@@ -71,7 +71,7 @@ class Nip38 {
     final pubkeyRef = findTagValue(event.tags, 'p');
     final coordRef = findTagValue(event.tags, 'a');
 
-    return UserStatus(
+    return UserStatusData(
       statusType: statusType,
       content: event.content,
       pubkey: event.pubkey,
@@ -87,7 +87,7 @@ class Nip38 {
 }
 
 /// Represents a NIP-38 user status event.
-class UserStatus {
+class UserStatusData {
   /// The status type identifier (from `d` tag): "general", "music", or custom.
   final String statusType;
 
@@ -115,8 +115,8 @@ class UserStatus {
   /// Optional referenced addressable event coordinate (from `a` tag).
   final String? coordinateRef;
 
-  /// Creates a [UserStatus] with the given fields.
-  const UserStatus({
+  /// Creates a [UserStatusData] with the given fields.
+  const UserStatusData({
     required this.statusType,
     required this.content,
     required this.pubkey,
@@ -129,4 +129,5 @@ class UserStatus {
   });
 }
 
-typedef UserStatuses = Nip38;
+typedef Nip38 = UserStatus;
+typedef UserStatuses = UserStatus;

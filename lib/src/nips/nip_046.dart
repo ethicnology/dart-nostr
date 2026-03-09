@@ -9,17 +9,17 @@ import 'package:nostr/nostr.dart';
 /// Supported methods include `connect`, `sign_event`, `get_public_key`,
 /// `nip44_encrypt`, `nip44_decrypt`, `nip04_encrypt`, `nip04_decrypt`,
 /// and `ping`.
-class Nip46 {
+class NostrConnect {
   /// The event kind used for Nostr Connect messages.
   static const int kind = 24133;
 
-  /// Encodes a kind-24133 Nostr Connect event.
+  /// Creates a kind-24133 Nostr Connect event.
   ///
   /// [encryptedContent] is the NIP-44 encrypted JSON-RPC payload.
   /// [targetPubkey] is the hex-encoded public key of the recipient
   /// (remote signer or client).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
-  static Event encode({
+  static Event create({
     required String encryptedContent,
     required String targetPubkey,
     required String secretKey,
@@ -34,11 +34,11 @@ class Nip46 {
     );
   }
 
-  /// Decodes a kind-24133 event into a [NostrConnectEvent].
+  /// Parses a kind-24133 event into a [NostrConnectData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 24133.
   /// Throws [MissingTagException] if the required `p` tag is absent.
-  static NostrConnectEvent decode(Event event) {
+  static NostrConnectData parse(Event event) {
     if (event.kind != 24133) {
       throw InvalidKindException(event.kind, [24133]);
     }
@@ -46,7 +46,7 @@ class Nip46 {
     if (targetPubkey == null) {
       throw MissingTagException('p');
     }
-    return NostrConnectEvent(
+    return NostrConnectData(
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -56,11 +56,11 @@ class Nip46 {
   }
 }
 
-/// A decoded NIP-46 Nostr Connect event (kind 24133).
+/// A parsed NIP-46 Nostr Connect event (kind 24133).
 ///
 /// The [encryptedContent] remains opaque — decryption requires calling
 /// NIP-44 with the appropriate keys.
-class NostrConnectEvent {
+class NostrConnectData {
   /// The event ID.
   final String id;
 
@@ -76,8 +76,8 @@ class NostrConnectEvent {
   /// The NIP-44 encrypted JSON-RPC content.
   final String encryptedContent;
 
-  /// Creates a [NostrConnectEvent] with the given fields.
-  const NostrConnectEvent({
+  /// Creates a [NostrConnectData] with the given fields.
+  const NostrConnectData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -86,4 +86,4 @@ class NostrConnectEvent {
   });
 }
 
-typedef NostrConnect = Nip46;
+typedef Nip46 = NostrConnect;

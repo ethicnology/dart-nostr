@@ -5,7 +5,7 @@ import 'package:nostr/nostr.dart';
 ///
 /// Mute, pin, categorized people, and categorized bookmarks, using NIP-44
 /// encryption for private content.
-class Nip51 {
+class NostrList {
   /// Converts a list of [Contact]s to `["p", pubkey, relay, petname]` tags.
   static List<List<String>> contactsToTags(List<Contact> items) {
     final List<List<String>> result = [];
@@ -109,7 +109,7 @@ class Nip51 {
   /// [encryptedItems] are the private contacts (encrypted in content).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [pubkey] is the hex-encoded public key of the list owner.
-  static Future<Event> createMutePeople(
+  static Future<Event> mutePeople(
     List<Contact> items,
     List<Contact> encryptedItems,
     String secretKey,
@@ -129,7 +129,7 @@ class Nip51 {
   /// [encryptedItems] are the private bookmarks (encrypted in content).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [pubkey] is the hex-encoded public key of the list owner.
-  static Future<Event> createPinEvent(
+  static Future<Event> pinEvent(
     List<String> items,
     List<String> encryptedItems,
     String secretKey,
@@ -150,7 +150,7 @@ class Nip51 {
   /// [encryptedItems] are the private contacts (encrypted in content).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [pubkey] is the hex-encoded public key of the list owner.
-  static Future<Event> createCategorizedPeople(
+  static Future<Event> categorizedPeople(
     String identifier,
     List<Contact> items,
     List<Contact> encryptedItems,
@@ -174,7 +174,7 @@ class Nip51 {
   /// [encryptedItems] are the private bookmarks (encrypted in content).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
   /// [pubkey] is the hex-encoded public key of the list owner.
-  static Future<Event> createCategorizedBookmarks(
+  static Future<Event> categorizedBookmarks(
     String identifier,
     List<String> items,
     List<String> encryptedItems,
@@ -191,11 +191,11 @@ class Nip51 {
     );
   }
 
-  /// Decodes a NIP-51 list event into a [UserList].
+  /// Parses a NIP-51 list event into a [UserListData].
   ///
   /// Accepts any list kind defined in the spec (10000-10102, 30000-39092, etc.).
   /// The method extracts public tags and decrypts private content using NIP-44.
-  static Future<UserList> getLists(Event event, String secretKey) async {
+  static Future<UserListData> parse(Event event, String secretKey) async {
     String identifier = "";
     final List<Contact> contacts = [];
     final List<String> bookmarks = [];
@@ -226,7 +226,7 @@ class Nip51 {
       } else {
         try {
           final content =
-              await Nip51.fromContent(event.content, secretKey, pubkey);
+              await NostrList.fromContent(event.content, secretKey, pubkey);
           contacts.addAll(content.contacts);
           bookmarks.addAll(content.bookmarks);
         } on Exception {
@@ -237,7 +237,7 @@ class Nip51 {
     if (event.kind == 10000) identifier = "Mute";
     if (event.kind == 10001) identifier = "Pin";
 
-    return UserList(
+    return UserListData(
       owner: event.pubkey,
       identifier: identifier,
       contacts: contacts,
@@ -300,8 +300,8 @@ class Contact {
   const Contact(this.pubkey, this.mainRelay, this.petName);
 }
 
-/// The decoded contents of a NIP-51 list event.
-class UserList {
+/// The parsed contents of a NIP-51 list event.
+class UserListData {
   /// The public key of the list owner.
   final String owner;
 
@@ -323,8 +323,8 @@ class UserList {
   /// Addressable event coordinates (from `a` tags, used in bookmark lists).
   final List<String> coordinates;
 
-  /// Creates a [UserList] with the given fields.
-  const UserList({
+  /// Creates a [UserListData] with the given fields.
+  const UserListData({
     required this.owner,
     required this.identifier,
     this.contacts = const [],
@@ -335,4 +335,5 @@ class UserList {
   });
 }
 
-typedef Lists = Nip51;
+typedef Nip51 = NostrList;
+typedef Lists = NostrList;

@@ -13,14 +13,14 @@ import 'package:nostr/nostr.dart';
 /// Kind 31989: handler recommendation — published by users to recommend
 /// applications for specific event kinds. Not modeled here as it is a
 /// simple wrapper around `a` tags.
-class Nip89 {
+class AppHandler {
   /// Kind for handler information events.
   static const int handlerInfoKind = 31990;
 
   /// Kind for handler recommendation events.
   static const int handlerRecommendationKind = 31989;
 
-  /// Encodes a kind-31990 handler information event.
+  /// Creates a kind-31990 handler information event.
   ///
   /// [id] is the handler identifier (`d` tag).
   /// [secretKey] is the hex-encoded secret key used to sign the event.
@@ -29,7 +29,7 @@ class Nip89 {
   /// containing `<bech32>` placeholders and optional entity types.
   /// [metadata] is an optional map of NIP-01 style metadata (name, about,
   /// picture, etc.) that will be JSON-encoded as the event content.
-  static Event encodeHandlerInfo({
+  static Event handlerInfo({
     required String id,
     required String secretKey,
     required List<int> supportedKinds,
@@ -62,11 +62,11 @@ class Nip89 {
     );
   }
 
-  /// Decodes a kind-31990 event into an [AppHandler].
+  /// Decodes a kind-31990 event into an [AppHandlerData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 31990.
   /// Throws [MissingTagException] if the `d` tag is absent.
-  static AppHandler decodeHandlerInfo(Event event) {
+  static AppHandlerData parseHandlerInfo(Event event) {
     if (event.kind != handlerInfoKind) {
       throw InvalidKindException(event.kind, [handlerInfoKind]);
     }
@@ -111,7 +111,7 @@ class Nip89 {
       }
     }
 
-    return AppHandler(
+    return AppHandlerData(
       id: id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -121,13 +121,13 @@ class Nip89 {
     );
   }
 
-  /// Encodes a kind-31989 handler recommendation event.
+  /// Creates a kind-31989 handler recommendation event.
   ///
   /// [eventKind] is the event kind being recommended (used as `d` tag).
   /// [handlerCoords] is a list of handler `a` tag coordinates
   /// (e.g. "31990:pubkey:handler-id").
   /// [secretKey] is the hex-encoded secret key used to sign the event.
-  static Event encodeRecommendation({
+  static Event recommendation({
     required int eventKind,
     required List<String> handlerCoords,
     required String secretKey,
@@ -148,11 +148,11 @@ class Nip89 {
     );
   }
 
-  /// Decodes a kind-31989 event into a [HandlerRecommendation].
+  /// Decodes a kind-31989 event into a [HandlerRecommendationData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 31989.
   /// Throws [MissingTagException] if the `d` tag is absent.
-  static HandlerRecommendation decodeRecommendation(Event event) {
+  static HandlerRecommendationData parseRecommendation(Event event) {
     if (event.kind != handlerRecommendationKind) {
       throw InvalidKindException(event.kind, [handlerRecommendationKind]);
     }
@@ -165,7 +165,7 @@ class Nip89 {
     final eventKind = int.tryParse(kindStr);
     final handlerCoords = findAllTagValues(event.tags, 'a');
 
-    return HandlerRecommendation(
+    return HandlerRecommendationData(
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       eventKind: eventKind,
@@ -175,7 +175,7 @@ class Nip89 {
 }
 
 /// A decoded handler information event (kind 31990).
-class AppHandler {
+class AppHandlerData {
   /// The handler identifier from the `d` tag.
   final String id;
 
@@ -194,8 +194,8 @@ class AppHandler {
   /// Optional NIP-01 style metadata parsed from the content JSON.
   final Map<String, dynamic>? metadata;
 
-  /// Creates an [AppHandler] with the given fields.
-  const AppHandler({
+  /// Creates an [AppHandlerData] with the given fields.
+  const AppHandlerData({
     required this.id,
     required this.pubkey,
     required this.createdAt,
@@ -206,7 +206,7 @@ class AppHandler {
 }
 
 /// A decoded handler recommendation event (kind 31989).
-class HandlerRecommendation {
+class HandlerRecommendationData {
   /// The recommending user's public key.
   final String pubkey;
 
@@ -219,8 +219,8 @@ class HandlerRecommendation {
   /// Handler coordinates from `a` tags (e.g. "31990:pubkey:handler-id").
   final List<String> handlerCoords;
 
-  /// Creates a [HandlerRecommendation] with the given fields.
-  const HandlerRecommendation({
+  /// Creates a [HandlerRecommendationData] with the given fields.
+  const HandlerRecommendationData({
     required this.pubkey,
     required this.createdAt,
     required this.handlerCoords,
@@ -250,4 +250,6 @@ class PlatformHandler {
   });
 }
 
-typedef AppHandlers = Nip89;
+typedef Nip89 = AppHandler;
+typedef AppHandlers = AppHandler;
+typedef HandlerRecommendation = HandlerRecommendationData;

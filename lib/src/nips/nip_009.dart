@@ -19,7 +19,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": "these posts were published by accident"
 /// }
 /// ```
-class Nip9 {
+class Deletion {
   /// Converts a list of event IDs to `["e", id]` tags.
   static List<List<String>> toTags(List<String> events) {
     return events.map((id) => ["e", id]).toList();
@@ -35,12 +35,12 @@ class Nip9 {
     return kinds.map((k) => ["k", k.toString()]).toList();
   }
 
-  /// Encodes a deletion request event.
+  /// Creates a deletion request event.
   ///
   /// [eventIds] references regular events by ID.
   /// [addressableCoords] references replaceable/addressable events by coordinate.
   /// [kinds] optionally indicates which kinds are being deleted.
-  static Event encode({
+  static Event request({
     required String secretKey,
     List<String> eventIds = const [],
     List<String> addressableCoords = const [],
@@ -75,12 +75,12 @@ class Nip9 {
         .toList();
   }
 
-  /// Decodes a kind-5 event into a [DeletionRequest].
+  /// Parses a kind-5 event into a [DeletionRequestData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 5.
-  static DeletionRequest decode(Event event) {
+  static DeletionRequestData parse(Event event) {
     if (event.kind != 5) throw InvalidKindException(event.kind, [5]);
-    return DeletionRequest(
+    return DeletionRequestData(
       pubkey: event.pubkey,
       eventIds: tagsToList(event.tags),
       addressableCoords: tagsToAddressableCoords(event.tags),
@@ -91,7 +91,7 @@ class Nip9 {
 }
 
 /// Represents a NIP-09 deletion request event.
-class DeletionRequest {
+class DeletionRequestData {
   /// Public key of the deletion request author.
   final String pubkey;
 
@@ -107,8 +107,8 @@ class DeletionRequest {
   /// Unix timestamp of the deletion request.
   final int createdAt;
 
-  /// Creates a [DeletionRequest] with the given fields.
-  const DeletionRequest({
+  /// Creates a [DeletionRequestData] with the given fields.
+  const DeletionRequestData({
     required this.pubkey,
     required this.createdAt,
     this.eventIds = const [],
@@ -117,4 +117,5 @@ class DeletionRequest {
   });
 }
 
-typedef Deletion = Nip9;
+typedef Nip9 = Deletion;
+typedef DeletionRequest = DeletionRequestData;

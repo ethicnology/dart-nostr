@@ -18,7 +18,7 @@ import 'package:nostr/nostr.dart';
 ///   "content": "Hello group!"
 /// }
 /// ```
-class Nip29 {
+class Group {
   /// Kind for group chat messages (simple, no subject).
   static const int kindGroupChatMessage = 9;
 
@@ -43,12 +43,12 @@ class Nip29 {
   /// Kind for group members list (relay-generated).
   static const int kindGroupMembers = 39002;
 
-  /// Decodes a group chat event into a [GroupMessage].
+  /// Parses a group chat event into a [GroupMessageData].
   ///
   /// Accepts kinds 9, 11, and 12 (the user-facing chat kinds).
   /// Throws [InvalidKindException] if the event kind is not one of these.
   /// Throws [MissingTagException] if the `h` tag is absent.
-  static GroupMessage decode(Event event) {
+  static GroupMessageData parse(Event event) {
     if (event.kind != kindGroupChatMessage &&
         event.kind != kindGroupThreadRoot &&
         event.kind != kindGroupThreadReply) {
@@ -78,7 +78,7 @@ class Nip29 {
     final replyToEventId = findTagValue(event.tags, 'e');
     final subject = findTagValue(event.tags, 'subject');
 
-    return GroupMessage(
+    return GroupMessageData(
       groupId: groupId,
       content: event.content,
       pubkey: event.pubkey,
@@ -90,10 +90,10 @@ class Nip29 {
     );
   }
 
-  /// Decodes a kind 39000 event into [GroupMetadata].
+  /// Parses a kind 39000 event into [GroupMetadataData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 39000.
-  static GroupMetadata decodeMetadata(Event event) {
+  static GroupMetadataData parseMetadata(Event event) {
     if (event.kind != kindGroupMetadata) {
       throw InvalidKindException(event.kind, [kindGroupMetadata]);
     }
@@ -109,7 +109,7 @@ class Nip29 {
     final bool isPublic =
         event.tags.any((t) => t.isNotEmpty && t[0] == 'public');
 
-    return GroupMetadata(
+    return GroupMetadataData(
       groupId: groupId,
       name: name,
       picture: picture,
@@ -123,7 +123,7 @@ class Nip29 {
 }
 
 /// Represents a NIP-29 group chat message (kinds 9, 11, 12).
-class GroupMessage {
+class GroupMessageData {
   /// The group identifier (from `h` tag).
   final String groupId;
 
@@ -148,8 +148,8 @@ class GroupMessage {
   /// Thread subject (from `subject` tag), if any (kind 11).
   final String? subject;
 
-  /// Creates a [GroupMessage] with the given fields.
-  const GroupMessage({
+  /// Creates a [GroupMessageData] with the given fields.
+  const GroupMessageData({
     required this.groupId,
     required this.content,
     required this.pubkey,
@@ -162,7 +162,7 @@ class GroupMessage {
 }
 
 /// Represents NIP-29 group metadata (kind 39000).
-class GroupMetadata {
+class GroupMetadataData {
   /// The group identifier (from `d` tag).
   final String groupId;
 
@@ -187,8 +187,8 @@ class GroupMetadata {
   /// Unix timestamp of the metadata event.
   final int createdAt;
 
-  /// Creates a [GroupMetadata] with the given fields.
-  const GroupMetadata({
+  /// Creates a [GroupMetadataData] with the given fields.
+  const GroupMetadataData({
     required this.groupId,
     required this.pubkey,
     required this.createdAt,
@@ -200,4 +200,4 @@ class GroupMetadata {
   });
 }
 
-typedef Groups = Nip29;
+typedef Nip29 = Group;
