@@ -42,7 +42,7 @@ void main() {
   });
 
   test('encode creates a valid deletion event with e tags only', () {
-    final event = Nip9.encode(["event1", "event2"], "Reason", privkey);
+    final event = Nip9.encode(eventIds: ["event1", "event2"], content: "Reason", secretKey: privkey);
     expect(event.kind, equals(5));
     expect(event.tags, equals([["e", "event1"], ["e", "event2"]]));
     expect(event.content, equals("Reason"));
@@ -51,9 +51,9 @@ void main() {
   test('encode supports a tags and k tags', () {
     const coord = "30023:$pubkey:my-post";
     final event = Nip9.encode(
-      ["event1"],
-      "Reason",
-      privkey,
+      eventIds: ["event1"],
+      content: "Reason",
+      secretKey: privkey,
       addressableCoords: [coord],
       kinds: [1, 30023],
     );

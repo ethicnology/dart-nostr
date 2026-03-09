@@ -194,7 +194,7 @@ class Nip28 {
     List<PTag>? ptags,
   }) {
     final Thread thread =
-        Thread(Nip10.rootTag(channelId, relay ?? ''), etags ?? [], ptags ?? []);
+        Thread(root: Nip10.rootTag(channelId, relay ?? ''), etags: etags ?? [], ptags: ptags ?? []);
     return Event.from(
       kind: 42,
       tags: Nip10.toTags(thread),

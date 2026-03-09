@@ -40,12 +40,12 @@ class Nip9 {
   /// [eventIds] references regular events by ID.
   /// [addressableCoords] references replaceable/addressable events by coordinate.
   /// [kinds] optionally indicates which kinds are being deleted.
-  static Event encode(
-    List<String> eventIds,
-    String content,
-    String secretKey, {
+  static Event encode({
+    required String secretKey,
+    List<String> eventIds = const [],
     List<String> addressableCoords = const [],
     List<int> kinds = const [],
+    String content = '',
   }) {
     return Event.from(
       kind: 5,
@@ -75,51 +75,46 @@ class Nip9 {
         .toList();
   }
 
-  /// Converts an Event to a [DeletionRequest] model.
-  static DeletionRequest toDeleteEvent(Event event) {
-    return DeletionRequest(
-      event.pubkey,
-      tagsToList(event.tags),
-      tagsToAddressableCoords(event.tags),
-      event.content,
-      event.createdAt,
-    );
-  }
-
   /// Decodes a kind-5 event into a [DeletionRequest].
   ///
   /// Throws [InvalidKindException] if the event kind is not 5.
   static DeletionRequest decode(Event event) {
-    if (event.kind == 5) return toDeleteEvent(event);
-    throw InvalidKindException(event.kind, [5]);
+    if (event.kind != 5) throw InvalidKindException(event.kind, [5]);
+    return DeletionRequest(
+      pubkey: event.pubkey,
+      eventIds: tagsToList(event.tags),
+      addressableCoords: tagsToAddressableCoords(event.tags),
+      reason: event.content,
+      createdAt: event.createdAt,
+    );
   }
 }
 
 /// Represents a NIP-09 deletion request event.
 class DeletionRequest {
   /// Public key of the deletion request author.
-  String pubkey;
+  final String pubkey;
 
   /// Event IDs requested for deletion (from `e` tags).
-  List<String> eventIds;
+  final List<String> eventIds;
 
   /// Addressable event coordinates requested for deletion (from `a` tags).
-  List<String> addressableCoords;
+  final List<String> addressableCoords;
 
   /// Optional human-readable reason for deletion.
-  String reason;
+  final String reason;
 
   /// Unix timestamp of the deletion request.
-  int createdAt;
+  final int createdAt;
 
   /// Creates a [DeletionRequest] with the given fields.
-  DeletionRequest(
-    this.pubkey,
-    this.eventIds,
-    this.addressableCoords,
-    this.reason,
-    this.createdAt,
-  );
+  const DeletionRequest({
+    required this.pubkey,
+    required this.createdAt,
+    this.eventIds = const [],
+    this.addressableCoords = const [],
+    this.reason = '',
+  });
 }
 
 typedef Deletion = Nip9;

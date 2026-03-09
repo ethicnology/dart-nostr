@@ -222,16 +222,16 @@ class ShareableIdentifiers {
   final String data;
 
   /// Relay URLs where the entity is likely to be found.
-  List<String> relays;
+  final List<String> relays;
 
   /// The pubkey of the event author (for nevent and naddr).
-  String? author;
+  final String? author;
 
   /// The event kind (for nevent and naddr).
-  int? kind;
+  final int? kind;
 
   /// Creates a [ShareableIdentifiers] with the given fields.
-  ShareableIdentifiers({
+  const ShareableIdentifiers({
     required this.prefix,
     required this.data,
     this.relays = const [],

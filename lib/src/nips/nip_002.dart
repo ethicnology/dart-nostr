@@ -18,9 +18,33 @@ class Nip2 {
   static List<Profile> toProfiles(List<List<String>> tags) {
     final List<Profile> result = [];
     for (final tag in tags) {
-      if (tag[0] == "p") result.add(Profile(tag[1], tag[2], tag[3]));
+      if (tag[0] == "p" && tag.length >= 2) {
+        result.add(Profile(
+          pubkey: tag[1],
+          relay: tag.length > 2 ? tag[2] : '',
+          petname: tag.length > 3 ? tag[3] : '',
+        ));
+      }
     }
     return result;
+  }
+
+  /// Creates a kind-3 follow list event from a list of [Profile]s.
+  ///
+  /// [profiles] are the followed profiles.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [content] is optional (some clients store relay JSON here).
+  static Event encode({
+    required List<Profile> profiles,
+    required String secretKey,
+    String content = '',
+  }) {
+    return Event.from(
+      kind: 3,
+      tags: toTags(profiles),
+      content: content,
+      secretKey: secretKey,
+    );
   }
 
   /// Returns tags from profiles list.
@@ -38,16 +62,20 @@ class Nip2 {
 /// Tag format: ["p", "32-bytes hex key", "relay URL", "petname"]
 class Profile {
   /// 32-bytes hex-encoded public key of the profile.
-  String pubkey;
+  final String pubkey;
 
   /// A relay URL where events from that key can be found (can be empty).
-  String relay;
+  final String relay;
 
   /// A local name ("petname") for that profile (can be empty).
-  String petname;
+  final String petname;
 
-  /// Creates a [Profile] with the given [pubkey], [relay], and [petname].
-  Profile(this.pubkey, this.relay, this.petname);
+  /// Creates a [Profile] with the given fields.
+  const Profile({
+    required this.pubkey,
+    this.relay = '',
+    this.petname = '',
+  });
 }
 
 typedef FollowList = Nip2;

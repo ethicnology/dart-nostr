@@ -16,6 +16,40 @@ class Nip23 {
   /// Event kind for a draft article.
   static const int kindDraft = 30024;
 
+  /// Creates a kind-30023 (or 30024 draft) long-form content event.
+  ///
+  /// [articleId] is the unique `d` tag identifier.
+  /// [content] is the Markdown body.
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [draft] creates a kind-30024 draft instead of a published article.
+  static Event encode({
+    required String articleId,
+    required String content,
+    required String secretKey,
+    String? title,
+    String? image,
+    String? summary,
+    int? publishedAt,
+    List<String> topics = const [],
+    bool draft = false,
+  }) {
+    final List<List<String>> tags = [
+      ['d', articleId],
+      if (title != null) ['title', title],
+      if (image != null) ['image', image],
+      if (summary != null) ['summary', summary],
+      if (publishedAt != null) ['published_at', publishedAt.toString()],
+      for (final t in topics) ['t', t],
+    ];
+
+    return Event.from(
+      kind: draft ? kindDraft : kindArticle,
+      tags: tags,
+      content: content,
+      secretKey: secretKey,
+    );
+  }
+
   /// Returns a [Nip23Article] instance representing the decoded event.
   ///
   /// Throws [InvalidKindException] if the event is not a valid NIP-23 kind.
@@ -89,16 +123,17 @@ class Nip23Article {
       throw InvalidKindException(event.kind, [Nip23.kindArticle, Nip23.kindDraft]);
     }
 
-    final articleId = _getTagValue(event.tags, 'd');
+    final articleId = findTagValue(event.tags, 'd');
     if (articleId == null) {
       throw MissingTagException('d');
     }
 
-    final title = _getTagValue(event.tags, 'title');
-    final image = _getTagValue(event.tags, 'image');
-    final summary = _getTagValue(event.tags, 'summary');
-    final publishedAtStr = _getTagValue(event.tags, 'published_at');
-    final topics = _getTagValues(event.tags, 't');
+    final title = findTagValue(event.tags, 'title');
+    final image = findTagValue(event.tags, 'image');
+    final summary = findTagValue(event.tags, 'summary');
+    final publishedAtStr = findTagValue(event.tags, 'published_at');
+    final topicValues = findAllTagValues(event.tags, 't');
+    final List<String>? topics = topicValues.isNotEmpty ? topicValues : null;
 
     // Extract additional tags by excluding known event.tags
     List<List<String>>? additionalTags = event.tags.where((tag) {
@@ -122,26 +157,6 @@ class Nip23Article {
     );
   }
 
-  // Helper to extract single tag value.
-  static String? _getTagValue(List<List<String>> tags, String tagName) {
-    for (final tag in tags) {
-      if (tag.isNotEmpty && tag[0] == tagName) {
-        return tag.length > 1 ? tag[1] : null;
-      }
-    }
-    return null;
-  }
-
-  // Helper to extract multiple tag values.
-  static List<String>? _getTagValues(List<List<String>> tags, String tagName) {
-    final values = <String>[];
-    for (final tag in tags) {
-      if (tag.isNotEmpty && tag[0] == tagName && tag.length > 1) {
-        values.add(tag[1]);
-      }
-    }
-    return values.isNotEmpty ? values : null;
-  }
 }
 
 typedef Article = Nip23;

@@ -19,8 +19,11 @@ class Nip5 {
         final String name = parts[0];
         final String domain = parts[1];
         final List<dynamic> relays = map['relays'] ?? [];
-        return DNS(name, domain, event.pubkey,
-            relays.map((e) => e.toString()).toList());
+        return DNS(
+            name: name,
+            domain: domain,
+            pubkey: event.pubkey,
+            relays: relays.map((e) => e.toString()).toList());
       } catch (e) {
         throw DeserializationException(e.toString());
       }
@@ -140,19 +143,24 @@ class Nip5 {
 /// A resolved NIP-05 DNS identity.
 class DNS {
   /// The local part of the identifier (before the @).
-  String name;
+  final String name;
 
   /// The domain part of the identifier (after the @).
-  String domain;
+  final String domain;
 
   /// The public key associated with this identifier.
-  String pubkey;
+  final String pubkey;
 
   /// Relay URLs where events from this identity can be found.
-  List<String> relays;
+  final List<String> relays;
 
   /// Creates a [DNS] with the given fields.
-  DNS(this.name, this.domain, this.pubkey, this.relays);
+  const DNS({
+    required this.name,
+    required this.domain,
+    required this.pubkey,
+    this.relays = const [],
+  });
 }
 
 typedef DnsIdentifier = Nip5;

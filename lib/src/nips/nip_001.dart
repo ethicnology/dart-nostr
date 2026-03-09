@@ -55,7 +55,7 @@ class Nip1 {
           ? <ETag>[]
           : [Nip10.replyTag(replyEvent, replyEventRelay ?? '')];
 
-      final Thread thread = Thread(root, reply, []);
+      final Thread thread = Thread(root: root, etags: reply);
       tags = Nip10.toTags(thread);
     }
 
@@ -77,29 +77,20 @@ class Nip1 {
 
   /// Extracts hashtag values from event tags.
   ///
-  /// Returns a list of strings from all `t` tags, or an empty list if none.
+  /// Returns a list of strings from all `t` tags, or null if none.
   static List<String>? extractHashTags(List<List<String>> tags) {
-    final List<String> result = [];
-    for (final tag in tags) {
-      if (tag[0] == 't') result.add(tag[1]);
-    }
-    return result;
+    final result = findAllTagValues(tags, 't');
+    return result.isNotEmpty ? result : null;
   }
 
   /// Returns the quote-repost event ID from a `q` tag, or null if absent.
   static String? quoteRepostId(List<List<String>> tags) {
-    for (final tag in tags) {
-      if (tag[0] == 'q') return tag[1];
-    }
-    return null;
+    return findTagValue(tags, 'q');
   }
 
   /// Returns the group ID from an `h` tag, or null if absent.
   static String? groupId(List<List<String>> tags) {
-    for (final tag in tags) {
-      if (tag[0] == 'h') return tag[1];
-    }
-    return null;
+    return findTagValue(tags, 'h');
   }
 
   /// Decodes a kind 1, 11, or 12 event into a [Note].
@@ -108,14 +99,14 @@ class Nip1 {
   static Note decodeTextNote(Event event) {
     if (event.kind == 1 || event.kind == 11 || event.kind == 12) {
       return Note(
-        event.id,
-        event.pubkey,
-        event.createdAt,
-        Nip10.fromTags(event.tags),
-        event.content,
-        extractHashTags(event.tags),
-        quoteRepostId(event.tags),
-        groupId(event.tags),
+        id: event.id,
+        pubkey: event.pubkey,
+        createdAt: event.createdAt,
+        thread: Nip10.fromTags(event.tags),
+        content: event.content,
+        hashTags: extractHashTags(event.tags),
+        quoteRepostId: quoteRepostId(event.tags),
+        groupId: groupId(event.tags),
       );
     }
     throw InvalidKindException(event.kind, [1, 11, 12]);
@@ -125,40 +116,40 @@ class Nip1 {
 /// A decoded text note (kind 1, 11, 12).
 class Note {
   /// The event ID.
-  String id;
+  final String id;
 
   /// The author's public key.
-  String pubkey;
+  final String pubkey;
 
   /// Unix timestamp of the event creation.
-  int createdAt;
+  final int createdAt;
 
   /// Thread references parsed from `e` and `p` tags.
-  Thread? thread;
+  final Thread? thread;
 
   /// The plaintext content of the note.
-  String content;
+  final String content;
 
   /// Hashtag values extracted from `t` tags.
-  List<String>? hashTags;
+  final List<String>? hashTags;
 
   /// The quote-repost event ID from a `q` tag, if present.
-  String? quoteRepostId;
+  final String? quoteRepostId;
 
   /// The group ID from an `h` tag, if present.
-  String? groupId;
+  final String? groupId;
 
   /// Creates a [Note] with the given fields.
-  Note(
-    this.id,
-    this.pubkey,
-    this.createdAt,
+  const Note({
+    required this.id,
+    required this.pubkey,
+    required this.createdAt,
+    required this.content,
     this.thread,
-    this.content,
     this.hashTags,
     this.quoteRepostId,
     this.groupId,
-  );
+  });
 }
 
 typedef TextNote = Nip1;

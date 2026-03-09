@@ -61,13 +61,13 @@ void main() {
     });
 
     test('sendChannelMessage with replies', () {
-      final eTag = ETag(
-          '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181',
-          'wss://example.com',
-          'reply');
-      final pTag = PTag(
-          '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1',
-          'wss://example.com');
+      const eTag = ETag(
+          eventId: '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181',
+          relayURL: 'wss://example.com',
+          marker: 'reply');
+      const pTag = PTag(
+          pubkey: '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1',
+          relayURL: 'wss://example.com');
       final event = Nip28.sendChannelMessage(
         channelId: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         content: 'reply',

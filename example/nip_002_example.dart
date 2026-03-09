@@ -22,11 +22,11 @@ void main() {
   const key = "91cf9..4e5ca";
   const relay = "wss://alicerelay.com/";
   const petname = "alice";
-  final alice = Profile(key, relay, petname);
+  const alice = Profile(pubkey: key, relay: relay, petname: petname);
 
   final List<Profile> profiles = [
     alice,
-    Profile("21df6d143fb96c2ec9d63726bf9edc71", "", "erin")
+    const Profile(pubkey: "21df6d143fb96c2ec9d63726bf9edc71", petname: "erin")
   ];
 
   // Encode profiles to nostr event.tags

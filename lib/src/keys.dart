@@ -28,7 +28,7 @@ class Keys {
   /// Throws an [InvalidKeyException] if the key is not a valid hex string
   /// and cannot be decoded as a Bech32 `nsec`.
   Keys(String secretKey) {
-    if (RegExp(r'^[0-9A-Fa-f]+$').hasMatch(secretKey)) {
+    if (RegExp(r'^[0-9A-Fa-f]{64}$').hasMatch(secretKey)) {
       secret = secretKey.toLowerCase();
       public = bip340.getPublicKey(secret);
       return;

@@ -7,7 +7,7 @@ void main() {
       const String key = "91cf9..4e5ca";
       const String relay = "wss://alicerelay.com/";
       const String petname = "alice";
-      final profile = Profile(key, relay, petname);
+      const profile = Profile(pubkey: key, relay: relay, petname: petname);
       expect(profile.pubkey, key);
       expect(profile.relay, relay);
       expect(profile.petname, petname);
@@ -29,7 +29,7 @@ void main() {
       const String key = "21df6d143fb96c2ec9d63726bf9edc71";
       const String relay = "";
       const String petname = "erin";
-      final List<Profile> profiles = [Profile(key, relay, petname)];
+      final List<Profile> profiles = [const Profile(pubkey: key, petname: petname)];
       final List<List<String>> tags = Nip2.toTags(profiles);
       expect(tags[0][0], "p");
       expect(tags[0][1], key);
