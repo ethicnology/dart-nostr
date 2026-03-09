@@ -62,11 +62,8 @@ void main() async {
 
   // Connecting to a nostr relay using websocket
   final WebSocket webSocket = await WebSocket.connect(
-    'wss://relay.nostr.info', // or any nostr relay
+    'wss://nos.lol', // or any nostr relay
   );
-  // if the current socket fail try another one
-  // wss://nostr.sandwich.farm
-  // wss://relay.damus.io
 
   // Send an event to the WebSocket server
   webSocket.add(anotherEvent.serialize());

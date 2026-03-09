@@ -37,16 +37,48 @@
 | `ChannelMessage.sender` | `ChannelMessage.pubkey` |
 | `ChannelMessage.createTime` | `ChannelMessage.createdAt` |
 
+**Model classes now use named `const` constructors with `final` fields:**
+
+| Before | After |
+|--------|-------|
+| `Profile(pubkey, relay, petname)` | `Profile(pubkey: ..., relay: ..., petname: ...)` |
+| `ETag(eventId, relay, marker)` | `ETag(eventId: ..., relayURL: ..., marker: ...)` |
+| `PTag(pubkey, relay)` | `PTag(pubkey: ..., relayURL: ...)` |
+| `Thread(root, etags, ptags)` | `Thread(root: ..., etags: ..., ptags: ...)` |
+| `DNS(name, domain, pubkey, relays)` | `DNS(name: ..., domain: ..., pubkey: ..., relays: ...)` |
+| `DeletionRequest(pubkey, ids, coords, reason, ts)` | `DeletionRequest(pubkey: ..., eventIds: ..., ...)` |
+| `Note(id, pubkey, ...)` | `Note(id: ..., pubkey: ..., ...)` |
+| `Nip9.encode(ids, content, secretKey, ...)` | `Nip9.encode(eventIds: ..., secretKey: ..., ...)` |
+
+**Other breaking changes:**
+
+| Before | After |
+|--------|-------|
+| `Nip9.toDeleteEvent(event)` | Removed — use `Nip9.decode(event)` |
+| `Keys.from(secretKey: ...)` | Removed — use `Keys(secretKey)` |
+| `Filter.fromJson(...)` (named ctor) | `Filter.fromJson(...)` (factory ctor, fields now `final`) |
+| `RelayMetadata(url: ..., read: true)` | `RelayMetadata(url: ..., read: true, write: true)` (both required) |
+| `Community.relays` (`List<String>`) | `Community.relays` (`List<CommunityRelay>`) |
+| `AppHandler.platforms` (`Map<String, String>`) | `AppHandler.platforms` (`List<PlatformHandler>`) |
+| `Nip23Article.topics` (`List<String>?`) | `Nip23Article.topics` (`List<String>`, defaults to `[]`) |
+| `Note.hashTags` (`List<String>?`) | `Note.hashTags` (`List<String>`, defaults to `[]`) |
+
 ### New Features
 
 - `Keys.nsec` / `Keys.npub` getters
+- `Keys()` now validates exact 64-char hex length
 - `MessageType.closed` (CLOSED relay message per NIP-01)
+- `Nip2.encode()` creates kind-3 follow list events
+- `Nip23.encode()` creates kind-30023 article events
 - `Nip5.verify()` DNS identity verification with no-redirect per spec
 - `Nip5.verificationUrl()` helper
 - `Nip9` now supports `a` tags (addressable events) and `k` tags (kind indication)
 - `Nip21.encode()` rejects `nsec` identifiers per spec
-- NIP-51 now uses NIP-44 encryption (methods are async)
+- NIP-51 `getLists()` handles both plaintext JSON and NIP-44 encrypted content
 - Semantic typedef aliases for every NIP (`TextNote`, `FollowList`, `DirectMessage`, etc.)
+- 13 new NIP implementations: 18, 22, 25, 29, 32, 38, 42, 46, 47, 53, 57, 65, 72, 89
+- rust-nostr cross-implementation test vectors (NIP-19, 13, 21, 44, 59, 05, 09)
+- Real-world relay event fixture tests for 20+ event kinds
 
 ### Bug Fixes
 
@@ -55,6 +87,7 @@
 - fix(nip44): stale error message expectations in test vectors
 - fix(nip28): safe null handling instead of force-unwraps on malformed events
 - fix(nip05): `isValidName` now allows hyphens and dots per spec
+- fix(nip23): replaced private `_getTagValue` helpers with shared `findTagValue`
 - fix: copy-paste doc errors in `Eose` and `Nip20`
 
 ## 1.5.0
