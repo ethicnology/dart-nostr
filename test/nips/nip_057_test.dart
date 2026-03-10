@@ -227,6 +227,57 @@ void main() {
       expect(receipt.embeddedRequest!.relays, isNotEmpty);
     });
 
+    test('anonymous zap request uses throwaway keys and anon tag', () {
+      final event = Zap.anonymousRequest(
+        recipientPubkey: recipientPubkey,
+        relays: ['wss://relay.damus.io'],
+        content: 'Anonymous zap!',
+        amount: 1000,
+      );
+      expect(event.kind, 9734);
+      expect(findTagValue(event.tags, 'p'), recipientPubkey);
+      // Has anon tag with no content
+      final anonTag = event.tags.firstWhere((t) => t[0] == 'anon');
+      expect(anonTag.length, 1); // just ["anon"], no payload
+      // Pubkey is NOT the sender's key
+      expect(event.pubkey, isNot(equals(Keys(secretKey).public)));
+    });
+
+    test('private zap request round-trip encrypt/decrypt', () async {
+      const recipientSecret =
+          'e108399bd8424357a710b606ae0c13166d853d327e47a6e5e038197346bdbf45';
+      final recipientPub = Keys(recipientSecret).public;
+
+      final privateZap = await Zap.privateRequest(
+        recipientPubkey: recipientPub,
+        relays: ['wss://relay.damus.io'],
+        secretKey: secretKey,
+        content: 'Private zap message!',
+        amount: 21000,
+      );
+
+      expect(privateZap.kind, 9734);
+      expect(privateZap.content, ''); // content hidden
+      // Has anon tag with encrypted payload
+      final anonTag = privateZap.tags.firstWhere((t) => t[0] == 'anon');
+      expect(anonTag.length, 2);
+      expect(anonTag[1], isNotEmpty);
+      // Outer pubkey is ephemeral, not sender
+      expect(privateZap.pubkey, isNot(equals(Keys(secretKey).public)));
+
+      // Recipient decrypts
+      final decrypted = await Zap.decryptPrivateRequest(
+        privateZapEvent: privateZap,
+        recipientSecretKey: recipientSecret,
+      );
+
+      // Inner event reveals real sender and message
+      expect(decrypted.pubkey, Keys(secretKey).public);
+      expect(decrypted.content, 'Private zap message!');
+      expect(decrypted.amount, 21000);
+      expect(decrypted.recipientPubkey, recipientPub);
+    });
+
     test('typedef Zaps works', () {
       final event = Zaps.request(
         recipientPubkey: recipientPubkey,

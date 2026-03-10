@@ -8,11 +8,13 @@ import 'package:nostr/nostr.dart';
 /// Kind 9735: zap receipt — published by the recipient's lightning wallet
 /// service after payment confirmation.
 ///
-/// Currently supports public zaps only. Anonymous and private zaps require
-/// bech32 encoding of payloads exceeding the BIP-173 90-character limit,
-/// which the Dart `bech32` package does not support. Additionally, the ECDH
-/// shared key derivation for private zaps has no cross-implementation test
-/// vectors to verify interoperability.
+/// Supports public, anonymous, and private zaps.
+/// Anonymous zaps use throwaway keys. Private zaps encrypt the real zap
+/// request using NIP-44 and store it in an `anon` tag.
+///
+/// Note: Anonymous and private zaps are not yet in the NIP-57 spec
+/// (marked as "future work"). This implementation uses NIP-44 encryption
+/// for private zaps (not AES-CBC as in some other libraries).
 class Zap {
   /// Kind for zap request events.
   static const int zapRequestKind = 9734;
@@ -69,6 +71,131 @@ class Zap {
     );
   }
 
+
+  /// Creates an anonymous kind-9734 zap request event.
+  ///
+  /// Uses a random throwaway key pair so the sender's identity is hidden.
+  /// Adds an empty `["anon"]` tag to signal this is an anonymous zap.
+  static Event anonymousRequest({
+    required String recipientPubkey,
+    required List<String> relays,
+    String content = '',
+    String? eventId,
+    String? addressableCoord,
+    int? amount,
+    String? lnurl,
+  }) {
+    final throwaway = Keys.generate();
+    final List<List<String>> tags = [
+      ['relays', ...relays],
+      ['p', recipientPubkey],
+      if (eventId != null) ['e', eventId],
+      if (addressableCoord != null) ['a', addressableCoord],
+      if (amount != null) ['amount', amount.toString()],
+      if (lnurl != null) ['lnurl', lnurl],
+      ['anon'],
+    ];
+
+    return Event.from(
+      kind: zapRequestKind,
+      tags: tags,
+      content: content,
+      secretKey: throwaway.secret,
+    );
+  }
+
+  /// Creates a private kind-9734 zap request event.
+  ///
+  /// The real zap request (with sender identity) is NIP-44 encrypted and
+  /// stored in an `["anon", encrypted]` tag. The outer event is signed
+  /// with an ephemeral key so the sender's identity is hidden on relays.
+  ///
+  /// The recipient can decrypt using [decryptPrivateRequest].
+  static Future<Event> privateRequest({
+    required String recipientPubkey,
+    required List<String> relays,
+    required String secretKey,
+    String content = '',
+    String? eventId,
+    String? addressableCoord,
+    int? amount,
+    String? lnurl,
+  }) async {
+    // Create the real zap request signed by sender
+    final innerEvent = request(
+      recipientPubkey: recipientPubkey,
+      relays: relays,
+      secretKey: secretKey,
+      content: content,
+      eventId: eventId,
+      addressableCoord: addressableCoord,
+      amount: amount,
+      lnurl: lnurl,
+    );
+
+    // Create ephemeral keys for the outer event
+    final ephemeral = Keys.generate();
+
+    // Encrypt the inner event JSON using NIP-44 with ephemeral key
+    // so recipient can decrypt using outer event's pubkey
+    final encrypted = await Encryption.encrypt(
+      plaintext: innerEvent.toJson(),
+      senderSecretKey: ephemeral.secret,
+      recipientPublicKey: recipientPubkey,
+    );
+    final List<List<String>> tags = [
+      ['relays', ...relays],
+      ['p', recipientPubkey],
+      if (eventId != null) ['e', eventId],
+      if (addressableCoord != null) ['a', addressableCoord],
+      if (amount != null) ['amount', amount.toString()],
+      if (lnurl != null) ['lnurl', lnurl],
+      ['anon', encrypted],
+    ];
+
+    return Event.from(
+      kind: zapRequestKind,
+      tags: tags,
+      content: '',
+      secretKey: ephemeral.secret,
+    );
+  }
+
+  /// Decrypts a private zap request received by the recipient.
+  ///
+  /// Extracts the NIP-44 encrypted payload from the `anon` tag,
+  /// decrypts it, and returns the inner zap request event containing
+  /// the real sender identity and message.
+  ///
+  /// Throws [MissingTagException] if no `anon` tag with content is found.
+  /// Throws [CryptoException] if decryption fails.
+  static Future<ZapRequestData> decryptPrivateRequest({
+    required Event privateZapEvent,
+    required String recipientSecretKey,
+  }) async {
+    // Find anon tag with encrypted content
+    String? encrypted;
+    for (final tag in privateZapEvent.tags) {
+      if (tag.length >= 2 && tag[0] == 'anon' && tag[1].isNotEmpty) {
+        encrypted = tag[1];
+        break;
+      }
+    }
+    if (encrypted == null) {
+      throw MissingTagException('anon');
+    }
+
+    // Decrypt using NIP-44 (sender is the outer event pubkey)
+    final decrypted = await Encryption.decrypt(
+      payload: encrypted,
+      recipientSecretKey: recipientSecretKey,
+      senderPublicKey: privateZapEvent.pubkey,
+    );
+
+    // Parse the inner event
+    final innerEvent = Event.fromJson(decrypted, verify: false);
+    return _parseZapRequestData(innerEvent);
+  }
 
   /// Decodes a kind-9735 zap receipt event into a [ZapReceiptData].
   ///
