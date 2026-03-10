@@ -130,8 +130,9 @@ class ArticleData {
 
     // Extract additional tags by excluding known tag types
     final additionalTags = event.tags.where((tag) {
-      return !['d', 'title', 'image', 'summary', 'published_at', 't']
-          .contains(tag[0]);
+      return tag.isNotEmpty &&
+          !['d', 'title', 'image', 'summary', 'published_at', 't']
+              .contains(tag[0]);
     }).toList();
 
     return ArticleData(
