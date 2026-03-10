@@ -354,17 +354,14 @@ class Event {
   /// Verifies that this event is valid.
   ///
   /// Checks that:
-  /// - The [createdAt] timestamp has a 10-digit length (seconds).
+  /// - The [createdAt] is a valid Unix timestamp in seconds.
   /// - The [id] matches the recomputed event id.
   /// - The [sig] is a valid Schnorr signature over [id] for [pubkey].
   bool isValid() {
     final String verifyId = getEventId();
-    if (createdAt.toString().length == 10 &&
+    return createdAt > 0 &&
+        createdAt < 253402300800 && // year 9999
         id == verifyId &&
-        bip340.verify(pubkey, id, sig)) {
-      return true;
-    } else {
-      return false;
-    }
+        bip340.verify(pubkey, id, sig);
   }
 }
