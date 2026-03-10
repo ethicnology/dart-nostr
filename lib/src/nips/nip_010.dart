@@ -20,6 +20,7 @@ class Threading {
     final List<ETag> etags = [];
     final List<PTag> ptags = [];
     for (final tag in tags) {
+      if (tag.isEmpty) continue;
       if (tag[0] == "p" && tag.length >= 3) {
         ptags.add(PTag(pubkey: tag[1], relayURL: tag[2]));
       }

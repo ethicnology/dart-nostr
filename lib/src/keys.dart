@@ -11,17 +11,17 @@ import 'package:nostr/src/utils.dart';
 class Keys {
   /// A hex-encoded (64 chars) secret key used to decrypt messages or
   /// create digital signatures. It must be kept secret.
-  late String secret;
+  late final String secret;
 
   /// A hex-encoded (64 chars) public key used to encrypt messages or
   /// verify digital signatures. It can be shared with anyone.
-  late String public;
+  late final String public;
 
   /// Returns the Bech32-encoded secret key (`nsec1...`).
-  String get nsec => Nip19.encode(prefix: Nip19Prefix.nsec, data: secret);
+  String get nsec => Bech32Entity.encode(prefix: Nip19Prefix.nsec, data: secret);
 
   /// Returns the Bech32-encoded public key (`npub1...`).
-  String get npub => Nip19.encode(prefix: Nip19Prefix.npub, data: public);
+  String get npub => Bech32Entity.encode(prefix: Nip19Prefix.npub, data: public);
 
   /// Instantiates [Keys] from a secret key in HEX or Bech32 (`nsec`) encoding.
   ///
@@ -35,7 +35,7 @@ class Keys {
     }
 
     try {
-      final nsec = Nip19.decode(payload: secretKey);
+      final nsec = Bech32Entity.decode(payload: secretKey);
       if (nsec.prefix != Nip19Prefix.nsec) {
         throw InvalidKeyException(
           'bech32 must have prefix "nsec", got ${nsec.prefix}',

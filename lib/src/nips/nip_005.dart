@@ -74,20 +74,16 @@ class DnsIdentifier {
 
     final url = Uri.https(domain, '/.well-known/nostr.json', {'name': name});
 
+    final client = http.Client();
     try {
       // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
-      final client = http.Client();
       final request = http.Request('GET', url)..followRedirects = false;
       final response = await client.send(request);
 
-      if (response.statusCode != 200) {
-        client.close();
-        return false;
-      }
+      if (response.statusCode != 200) return false;
 
       // Read body BEFORE closing the client (stream depends on connection)
       final body = await response.stream.bytesToString();
-      client.close();
 
       final Map<String, dynamic> data = json.decode(body);
       final Map<String, dynamic>? names = data['names'];
@@ -99,6 +95,8 @@ class DnsIdentifier {
       return resolvedPubkey.toLowerCase() == pubkey.toLowerCase();
     } on Exception {
       return false;
+    } finally {
+      client.close();
     }
   }
 

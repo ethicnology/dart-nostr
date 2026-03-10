@@ -62,7 +62,7 @@ class Deletion {
   /// Extracts event IDs from `e` tags.
   static List<String> tagsToList(List<List<String>> tags) {
     return tags
-        .where((tag) => tag[0] == "e")
+        .where((tag) => tag.length >= 2 && tag[0] == "e")
         .map((tag) => tag[1])
         .toList();
   }
@@ -70,7 +70,7 @@ class Deletion {
   /// Extracts addressable event coordinates from `a` tags.
   static List<String> tagsToAddressableCoords(List<List<String>> tags) {
     return tags
-        .where((tag) => tag[0] == "a")
+        .where((tag) => tag.length >= 2 && tag[0] == "a")
         .map((tag) => tag[1])
         .toList();
   }
@@ -80,10 +80,17 @@ class Deletion {
   /// Throws [InvalidKindException] if the event kind is not 5.
   static DeletionRequestData parse(Event event) {
     if (event.kind != 5) throw InvalidKindException(event.kind, [5]);
+    final kindStrings = findAllTagValues(event.tags, 'k');
+    final kinds = <int>[];
+    for (final k in kindStrings) {
+      final parsed = int.tryParse(k);
+      if (parsed != null) kinds.add(parsed);
+    }
     return DeletionRequestData(
       pubkey: event.pubkey,
       eventIds: tagsToList(event.tags),
       addressableCoords: tagsToAddressableCoords(event.tags),
+      kinds: kinds,
       reason: event.content,
       createdAt: event.createdAt,
     );
@@ -101,6 +108,9 @@ class DeletionRequestData {
   /// Addressable event coordinates requested for deletion (from `a` tags).
   final List<String> addressableCoords;
 
+  /// Kind numbers being deleted (from `k` tags).
+  final List<int> kinds;
+
   /// Optional human-readable reason for deletion.
   final String reason;
 
@@ -113,6 +123,7 @@ class DeletionRequestData {
     required this.createdAt,
     this.eventIds = const [],
     this.addressableCoords = const [],
+    this.kinds = const [],
     this.reason = '',
   });
 }

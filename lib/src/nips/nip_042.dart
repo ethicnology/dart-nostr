@@ -37,17 +37,24 @@ class Auth {
     );
   }
 
-  /// Validates an authentication event against the expected relay URL
-  /// and challenge string.
+  /// Validates an authentication event per NIP-42 spec.
   ///
-  /// Returns `true` if the event is a valid kind 22242 with matching
-  /// `relay` and `challenge` tags.
+  /// Checks all 4 conditions:
+  /// 1. kind is 22242
+  /// 2. created_at is within ~10 minutes of current time
+  /// 3. challenge tag matches
+  /// 4. relay tag matches
   static bool validate({
     required Event event,
     required String relayUrl,
     required String challenge,
   }) {
     if (event.kind != kindAuth) return false;
+
+    // Timestamp must be within ~10 minutes
+    final now = currentUnixTimestampSeconds();
+    const tenMinutes = 10 * 60;
+    if ((event.createdAt - now).abs() > tenMinutes) return false;
 
     final eventRelay = findTagValue(event.tags, 'relay');
     if (eventRelay != relayUrl) return false;

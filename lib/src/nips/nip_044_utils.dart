@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:convert/convert.dart';
 import 'package:nostr/src/error.dart';
 import 'package:pointycastle/export.dart';
 
@@ -196,6 +195,7 @@ Map<String, dynamic> parsePayload(String payload) {
 
 /// Verifies that the HMAC-SHA256 tag matches the expected [mac].
 ///
+/// Uses constant-time comparison per NIP-44 spec to prevent timing attacks.
 /// Throws [CryptoException] if the MAC does not match.
 void verifyMac(
   List<int> hmacKey,
@@ -204,9 +204,21 @@ void verifyMac(
   List<int> mac,
 ) {
   final calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
-  if (hex.encode(calculatedMac) != hex.encode(mac)) {
+  if (calculatedMac.length != mac.length || !_constantTimeEqual(calculatedMac, mac)) {
     throw const CryptoException('Invalid MAC');
   }
+}
+
+/// Constant-time comparison of two byte lists.
+/// Returns true if equal, false otherwise.
+/// Does NOT short-circuit on mismatch — always compares all bytes.
+bool _constantTimeEqual(List<int> a, List<int> b) {
+  if (a.length != b.length) return false;
+  int result = 0;
+  for (int i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result == 0;
 }
 
 /// Ensures a public key has the correct compressed prefix.

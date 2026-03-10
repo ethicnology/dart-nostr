@@ -90,6 +90,7 @@ class NostrList {
       senderPublicKey: pubkey,
     );
     for (final List tag in json.decode(decrypted)) {
+      if (tag.length < 2) continue;
       if (tag[0] == "p") {
         contacts.add(Contact(
           tag[1],
@@ -200,6 +201,7 @@ class NostrList {
     final List<Contact> contacts = [];
     final List<String> bookmarks = [];
     for (final List tag in event.tags) {
+      if (tag.length < 2) continue;
       if (tag[0] == "p") {
         contacts.add(Contact(
           tag[1],
@@ -269,7 +271,7 @@ class NostrList {
     List<String> bookmarks,
   ) {
     for (final tag in tags) {
-      if (tag.isEmpty) continue;
+      if (tag.length < 2) continue;
       if (tag[0] == 'p') {
         contacts.add(Contact(
           tag[1],
