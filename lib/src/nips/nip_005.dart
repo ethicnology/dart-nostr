@@ -53,6 +53,61 @@ class DnsIdentifier {
     }
   }
 
+  /// Fetches the NIP-05 identity for the given identifier.
+  ///
+  /// Makes an HTTP GET to `https://<domain>/.well-known/nostr.json?name=<local>`
+  /// and returns the resolved pubkey and relays.
+  ///
+  /// Per the spec, HTTP redirects are NOT followed.
+  ///
+  /// Returns `null` if the identifier cannot be resolved.
+  static Future<DnsData?> fetch(String identifier) async {
+    final parts = identifier.split('@');
+    if (parts.length != 2) return null;
+    final name = parts[0];
+    final domain = parts[1];
+
+    if (!isValidName(name) || !isValidDomain(domain)) return null;
+
+    final url = Uri.https(domain, '/.well-known/nostr.json', {'name': name});
+
+    final client = http.Client();
+    try {
+      // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
+      final request = http.Request('GET', url)..followRedirects = false;
+      final response = await client.send(request);
+
+      if (response.statusCode != 200) return null;
+
+      // Read body BEFORE closing the client (stream depends on connection)
+      final body = await response.stream.bytesToString();
+
+      final Map<String, dynamic> data = json.decode(body);
+      final Map<String, dynamic>? names = data['names'];
+      if (names == null) return null;
+
+      final String? pubkey = names[name];
+      if (pubkey == null) return null;
+
+      // Extract relays for this pubkey (optional per spec)
+      final Map<String, dynamic>? relaysMap = data['relays'];
+      final List<String> relays = relaysMap != null && relaysMap[pubkey] != null
+          ? (relaysMap[pubkey] as List).map((e) => e.toString()).toList()
+          : [];
+
+      return DnsData(
+        name: name,
+        domain: domain,
+        pubkey: pubkey,
+        relays: relays,
+      );
+    } on Exception {
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
   /// Verify a NIP-05 identifier against the claimed public key.
   ///
   /// Makes an HTTP GET to `https://<domain>/.well-known/nostr.json?name=<local>`
@@ -65,39 +120,8 @@ class DnsIdentifier {
     required String identifier,
     required String pubkey,
   }) async {
-    final parts = identifier.split('@');
-    if (parts.length != 2) return false;
-    final name = parts[0];
-    final domain = parts[1];
-
-    if (!isValidName(name) || !isValidDomain(domain)) return false;
-
-    final url = Uri.https(domain, '/.well-known/nostr.json', {'name': name});
-
-    final client = http.Client();
-    try {
-      // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
-      final request = http.Request('GET', url)..followRedirects = false;
-      final response = await client.send(request);
-
-      if (response.statusCode != 200) return false;
-
-      // Read body BEFORE closing the client (stream depends on connection)
-      final body = await response.stream.bytesToString();
-
-      final Map<String, dynamic> data = json.decode(body);
-      final Map<String, dynamic>? names = data['names'];
-      if (names == null) return false;
-
-      final String? resolvedPubkey = names[name];
-      if (resolvedPubkey == null) return false;
-
-      return resolvedPubkey.toLowerCase() == pubkey.toLowerCase();
-    } on Exception {
-      return false;
-    } finally {
-      client.close();
-    }
+    final result = await fetch(identifier);
+    return result != null && result.pubkey.toLowerCase() == pubkey.toLowerCase();
   }
 
   /// Returns a NIP-05 verification URL for the given identifier.

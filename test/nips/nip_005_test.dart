@@ -97,6 +97,21 @@ void main() {
       expect(url.toString(), nip05['expected_url']);
     });
 
+    test('fetch damus@damus.io (live DNS)', () async {
+      final result = await Nip5.fetch('damus@damus.io');
+      expect(result, isNotNull);
+      expect(result!.name, 'damus');
+      expect(result.domain, 'damus.io');
+      expect(result.pubkey,
+          '3efdaebb1d8923ebd99c9e7ace3b4194ab45512e2be79c1b7d68d9243e0d2681');
+    });
+
+    test('fetch non-existent returns null (live DNS)', () async {
+      final result =
+          await Nip5.fetch('this_user_surely_does_not_exist_xyz@damus.io');
+      expect(result, isNull);
+    });
+
     test('verify with non-existent name returns false (live DNS)', () async {
       final result = await Nip5.verify(
         identifier: 'this_user_surely_does_not_exist_xyz@damus.io',
