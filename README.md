@@ -47,6 +47,7 @@ flutter pub add nostr
 - [x] [NIP-65 Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md)
 - [x] [NIP-72 Moderated Communities](https://github.com/nostr-protocol/nips/blob/master/72.md)
 - [x] [NIP-89 Application Handlers](https://github.com/nostr-protocol/nips/blob/master/89.md)
+- [x] [NIP-94 File Metadata](https://github.com/nostr-protocol/nips/blob/master/94.md)
 - [x] [NIP-98 HTTP Auth](https://github.com/nostr-protocol/nips/blob/master/98.md)
 
 

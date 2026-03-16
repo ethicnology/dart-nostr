@@ -44,6 +44,7 @@ export 'src/nips/nip_059.dart';
 export 'src/nips/nip_065.dart';
 export 'src/nips/nip_072.dart';
 export 'src/nips/nip_089.dart';
+export 'src/nips/nip_094.dart';
 export 'src/nips/nip_098.dart';
 export 'src/request.dart';
 export 'src/schnorr.dart';

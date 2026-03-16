@@ -86,5 +86,35 @@
       "pubkey": "aa4fc8665f5696e33db7e1a572e3b0f5b3d615837b0f362dcb1c8068b098c7b4",
       "event_id": "12b46be00892279e7bbaa8ea89809ecb1f2c992f5d94edf2cdbd6cba6ee30c03"
     }
+  },
+  "nip94": {
+    "image_url": "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg",
+    "image_hash": "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02",
+    "mime_type": "image/jpeg",
+    "dimensions": "640x640",
+    "parse_from_tags": {
+      "description": "Tags in arbitrary order (matching rust-nostr test: parses_valid_tag_vector)",
+      "tags": [
+        ["dim", "640x640"],
+        ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+        ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"],
+        ["m", "image/jpeg"]
+      ]
+    },
+    "missing_url_tags": [
+      ["dim", "640x640"],
+      ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+      ["m", "image/jpeg"]
+    ],
+    "missing_mime_tags": [
+      ["dim", "640x640"],
+      ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+      ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"]
+    ],
+    "missing_sha_tags": [
+      ["dim", "640x640"],
+      ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"],
+      ["m", "image/jpeg"]
+    ]
   }
 }
