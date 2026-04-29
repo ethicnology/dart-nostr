@@ -20,6 +20,18 @@ export 'src/namecoin/electrumx_client.dart'
         NameNotFoundException;
 export 'src/namecoin/electrumx_server.dart'
     show ElectrumxServer, defaultElectrumxServers;
+export 'src/namecoin/record_parser.dart'
+    show
+        ParsedHostFlat,
+        parseHostFlat,
+        parseRelayUrls,
+        parseTlsaRecords,
+        parseTorEndpoints,
+        walkSubdomain;
+export 'src/namecoin/relay_resolver.dart'
+    show NamecoinRelayResolver, RelayResolution;
+export 'src/namecoin/tlsa.dart'
+    show TlsaMatchingType, TlsaRecord, TlsaSelector, TlsaUsage;
 export 'src/nips/nip_001.dart';
 export 'src/nips/nip_002.dart';
 export 'src/nips/nip_005.dart';
