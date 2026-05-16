@@ -11,9 +11,31 @@ export 'src/event.dart';
 export 'src/filter.dart';
 export 'src/keys.dart';
 export 'src/message.dart';
+export 'src/namecoin/electrumx_client.dart'
+    show
+        DefaultElectrumxClient,
+        ElectrumxClient,
+        ElectrumxUnreachableException,
+        NameExpiredException,
+        NameNotFoundException;
+export 'src/namecoin/electrumx_server.dart'
+    show ElectrumxServer, defaultElectrumxServers;
+export 'src/namecoin/record_parser.dart'
+    show
+        ParsedHostFlat,
+        parseHostFlat,
+        parseRelayUrls,
+        parseTlsaRecords,
+        parseTorEndpoints,
+        walkSubdomain;
+export 'src/namecoin/relay_resolver.dart'
+    show NamecoinRelayResolver, RelayResolution;
+export 'src/namecoin/tlsa.dart'
+    show TlsaMatchingType, TlsaRecord, TlsaSelector, TlsaUsage;
 export 'src/nips/nip_001.dart';
 export 'src/nips/nip_002.dart';
 export 'src/nips/nip_005.dart';
+export 'src/nips/nip_005_namecoin.dart';
 export 'src/nips/nip_009.dart';
 export 'src/nips/nip_010.dart';
 export 'src/nips/nip_013.dart';
