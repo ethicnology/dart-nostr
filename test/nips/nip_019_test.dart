@@ -187,4 +187,155 @@ void main() {
       expect(decoded.data, '');
     });
   });
+
+  group('Nip19Prefix.from', () {
+    test('resolves a known prefix name', () {
+      expect(Nip19Prefix.from('npub'), Nip19Prefix.npub);
+      expect(Nip19Prefix.from('nevent'), Nip19Prefix.nevent);
+    });
+
+    test('is case-insensitive', () {
+      expect(Nip19Prefix.from('NADDR'), Nip19Prefix.naddr);
+      expect(Nip19Prefix.from('Note'), Nip19Prefix.note);
+    });
+
+    test('throws for unknown prefix names', () {
+      expect(() => Nip19Prefix.from('nbunker'), throwsA(isA<ArgumentError>()));
+    });
+  });
+
+  group('Nip19.decodeAny', () {
+    test('dispatches to shareable-identifier decoder for nprofile', () {
+      const author =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.nprofile,
+        data: author,
+        relays: ['wss://relay.example'],
+      );
+      final decoded = Nip19.decodeAny(payload: encoded);
+      expect(decoded.prefix, Nip19Prefix.nprofile);
+      expect(decoded.data, author);
+      expect(decoded.relays, ['wss://relay.example']);
+    });
+
+    test('handles plain npub / note payloads', () {
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      final encoded = Nip19.encode(prefix: Nip19Prefix.npub, data: pubkey);
+      final decoded = Nip19.decodeAny(payload: encoded);
+      expect(decoded.prefix, Nip19Prefix.npub);
+      expect(decoded.data, pubkey);
+      expect(decoded.relays, isEmpty);
+      expect(decoded.author, isNull);
+      expect(decoded.kind, isNull);
+    });
+
+    test('handles naddr with author + kind', () {
+      const author =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: 'my-article',
+        author: author,
+        kind: 30023,
+      );
+      final decoded = Nip19.decodeAny(payload: encoded);
+      expect(decoded.prefix, Nip19Prefix.naddr);
+      expect(decoded.data, 'my-article');
+      expect(decoded.author, author);
+      expect(decoded.kind, 30023);
+    });
+  });
+
+  group('Adversarial decode inputs', () {
+    test('decode throws on garbage non-bech32 string', () {
+      expect(
+        () => Bech32Entity.decode(payload: 'this is not bech32'),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('decode throws on empty string', () {
+      expect(
+        () => Bech32Entity.decode(payload: ''),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('decodeShareableIdentifiers wraps inner errors in DeserializationException', () {
+      // Passing an npub (no TLV body) to the TLV decoder should fail
+      // gracefully with DeserializationException, not leak a RangeError.
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      final npub = Bech32Entity.encode(prefix: Nip19Prefix.npub, data: pubkey);
+      expect(
+        () => Bech32Entity.decodeShareableIdentifiers(payload: npub),
+        throwsA(isA<DeserializationException>()),
+      );
+    });
+
+    test('encode rejects shareable-identifier prefixes (must use shareable encoder)', () {
+      expect(
+        () => Bech32Entity.encode(
+          prefix: Nip19Prefix.nprofile,
+          data: '00' * 32,
+        ),
+        throwsA(isA<WrongDecodeMethodException>()),
+      );
+    });
+
+    test('encodeShareableIdentifiers rejects non-shareable prefixes', () {
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.npub,
+          data: '00' * 32,
+        ),
+        throwsA(isA<WrongPrefixException>()),
+      );
+    });
+
+    test('encodeShareableIdentifiers naddr requires author', () {
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.naddr,
+          data: 'slug',
+          kind: 30023,
+        ),
+        throwsA(isA<MissingTlvException>()),
+      );
+    });
+
+    test('encodeShareableIdentifiers naddr requires kind', () {
+      const author =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.naddr,
+          data: 'slug',
+          author: author,
+        ),
+        throwsA(isA<MissingTlvException>()),
+      );
+    });
+
+    test('decode enforces the 5000-char soft cap', () {
+      // Build a payload over the cap by stuffing many long relay URLs
+      // (relays in TLV are length-prefixed by 1 byte, so cap at 255).
+      const author =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      final manyRelays = List<String>.generate(
+        50,
+        (i) => 'wss://relay-${'x' * 200}-$i.example.com',
+      );
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.nprofile,
+          data: author,
+          relays: manyRelays,
+        ),
+        throwsA(isA<Exception>()), // either size cap or bech32 limit
+      );
+    });
+  });
 }

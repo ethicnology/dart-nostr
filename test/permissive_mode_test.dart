@@ -145,4 +145,151 @@ void main() {
       expect(data.isComplete, isFalse);
     });
   });
+
+  group('NIP-72 ModeratedCommunity.parseCommunity permissive', () {
+    test('strict throws on missing d', () {
+      final event = _build(34550, [
+        ['name', 'g'],
+      ]);
+      expect(() => ModeratedCommunity.parseCommunity(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'd')));
+    });
+
+    test('permissive surfaces missing d and keeps the rest', () {
+      final event = _build(34550, [
+        ['name', 'g'],
+        ['description', 'a desc'],
+      ]);
+      final data = ModeratedCommunity.parseCommunity(event, permissive: true);
+      expect(data.id, '');
+      expect(data.name, 'g');
+      expect(data.description, 'a desc');
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+    });
+  });
+
+  group('NIP-58 Badge.parseDefinition permissive', () {
+    test('strict throws on missing d', () {
+      final event = _build(30009, [
+        ['name', 'b'],
+      ]);
+      expect(() => Badge.parseDefinition(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'd')));
+    });
+
+    test('permissive surfaces missing d', () {
+      final event = _build(30009, [
+        ['name', 'b'],
+      ]);
+      final data = Badge.parseDefinition(event, permissive: true);
+      expect(data.badgeId, '');
+      expect(data.name, 'b');
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+    });
+  });
+
+  group('NIP-53 LiveActivity.parse permissive', () {
+    test('strict throws on missing d', () {
+      final event = _build(30311, [
+        ['title', 'a stream'],
+      ]);
+      expect(() => LiveActivity.parse(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'd')));
+    });
+
+    test('permissive surfaces missing d', () {
+      final event = _build(30311, [
+        ['title', 'a stream'],
+      ]);
+      final data = LiveActivity.parse(event, permissive: true);
+      expect(data.identifier, '');
+      expect(data.title, 'a stream');
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+    });
+  });
+
+  group('NIP-57 Zap permissive', () {
+    test('parseRequest strict throws on missing p', () {
+      final event = _build(9734, [
+        ['relays', 'wss://relay.example'],
+      ]);
+      expect(() => Zap.parseRequest(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'p')));
+    });
+
+    test('parseRequest permissive surfaces missing p', () {
+      final event = _build(9734, [
+        ['relays', 'wss://relay.example'],
+      ]);
+      final data = Zap.parseRequest(event, permissive: true);
+      expect(data.recipientPubkey, '');
+      expect(data.relays, ['wss://relay.example']);
+      expect(data.missingTags, {'p'});
+      expect(data.isComplete, isFalse);
+    });
+
+    test('parseReceipt permissive flags bolt11 / description / p', () {
+      final event = _build(9735, []);
+      final data = Zap.parseReceipt(event, permissive: true);
+      expect(data.bolt11, '');
+      expect(data.description, '');
+      expect(data.recipientPubkey, '');
+      expect(data.missingTags, {'bolt11', 'description', 'p'});
+      expect(data.isComplete, isFalse);
+    });
+  });
+
+  group('NIP-89 AppHandler permissive', () {
+    test('parseHandlerInfo strict throws on missing d', () {
+      final event = _build(31990, [
+        ['k', '1'],
+      ]);
+      expect(() => AppHandler.parseHandlerInfo(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'd')));
+    });
+
+    test('parseHandlerInfo permissive surfaces missing d', () {
+      final event = _build(31990, [
+        ['k', '1'],
+      ]);
+      final data = AppHandler.parseHandlerInfo(event, permissive: true);
+      expect(data.id, '');
+      expect(data.supportedKinds, [1]);
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+    });
+
+    test('parseRecommendation permissive surfaces missing d', () {
+      final event = _build(31989, [
+        ['a', '31990:author:handler'],
+      ]);
+      final data = AppHandler.parseRecommendation(event, permissive: true);
+      expect(data.eventKind, isNull);
+      expect(data.handlerCoords, ['31990:author:handler']);
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+    });
+  });
+
+  group('NIP-98 HttpAuth.parse permissive', () {
+    test('strict throws on missing u', () {
+      final event = _build(27235, [
+        ['method', 'GET'],
+      ]);
+      expect(() => HttpAuth.parse(event),
+          throwsA(isA<MissingTagException>().having((e) => e.tag, 'tag', 'u')));
+    });
+
+    test('permissive flags missing u + method', () {
+      final event = _build(27235, []);
+      final data = HttpAuth.parse(event, permissive: true);
+      expect(data.url, '');
+      expect(data.method, '');
+      expect(data.missingTags, {'u', 'method'});
+      expect(data.isComplete, isFalse);
+    });
+  });
 }

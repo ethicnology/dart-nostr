@@ -133,5 +133,58 @@ void main() {
       final json = filter.toJson();
       expect(json.keys.where((k) => k.startsWith('#')), isEmpty);
     });
+
+    test('round-trip preserves every populated field', () {
+      final original = Filter(
+        ids: ['a' * 64],
+        authors: ['b' * 64],
+        kinds: [1, 7, 30023],
+        eTags: ['c' * 64],
+        aTags: ['30023:author:slug'],
+        pTags: ['d' * 64],
+        tagFilters: {
+          't': ['nostr', 'dart'],
+          'd': ['my-article'],
+          'K': ['1'],
+        },
+        since: 1700000000,
+        until: 1800000000,
+        limit: 100,
+        search: 'bitcoin',
+      );
+      final round = Filter.fromJson(original.toJson());
+      expect(round.ids, original.ids);
+      expect(round.authors, original.authors);
+      expect(round.kinds, original.kinds);
+      expect(round.eTags, original.eTags);
+      expect(round.aTags, original.aTags);
+      expect(round.pTags, original.pTags);
+      expect(round.tagFilters!['t'], original.tagFilters!['t']);
+      expect(round.tagFilters!['d'], original.tagFilters!['d']);
+      expect(round.tagFilters!['K'], original.tagFilters!['K']);
+      expect(round.since, original.since);
+      expect(round.until, original.until);
+      expect(round.limit, original.limit);
+      expect(round.search, original.search);
+    });
+
+    test('accepts uppercase single-letter tag keys (e.g. #K, #A)', () {
+      final filter = Filter.fromJson({
+        '#K': ['1'],
+        '#A': ['30023:author:slug'],
+      });
+      expect(filter.tagFilters!['K'], ['1']);
+      expect(filter.tagFilters!['A'], ['30023:author:slug']);
+    });
+
+    test('rejects non-ASCII single-letter tag keys', () {
+      // Unicode "letter" Ω is not allowed by NIP-01; ASCII-only.
+      final filter = Filter.fromJson({
+        '#Ω': ['x'],
+        '#t': ['nostr'],
+      });
+      expect(filter.tagFilters!.containsKey('Ω'), isFalse);
+      expect(filter.tagFilters!['t'], ['nostr']);
+    });
   });
 }

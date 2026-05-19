@@ -175,4 +175,115 @@ void main() {
       expect(Nip29.kindGroupChatMessage, 9);
     });
   });
+
+  group('Nip29 builders', () {
+    const secret =
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+    test('message() emits kind 9 with h tag and optional previous/reply', () {
+      final event = Group.message(
+        groupId: 'g1',
+        content: 'hi',
+        secretKey: secret,
+        previousEvents: ['aaaaaaaa', 'bbbbbbbb'],
+        replyToEventId: 'a' * 64,
+      );
+      expect(event.kind, Group.kindGroupChatMessage);
+      expect(event.content, 'hi');
+      final h = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'h');
+      expect(h[1], 'g1');
+      final previous = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'previous');
+      expect(previous, ['previous', 'aaaaaaaa', 'bbbbbbbb']);
+      final e = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'e');
+      expect(e[1], 'a' * 64);
+    });
+
+    test('threadRoot() emits kind 11 with subject tag', () {
+      final event = Group.threadRoot(
+        groupId: 'g1',
+        subject: 'Hello world',
+        content: 'body',
+        secretKey: secret,
+      );
+      expect(event.kind, Group.kindGroupThreadRoot);
+      final subject =
+          event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'subject');
+      expect(subject[1], 'Hello world');
+    });
+
+    test('threadReply() emits kind 12 with parent e tag', () {
+      final event = Group.threadReply(
+        groupId: 'g1',
+        replyToEventId: 'b' * 64,
+        content: 'reply',
+        secretKey: secret,
+      );
+      expect(event.kind, Group.kindGroupThreadReply);
+      final e = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'e');
+      expect(e[1], 'b' * 64);
+    });
+
+    test('joinRequest() emits kind 9021 with h tag', () {
+      final event = Group.joinRequest(groupId: 'g1', secretKey: secret);
+      expect(event.kind, Group.kindJoinRequest);
+      expect(event.tags, [
+        ['h', 'g1'],
+      ]);
+    });
+
+    test('leaveRequest() emits kind 9022 with h tag', () {
+      final event = Group.leaveRequest(groupId: 'g1', secretKey: secret);
+      expect(event.kind, Group.kindLeaveRequest);
+      expect(event.tags, [
+        ['h', 'g1'],
+      ]);
+    });
+  });
+
+  group('Nip29.parseAdmins / parseMembers permissive', () {
+    const secret =
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+    test('parseAdmins strict throws on missing d', () {
+      final event = Event.from(
+        kind: Group.kindGroupAdmins,
+        tags: [
+          ['p', 'a' * 64, 'admin'],
+        ],
+        content: '',
+        secretKey: secret,
+      );
+      expect(() => Group.parseAdmins(event), throwsA(isA<MissingTagException>()));
+    });
+
+    test('parseAdmins permissive records missing d', () {
+      final event = Event.from(
+        kind: Group.kindGroupAdmins,
+        tags: [
+          ['p', 'a' * 64, 'admin'],
+        ],
+        content: '',
+        secretKey: secret,
+      );
+      final data = Group.parseAdmins(event, permissive: true);
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+      expect(data.admins, hasLength(1));
+    });
+
+    test('parseMembers permissive records missing d', () {
+      final event = Event.from(
+        kind: Group.kindGroupMembers,
+        tags: [
+          ['p', 'a' * 64],
+        ],
+        content: '',
+        secretKey: secret,
+      );
+      final data = Group.parseMembers(event, permissive: true);
+      expect(data.missingTags, {'d'});
+      expect(data.isComplete, isFalse);
+      expect(data.members, ['a' * 64]);
+    });
+  });
 }
