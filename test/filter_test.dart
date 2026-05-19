@@ -86,5 +86,52 @@ void main() {
       expect(json['#p'], ['def456']);
       expect(json['#a'], ['30023:pk:id']);
     });
+
+    test('tagFilters serializes generic #X keys', () {
+      const filter = Filter(
+        tagFilters: {
+          't': ['nostr', 'bitcoin'],
+          'd': ['my-article-id'],
+          'r': ['wss://relay.example.com'],
+        },
+      );
+      final json = filter.toJson();
+      expect(json['#t'], ['nostr', 'bitcoin']);
+      expect(json['#d'], ['my-article-id']);
+      expect(json['#r'], ['wss://relay.example.com']);
+    });
+
+    test('fromJson collects generic #X keys into tagFilters', () {
+      final filter = Filter.fromJson({
+        '#t': ['nostr'],
+        '#d': ['article-1'],
+        '#k': ['1'],
+      });
+      expect(filter.tagFilters!['t'], ['nostr']);
+      expect(filter.tagFilters!['d'], ['article-1']);
+      expect(filter.tagFilters!['k'], ['1']);
+    });
+
+    test('convenience fields win over tagFilters entry', () {
+      const filter = Filter(
+        eTags: ['from-eTags'],
+        tagFilters: {
+          'e': ['from-tagFilters'],
+        },
+      );
+      expect(filter.toJson()['#e'], ['from-eTags']);
+    });
+
+    test('non-letter and multi-char tag-filter keys are ignored', () {
+      const filter = Filter(
+        tagFilters: {
+          'too-long': ['x'],
+          '1': ['y'],
+          '#': ['z'],
+        },
+      );
+      final json = filter.toJson();
+      expect(json.keys.where((k) => k.startsWith('#')), isEmpty);
+    });
   });
 }

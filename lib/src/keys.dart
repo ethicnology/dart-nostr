@@ -1,4 +1,3 @@
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/src/error.dart';
 import 'package:nostr/src/nips/nip_019.dart';
 import 'package:nostr/src/schnorr.dart';
@@ -30,7 +29,7 @@ class Keys {
   Keys(String secretKey) {
     if (RegExp(r'^[0-9A-Fa-f]{64}$').hasMatch(secretKey)) {
       secret = secretKey.toLowerCase();
-      public = bip340.getPublicKey(secret);
+      public = Schnorr.derivePublicKey(secret);
       return;
     }
 
@@ -42,7 +41,7 @@ class Keys {
         );
       }
       secret = nsec.data;
-      public = bip340.getPublicKey(secret);
+      public = Schnorr.derivePublicKey(secret);
     } catch (e) {
       if (e is InvalidKeyException) rethrow;
       throw InvalidKeyException('Expects HEX or valid Bech32 "nsec".: $e');
@@ -52,7 +51,7 @@ class Keys {
   /// Generates a new random key pair.
   Keys.generate() {
     secret = generateRandomHex();
-    public = bip340.getPublicKey(secret);
+    public = Schnorr.derivePublicKey(secret);
   }
 
   /// Signs a 32-byte hex-encoded [message] using Schnorr (BIP-340).

@@ -5,6 +5,13 @@ import 'package:convert/convert.dart';
 import 'package:nostr/src/error.dart';
 import 'package:pointycastle/export.dart';
 
+/// A single Nostr event tag — an ordered list of strings whose first
+/// element is the tag name and remaining elements are the value(s).
+typedef Tag = List<String>;
+
+/// A collection of [Tag]s as carried on a Nostr event.
+typedef Tags = List<Tag>;
+
 /// Generates [bytes] random bytes and returns them as a hex string.
 /// Defaults to 32 bytes (64 hex chars).
 String generateRandomHex({int bytes = 32}) {

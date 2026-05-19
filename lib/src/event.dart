@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:convert/convert.dart';
 import 'package:nostr/src/error.dart';
+import 'package:nostr/src/schnorr.dart';
 import 'package:nostr/src/utils.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
@@ -92,8 +92,39 @@ class Event {
     bool verify = true,
   }) {
     pubkey = pubkey.toLowerCase();
-    if (verify && isValid() == false) {
-      throw const EventValidationException('Invalid event');
+    if (verify) _assertValid();
+  }
+
+  /// Runs the same checks as [isValid] but throws a typed
+  /// [EventValidationException] (with a specific [EventValidationReason])
+  /// the first time one fails. Used by the validating constructor;
+  /// public so consumers can get the reason without parsing strings.
+  void _assertValid() {
+    if (createdAt <= 0 || createdAt >= 253402300800 /* year 9999 */) {
+      throw EventValidationException(
+        'created_at $createdAt is not a valid Unix timestamp (seconds)',
+        EventValidationReason.invalidTimestamp,
+      );
+    }
+    final String verifyId = getEventId();
+    if (id != verifyId) {
+      throw EventValidationException(
+        'event id mismatch (claimed=$id, canonical=$verifyId)',
+        EventValidationReason.idMismatch,
+      );
+    }
+    try {
+      if (!Schnorr.verify(publicKey: pubkey, message: id, signature: sig)) {
+        throw EventValidationException(
+          'Schnorr signature invalid for pubkey=$pubkey',
+          EventValidationReason.invalidSignature,
+        );
+      }
+    } on InvalidKeyException catch (e) {
+      throw EventValidationException(
+        'malformed pubkey or signature: ${e.message}',
+        EventValidationReason.malformedSignature,
+      );
     }
   }
 
@@ -161,7 +192,7 @@ class Event {
     bool verify = false,
   }) {
     createdAt ??= currentUnixTimestampSeconds();
-    pubkey ??= bip340.getPublicKey(secretKey).toLowerCase();
+    pubkey ??= Schnorr.derivePublicKey(secretKey).toLowerCase();
 
     final id = _processEventId(pubkey, createdAt, kind, tags, content);
 
@@ -345,10 +376,9 @@ class Event {
 
   // Support for [getSignature]
   static String _processSignature(String secretKey, String id) {
-    /// aux must be 32-bytes random bytes, generated at signature time.
-    /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
-    final String aux = generateRandomHex();
-    return bip340.sign(secretKey, id, aux);
+    // aux is the 32-byte random component required by BIP-340; we let
+    // Schnorr.sign generate it when omitted.
+    return Schnorr.sign(secretKey: secretKey, message: id);
   }
 
   /// Verifies that this event is valid.
@@ -357,11 +387,17 @@ class Event {
   /// - The [createdAt] is a valid Unix timestamp in seconds.
   /// - The [id] matches the recomputed event id.
   /// - The [sig] is a valid Schnorr signature over [id] for [pubkey].
+  ///
+  /// Returns `false` instead of throwing. Use the [Event] constructor
+  /// (with default `verify: true`) when you want a typed
+  /// [EventValidationException] that carries the specific failure
+  /// [EventValidationReason].
   bool isValid() {
-    final String verifyId = getEventId();
-    return createdAt > 0 &&
-        createdAt < 253402300800 && // year 9999
-        id == verifyId &&
-        bip340.verify(pubkey, id, sig);
+    try {
+      _assertValid();
+      return true;
+    } on EventValidationException {
+      return false;
+    }
   }
 }

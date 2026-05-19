@@ -6,8 +6,22 @@ import 'package:nostr/src/utils.dart';
 /// Provides Schnorr signature operations (BIP-340) for the Nostr protocol.
 ///
 /// This class wraps the `bip340` package so callers do not need to add it
-/// as a direct dependency.
+/// as a direct dependency, and so internal callers (Event, Keys) get the
+/// consistent length validation below.
 class Schnorr {
+  /// Derives the BIP-340 x-only public key (32-byte hex) from a 32-byte
+  /// hex-encoded [secretKey].
+  ///
+  /// Throws [InvalidKeyException] if [secretKey] is not 32-byte hex.
+  static String derivePublicKey(String secretKey) {
+    if (hex.decode(secretKey).length != 32) {
+      throw const InvalidKeyException(
+        'secretKey must be 32-bytes hex encoded',
+      );
+    }
+    return bip340.getPublicKey(secretKey);
+  }
+
   /// Signs a 32-byte hex-encoded [message] with the given [secretKey].
   ///
   /// An optional 32-byte hex-encoded [aux] random value can be supplied;
