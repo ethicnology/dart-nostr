@@ -4,6 +4,10 @@ import 'dart:typed_data';
 
 import 'package:elliptic/elliptic.dart' as elliptic;
 import 'package:nostr/nostr.dart';
+// Low-level primitives are deliberately not part of the public API; the
+// test file reaches into the internal module directly to exercise them
+// against the spec vectors.
+import 'package:nostr/src/nips/nip_044_utils.dart';
 import 'package:test/test.dart';
 
 Uint8List hexToBytes(String hex) {
@@ -69,7 +73,7 @@ Future<void> assertCryptPriv(
   final encryptedMessage = await Nip44.encrypt(
     plaintext: plaintext,
     senderSecretKey: sk1Hex,
-    recipientPublicKey: pk2Hex,
+    recipientPubkey: pk2Hex,
     customNonce: nonce,
   );
 
@@ -79,7 +83,7 @@ Future<void> assertCryptPriv(
   final decryptedMessage = await Nip44.decrypt(
     payload: encryptedMessage,
     recipientSecretKey: sk2Hex,
-    senderPublicKey: pk1Hex,
+    senderPubkey: pk1Hex,
   );
 
   expect(decryptedMessage, equals(plaintext),
@@ -317,7 +321,7 @@ void main() {
         final encrypted = await Nip44.encrypt(
           plaintext: v['plaintext'],
           senderSecretKey: v['sec1'],
-          recipientPublicKey: pk2Hex,
+          recipientPubkey: pk2Hex,
           customNonce: nonce,
         );
         expect(encrypted, v['ciphertext'],
@@ -1261,5 +1265,50 @@ void main() {
       'a8188daff807a1182200b39d',
       '47b89da97f68d389867b5d8a2d7ba55715a30e3d88a3cc11f3646bc2af5580ef',
     );
+  });
+
+  group('strict padded-length check (NIP-44 v2 §unpad)', () {
+    // unpaddedLen = 5, so calcPaddedLen(5) = 32 and the spec-correct
+    // padded buffer length must be 34 (2-byte header + 32-byte block).
+    test('unpad rejects buffer larger than 2 + calcPaddedLen(unpaddedLen)',
+        () {
+      // unpaddedLen=5 header, then 32 zero bytes, then 16 EXTRA zeros — the
+      // shape used by a malleability attempt that the prior implementation
+      // happily accepted.
+      final oversized = <int>[
+        0x00, 0x05, // unpaddedLen = 5
+        ...List<int>.filled(48, 0), // 32 (expected) + 16 (extra)
+      ];
+
+      expect(
+        () => unpad(oversized),
+        throwsA(isA<CryptoException>()),
+      );
+    });
+
+    test('unpad accepts correctly sized buffer', () {
+      final correct = <int>[
+        0x00, 0x05, // unpaddedLen = 5
+        0x68, 0x65, 0x6c, 0x6c, 0x6f, // "hello"
+        ...List<int>.filled(27, 0), // pad to 32 total payload bytes
+      ];
+
+      expect(unpad(correct), equals([0x68, 0x65, 0x6c, 0x6c, 0x6f]));
+    });
+
+    test('unpad rejects buffer too short for header', () {
+      expect(
+        () => unpad(<int>[0x00]),
+        throwsA(isA<CryptoException>()),
+      );
+    });
+
+    test('unpad rejects unpaddedLen=0', () {
+      final zero = <int>[0x00, 0x00, ...List<int>.filled(32, 0)];
+      expect(
+        () => unpad(zero),
+        throwsA(isA<CryptoException>()),
+      );
+    });
   });
 }

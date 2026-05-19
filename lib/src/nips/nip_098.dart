@@ -63,10 +63,13 @@ class HttpAuth {
   /// Decodes an `Authorization: Nostr <base64>` header back into an [Event].
   ///
   /// Accepts either the full header value (`Nostr <base64>`) or just the
-  /// base64 portion. The returned [Event] is validated (id + signature).
+  /// base64 portion. The returned [Event] is cryptographically verified
+  /// (id matches canonical serialization, signature is valid for the
+  /// claimed pubkey).
   ///
   /// Throws [NostrException] if the header is malformed or the event
-  /// fails validation.
+  /// fails validation. Use [validate] after this to also check the
+  /// request-specific fields (kind, timestamp, URL, method, payload).
   static Event fromAuthHeader(String header) {
     var b64 = header;
     if (b64.startsWith('Nostr ')) {
@@ -77,18 +80,20 @@ class HttpAuth {
     try {
       decoded = utf8.decode(base64.decode(b64));
     } on FormatException catch (e) {
-      throw NostrException('Malformed auth header: $e');
+      throw MalformedAuthHeaderException(AuthHeaderError.badBase64, e);
     }
 
     final Map<String, dynamic> map;
     try {
       map = jsonDecode(decoded) as Map<String, dynamic>;
     } on FormatException catch (e) {
-      throw NostrException('Invalid JSON in auth header: $e');
+      throw MalformedAuthHeaderException(AuthHeaderError.invalidJson, e);
     }
 
-    // Skip verification here — callers should use [validate] for
-    // server-side checks (kind, timestamp, URL, method, payload, sig).
+    // The Event constructor verifies id + sig and throws
+    // EventValidationException (which extends NostrException). We let
+    // it propagate so the caller learns the specific
+    // EventValidationReason; no need to wrap.
     return Event(
       map['id'] as String,
       map['pubkey'] as String,
@@ -99,43 +104,58 @@ class HttpAuth {
           .toList(),
       map['content'] as String,
       map['sig'] as String,
-      verify: false,
     );
   }
 
   /// Parses a kind-27235 event into an [HttpAuthData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 27235.
-  /// Throws [MissingTagException] if `u` or `method` tags are absent.
-  static HttpAuthData parse(Event event) {
+  /// Throws [MissingTagException] if `u` or `method` tags are absent
+  /// and [permissive] is false. In permissive mode missing tags are
+  /// recorded on [HttpAuthData.missingTags].
+  static HttpAuthData parse(Event event, {bool permissive = false}) {
     if (event.kind != kindHttpAuth) {
       throw InvalidKindException(event.kind, [kindHttpAuth]);
     }
 
+    final missing = <String>{};
     final url = findTagValue(event.tags, 'u');
-    if (url == null) throw MissingTagException('u');
+    if (url == null) {
+      if (!permissive) throw MissingTagException('u');
+      missing.add('u');
+    }
 
     final method = findTagValue(event.tags, 'method');
-    if (method == null) throw MissingTagException('method');
+    if (method == null) {
+      if (!permissive) throw MissingTagException('method');
+      missing.add('method');
+    }
 
     return HttpAuthData(
-      url: url,
-      method: method,
+      url: url ?? '',
+      method: method ?? '',
       payload: findTagValue(event.tags, 'payload'),
       pubkey: event.pubkey,
       createdAt: event.createdAt,
+      missingTags: missing,
     );
   }
 
   /// Validates an HTTP auth event against the actual request parameters.
   ///
   /// Checks:
-  /// 1. Event kind is 27235
-  /// 2. `created_at` is not too old ([pastWindowSeconds], default 60) or
+  /// 1. Event id + Schnorr signature are valid for the claimed pubkey
+  /// 2. Event kind is 27235
+  /// 3. `created_at` is not too old ([pastWindowSeconds], default 60) or
   ///    too far in the future ([futureWindowSeconds], default 30)
-  /// 3. `u` tag matches [url]
-  /// 4. `method` tag matches [method]
-  /// 5. If [body] is provided, `payload` tag matches its SHA256 hash
+  /// 4. `u` tag matches [url]
+  /// 5. `method` tag matches [method]
+  /// 6. If [body] is provided, `payload` tag matches its SHA256 hash
+  ///
+  /// The signature check is critical: without it, anyone can claim any
+  /// pubkey for an auth event. The check is performed even when [event]
+  /// was obtained via [fromAuthHeader] (which also verifies) — defense
+  /// in depth covers callers that build the [Event] another way.
   ///
   /// Throws [NostrException] on validation failure.
   static void validate({
@@ -146,6 +166,18 @@ class HttpAuth {
     int pastWindowSeconds = 60,
     int futureWindowSeconds = 30,
   }) {
+    // Force the same validation EVENT's constructor does, but reraise
+    // explicitly so callers building Event another way still get caught.
+    // event.isValid() returns false instead of throwing, so we re-derive
+    // the reason here by calling the typed validator via a temporary
+    // reconstruction.
+    if (!event.isValid()) {
+      throw const EventValidationException(
+        'Invalid auth event id or signature',
+        EventValidationReason.invalidSignature,
+      );
+    }
+
     if (event.kind != kindHttpAuth) {
       throw InvalidKindException(event.kind, [kindHttpAuth]);
     }
@@ -153,14 +185,11 @@ class HttpAuth {
     // Asymmetric timestamp check (like rust-nostr)
     final now = currentUnixTimestampSeconds();
     final delta = now - event.createdAt;
-    if (delta > pastWindowSeconds) {
-      throw NostrException(
-        'Auth event too old: $delta seconds (max $pastWindowSeconds)',
-      );
-    }
-    if (delta < -futureWindowSeconds) {
-      throw NostrException(
-        'Auth event too far in the future: ${-delta} seconds (max $futureWindowSeconds)',
+    if (delta > pastWindowSeconds || delta < -futureWindowSeconds) {
+      throw TimestampOutOfWindowException(
+        deltaSeconds: delta,
+        maxPastSeconds: pastWindowSeconds,
+        maxFutureSeconds: futureWindowSeconds,
       );
     }
 
@@ -168,16 +197,12 @@ class HttpAuth {
 
     // URL check
     if (data.url != url) {
-      throw NostrException(
-        'URL mismatch: expected "$url", got "${data.url}"',
-      );
+      throw FieldMismatchException('url', url, data.url);
     }
 
     // Method check
     if (data.method.toUpperCase() != method.toUpperCase()) {
-      throw NostrException(
-        'Method mismatch: expected "$method", got "${data.method}"',
-      );
+      throw FieldMismatchException('method', method, data.method);
     }
 
     // Payload check
@@ -187,9 +212,7 @@ class HttpAuth {
         throw MissingTagException('payload');
       }
       if (data.payload != expected) {
-        throw NostrException(
-          'Payload hash mismatch: expected "$expected", got "${data.payload}"',
-        );
+        throw FieldMismatchException('payload', expected, data.payload ?? '');
       }
     }
   }
@@ -212,6 +235,13 @@ class HttpAuthData {
   /// Unix timestamp of the auth event.
   final int createdAt;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-98: `u`, `method`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates an [HttpAuthData].
   const HttpAuthData({
     required this.url,
@@ -219,6 +249,7 @@ class HttpAuthData {
     required this.pubkey,
     required this.createdAt,
     this.payload,
+    this.missingTags = const {},
   });
 }
 

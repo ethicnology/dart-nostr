@@ -53,7 +53,11 @@ class Article {
   /// Returns an [ArticleData] instance representing the parsed event.
   ///
   /// Throws [InvalidKindException] if the event is not a valid NIP-23 kind.
-  static ArticleData parse(Event event) => ArticleData.fromEvent(event);
+  /// Throws [MissingTagException] in strict mode if the `d` tag is absent.
+  /// In permissive mode the missing `d` is recorded on
+  /// [ArticleData.missingTags] instead.
+  static ArticleData parse(Event event, {bool permissive = false}) =>
+      ArticleData.fromEvent(event, permissive: permissive);
 }
 
 /// Represents a Nostr long-form content event according to NIP-23.
@@ -93,6 +97,13 @@ class ArticleData {
   /// The event kind, should be either [Article.kindArticle] or [Article.kindDraft].
   final int kind;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-23 requires `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates an [ArticleData] with the given fields.
   const ArticleData({
     required this.content,
@@ -106,20 +117,25 @@ class ArticleData {
     this.topics = const [],
     this.additionalTags = const [],
     this.kind = Article.kindArticle,
+    this.missingTags = const {},
   });
 
   /// Factory constructor to create an [ArticleData] from an [Event] instance.
   ///
   /// Throws [InvalidKindException] if the event kind is not valid for NIP-23.
-  /// Throws [MissingTagException] if the required `d` tag is absent.
-  factory ArticleData.fromEvent(Event event) {
+  /// Throws [MissingTagException] if the required `d` tag is absent and
+  /// [permissive] is false. In permissive mode the missing `d` is
+  /// recorded on [missingTags] instead.
+  factory ArticleData.fromEvent(Event event, {bool permissive = false}) {
     if (event.kind != Article.kindArticle && event.kind != Article.kindDraft) {
       throw InvalidKindException(event.kind, [Article.kindArticle, Article.kindDraft]);
     }
 
+    final missing = <String>{};
     final articleId = findTagValue(event.tags, 'd');
     if (articleId == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
     final title = findTagValue(event.tags, 'title');
@@ -139,7 +155,7 @@ class ArticleData {
       content: event.content,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
-      articleId: articleId,
+      articleId: articleId ?? '',
       title: title,
       image: image,
       summary: summary,
@@ -147,6 +163,7 @@ class ArticleData {
       topics: topics,
       additionalTags: additionalTags,
       kind: event.kind,
+      missingTags: missing,
     );
   }
 }

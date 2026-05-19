@@ -7,26 +7,51 @@ import 'package:nostr/src/error.dart';
 class NostrUri {
   static const String _prefix = 'nostr:';
 
+  /// Identifiers allowed after `nostr:`. Spec: "the identifier MUST be
+  /// the same as a NIP-19 identifier (except `nsec`, which MUST NOT be
+  /// used)."
+  static const _allowedPrefixes = ['npub', 'note', 'nprofile', 'nevent', 'naddr'];
+
   /// Parses a `nostr:` URI and extracts the identifier.
   ///
-  /// Throws a [NostrException] if the prefix `nostr:` is missing.
+  /// Throws [NostrException] if the prefix `nostr:` is missing, if the
+  /// identifier begins with `nsec` (forbidden by spec), or if the
+  /// bech32 prefix is not one of `npub`, `note`, `nprofile`, `nevent`,
+  /// `naddr`.
   static String decode(String uri) {
     if (!uri.startsWith(_prefix)) {
-      throw const NostrException('Invalid Nostr URI: must start with "nostr:"');
+      throw InvalidNostrUriException(NostrUriRejection.missingScheme, uri);
     }
 
-    return uri.substring(_prefix.length);
+    final identifier = uri.substring(_prefix.length);
+    _assertAllowedPrefix(identifier);
+    return identifier;
   }
 
   /// Generates a `nostr:` URI from a given NIP-19 identifier.
   ///
-  /// Throws [NostrException] if the identifier starts with "nsec" -- secret
-  /// keys must never be shared as URIs per the NIP-21 spec.
+  /// Throws [NostrException] if the identifier starts with `nsec` (secret
+  /// keys must never be shared as URIs per spec) or with any prefix not in
+  /// the spec's allowed set.
   static String encode(String content) {
-    if (content.startsWith('nsec')) {
-      throw const NostrException('nsec must not be used in nostr: URIs');
-    }
+    _assertAllowedPrefix(content);
     return _prefix + content;
+  }
+
+  static void _assertAllowedPrefix(String identifier) {
+    if (identifier.startsWith('nsec')) {
+      throw InvalidNostrUriException(
+        NostrUriRejection.forbiddenPrefix,
+        identifier,
+      );
+    }
+    for (final p in _allowedPrefixes) {
+      if (identifier.startsWith(p)) return;
+    }
+    throw InvalidNostrUriException(
+      NostrUriRejection.unknownPrefix,
+      identifier,
+    );
   }
 }
 

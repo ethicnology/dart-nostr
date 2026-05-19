@@ -14,10 +14,16 @@ Map<String, List<int>> deriveMessageKeys(
   List<int> nonce,
 ) {
   if (conversationKey.length != 32) {
-    throw const CryptoException('Invalid conversation key length');
+    throw const CryptoException(
+      'Invalid conversation key length',
+      CryptoErrorCode.invalidConversationKeyLength,
+    );
   }
   if (nonce.length != 32) {
-    throw const CryptoException('Invalid nonce length');
+    throw const CryptoException(
+      'Invalid nonce length',
+      CryptoErrorCode.invalidNonceLength,
+    );
   }
 
   final hkdfOutput = hkdfExpand(
@@ -40,7 +46,10 @@ Map<String, List<int>> deriveMessageKeys(
 List<int> pad(List<int> plaintext) {
   final unpaddedLen = plaintext.length;
   if (unpaddedLen < 1 || unpaddedLen > 65535) {
-    throw const CryptoException('Invalid plaintext length');
+    throw const CryptoException(
+      'Invalid plaintext length',
+      CryptoErrorCode.invalidPlaintextLength,
+    );
   }
 
   final paddedLen = calcPaddedLen(unpaddedLen);
@@ -145,11 +154,25 @@ List<int> hkdfExpand({
 
 /// Removes padding from a padded plaintext.
 ///
+/// Per NIP-44 v2 spec, the buffer must be exactly `2 + calcPaddedLen(unpaddedLen)`
+/// bytes — any deviation is rejected to prevent padding-oracle / malleability.
+///
 /// Throws [CryptoException] if the padding is invalid.
 List<int> unpad(List<int> padded) {
+  if (padded.length < 2) {
+    throw const CryptoException(
+      'Invalid padding',
+      CryptoErrorCode.invalidPadding,
+    );
+  }
   final int unpaddedLen = (padded[0] << 8) + padded[1];
-  if (unpaddedLen == 0 || unpaddedLen > padded.length - 2) {
-    throw const CryptoException('Invalid padding');
+  if (unpaddedLen == 0 ||
+      unpaddedLen > padded.length - 2 ||
+      padded.length != 2 + calcPaddedLen(unpaddedLen)) {
+    throw const CryptoException(
+      'Invalid padding',
+      CryptoErrorCode.invalidPadding,
+    );
   }
   return padded.sublist(2, 2 + unpaddedLen);
 }
@@ -169,17 +192,26 @@ List<int> calculateMac(List<int> key, List<int> nonce, List<int> ciphertext) {
 /// payload size is invalid.
 Map<String, dynamic> parsePayload(String payload) {
   if (payload.isEmpty || payload[0] == '#') {
-    throw const CryptoException('Unknown version');
+    throw const CryptoException(
+      'Unknown version',
+      CryptoErrorCode.unknownEncryptionVersion,
+    );
   }
 
   if (payload.length < 132 || payload.length > 87472) {
-    throw const CryptoException('Invalid payload size');
+    throw const CryptoException(
+      'Invalid payload size',
+      CryptoErrorCode.invalidPayloadSize,
+    );
   }
 
   final data = base64.decode(payload);
 
   if (data[0] != 0x02) {
-    throw const CryptoException('Unsupported version');
+    throw const CryptoException(
+      'Unsupported version',
+      CryptoErrorCode.unsupportedEncryptionVersion,
+    );
   }
 
   final nonce = data.sublist(1, 33);
@@ -205,7 +237,7 @@ void verifyMac(
 ) {
   final calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
   if (calculatedMac.length != mac.length || !_constantTimeEqual(calculatedMac, mac)) {
-    throw const CryptoException('Invalid MAC');
+    throw const CryptoException('Invalid MAC', CryptoErrorCode.invalidMac);
   }
 }
 
@@ -233,5 +265,8 @@ String checkPublicKey(String publicKey) {
   } else if (publicKey.length == 64) {
     return '02$publicKey';
   }
-  throw const CryptoException('Invalid Public Key');
+  throw const CryptoException(
+    'Invalid Public Key',
+    CryptoErrorCode.invalidPublicKey,
+  );
 }

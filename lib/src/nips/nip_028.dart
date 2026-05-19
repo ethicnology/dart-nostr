@@ -6,41 +6,49 @@ import 'package:nostr/nostr.dart';
 /// Kind 40: channel creation, kind 41: channel metadata update,
 /// kind 42: channel message, kind 43: hide message, kind 44: mute user.
 class PublicChat {
-  /// Decodes a kind-40 event into a [ChannelData].
+  /// Event kind for channel creation.
+  static const int kindChannelCreation = 40;
+
+  /// Event kind for channel metadata updates.
+  static const int kindChannelMetadata = 41;
+
+  /// Event kind for channel messages.
+  static const int kindChannelMessage = 42;
+
+  /// Event kind for hiding a channel message.
+  static const int kindHideMessage = 43;
+
+  /// Event kind for muting a channel user.
+  static const int kindMuteUser = 44;
+
+  /// Parses a kind-40 event into a [ChannelData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 40.
   static ChannelData parseChannel(Event event) {
-    if (event.kind != 40) {
-      throw InvalidKindException(event.kind, [40]);
+    if (event.kind != kindChannelCreation) {
+      throw InvalidKindException(event.kind, [kindChannelCreation]);
     }
-    final Map content = json.decode(event.content);
-    final Map<String, String> additional = Map.from(content);
-    final String name = additional.remove("name") ?? '';
-    final String about = additional.remove("about") ?? '';
-    final String picture = additional.remove("picture") ?? '';
+    final parsed = _parseChannelContent(event.content);
     return ChannelData(
       channelId: event.id,
-      name: name,
-      about: about,
-      picture: picture,
+      name: parsed.name,
+      about: parsed.about,
+      picture: parsed.picture,
+      relays: parsed.relays,
       owner: event.pubkey,
-      additional: additional,
+      additional: parsed.additional,
     );
   }
 
-  /// Decodes a kind-41 event into a [ChannelData] with updated metadata.
+  /// Parses a kind-41 event into a [ChannelData] with updated metadata.
   ///
   /// Throws [InvalidKindException] if the event kind is not 41.
   /// Throws [MissingTagException] if the `e` tag (channel reference) is absent.
   static ChannelData parseMetadata(Event event) {
-    if (event.kind != 41) {
-      throw InvalidKindException(event.kind, [41]);
+    if (event.kind != kindChannelMetadata) {
+      throw InvalidKindException(event.kind, [kindChannelMetadata]);
     }
-    final Map content = json.decode(event.content);
-    final Map<String, String> additional = Map.from(content);
-    final String name = additional.remove("name") ?? '';
-    final String about = additional.remove("about") ?? '';
-    final String picture = additional.remove("picture") ?? '';
+    final parsed = _parseChannelContent(event.content);
 
     final channelId = findTagValue(event.tags, 'e');
     if (channelId == null) {
@@ -50,7 +58,7 @@ class PublicChat {
     // Extract relay from e tag (third element)
     String? relay;
     for (final tag in event.tags) {
-      if (tag[0] == 'e' && tag.length > 2) {
+      if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 2) {
         relay = tag[2];
         break;
       }
@@ -58,23 +66,67 @@ class PublicChat {
 
     return ChannelData(
       channelId: channelId,
-      name: name,
-      about: about,
-      picture: picture,
+      name: parsed.name,
+      about: parsed.about,
+      picture: parsed.picture,
+      relays: parsed.relays,
       owner: event.pubkey,
-      additional: additional,
+      additional: parsed.additional,
       relay: relay,
     );
   }
 
-  /// Decodes a kind-42 event into a [ChannelMessageData].
+  /// Parses the JSON content of a kind 40 / 41 channel event into its
+  /// well-known fields plus any extra string metadata.
+  ///
+  /// The spec allows a `relays` array alongside `name`, `about`, `picture`;
+  /// we extract it as a typed `List<String>` rather than crashing on the
+  /// non-string value the way `Map<String, String>.from` would.
+  static _ChannelContent _parseChannelContent(String raw) {
+    final Map<String, dynamic> content =
+        json.decode(raw) as Map<String, dynamic>;
+
+    final String name = content['name'] is String ? content['name'] : '';
+    final String about = content['about'] is String ? content['about'] : '';
+    final String picture =
+        content['picture'] is String ? content['picture'] : '';
+
+    final List<String> relays = content['relays'] is List
+        ? (content['relays'] as List).whereType<String>().toList()
+        : const [];
+
+    // Anything else that's a string falls through to `additional` so callers
+    // can read forward-compatible kind-0 conventions (website, banner, bot…).
+    final Map<String, String> additional = {};
+    for (final entry in content.entries) {
+      if (entry.key == 'name' ||
+          entry.key == 'about' ||
+          entry.key == 'picture' ||
+          entry.key == 'relays') {
+        continue;
+      }
+      if (entry.value is String) {
+        additional[entry.key] = entry.value as String;
+      }
+    }
+
+    return _ChannelContent(
+      name: name,
+      about: about,
+      picture: picture,
+      relays: relays,
+      additional: additional,
+    );
+  }
+
+  /// Parses a kind-42 event into a [ChannelMessageData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 42.
   static ChannelMessageData parseMessage(Event event) {
-    if (event.kind != 42) {
-      throw InvalidKindException(event.kind, [42]);
+    if (event.kind != kindChannelMessage) {
+      throw InvalidKindException(event.kind, [kindChannelMessage]);
     }
-    final Thread thread = Threading.fromTags(event.tags);
+    final Thread thread = Threading.parseTags(event.tags);
     return ChannelMessageData(
       channelId: thread.root.eventId,
       pubkey: event.pubkey,
@@ -84,12 +136,12 @@ class PublicChat {
     );
   }
 
-  /// Decodes a kind-43 event into a [ChannelMessageHiddenData].
+  /// Parses a kind-43 event into a [ChannelMessageHiddenData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 43.
   static ChannelMessageHiddenData parseHidden(Event event) {
-    if (event.kind != 43) {
-      throw InvalidKindException(event.kind, [43]);
+    if (event.kind != kindHideMessage) {
+      throw InvalidKindException(event.kind, [kindHideMessage]);
     }
     final messageId = findTagValue(event.tags, 'e') ?? '';
     String reason = '';
@@ -107,13 +159,13 @@ class PublicChat {
     );
   }
 
-  /// Decodes a kind-44 event into a [ChannelUserMutedData].
+  /// Parses a kind-44 event into a [ChannelUserMutedData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 44.
   /// Throws [MissingTagException] if the `p` tag (user reference) is absent.
   static ChannelUserMutedData parseMuted(Event event) {
-    if (event.kind != 44) {
-      throw InvalidKindException(event.kind, [44]);
+    if (event.kind != kindMuteUser) {
+      throw InvalidKindException(event.kind, [kindMuteUser]);
     }
     final userPubkey = findTagValue(event.tags, 'p');
     if (userPubkey == null) {
@@ -140,16 +192,18 @@ class PublicChat {
     required String about,
     required String picture,
     required String secretKey,
+    List<String> relays = const [],
     Map<String, String> additional = const {},
   }) {
     final Map<String, dynamic> map = {
       'name': name,
       'about': about,
       'picture': picture,
+      if (relays.isNotEmpty) 'relays': relays,
     };
     map.addAll(additional);
     return Event.from(
-      kind: 40,
+      kind: kindChannelCreation,
       tags: [],
       content: json.encode(map),
       secretKey: secretKey,
@@ -166,16 +220,18 @@ class PublicChat {
     required String channelId,
     required String relayURL,
     required String secretKey,
+    List<String> relays = const [],
     Map<String, String> additional = const {},
   }) {
     final Map<String, dynamic> map = {
       'name': name,
       'about': about,
       'picture': picture,
+      if (relays.isNotEmpty) 'relays': relays,
     };
     map.addAll(additional);
     return Event.from(
-      kind: 41,
+      kind: kindChannelMetadata,
       tags: [
         ["e", channelId, relayURL, "root"]
       ],
@@ -196,7 +252,7 @@ class PublicChat {
     final Thread thread =
         Thread(root: Threading.rootTag(channelId, relay ?? ''), etags: etags ?? [], ptags: ptags ?? []);
     return Event.from(
-      kind: 42,
+      kind: kindChannelMessage,
       tags: Threading.toTags(thread),
       content: content,
       secretKey: secretKey,
@@ -210,7 +266,7 @@ class PublicChat {
     required String secretKey,
   }) {
     return Event.from(
-      kind: 43,
+      kind: kindHideMessage,
       tags: [
         ["e", messageId]
       ],
@@ -226,7 +282,7 @@ class PublicChat {
     required String secretKey,
   }) {
     return Event.from(
-        kind: 44,
+        kind: kindMuteUser,
         tags: [
           ["p", pubkey]
         ],
@@ -249,13 +305,20 @@ class ChannelData {
   /// The channel picture URL.
   final String picture;
 
+  /// Channel-level relay hints from the kind-40 content (spec-defined
+  /// `relays` array). Empty when the content does not include it.
+  final List<String> relays;
+
   /// The public key of the channel creator.
   final String owner;
 
-  /// The relay URL where the channel was created.
+  /// The relay URL from the kind-41 `e`-tag third element (the relay where
+  /// the kind-40 creation event can be found). Distinct from [relays].
   final String? relay;
 
-  /// Extra metadata fields beyond name, about, and picture.
+  /// Extra metadata fields beyond name, about, picture, and relays.
+  /// Only string values are kept; structured fields land on dedicated
+  /// fields above.
   final Map<String, String> additional;
 
   const ChannelData({
@@ -265,7 +328,24 @@ class ChannelData {
     required this.picture,
     required this.owner,
     required this.additional,
+    this.relays = const [],
     this.relay,
+  });
+}
+
+/// Internal struct for unpacking a kind 40 / 41 content payload.
+class _ChannelContent {
+  final String name;
+  final String about;
+  final String picture;
+  final List<String> relays;
+  final Map<String, String> additional;
+  const _ChannelContent({
+    required this.name,
+    required this.about,
+    required this.picture,
+    required this.relays,
+    required this.additional,
   });
 }
 

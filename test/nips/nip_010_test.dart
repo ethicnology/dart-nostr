@@ -3,13 +3,13 @@ import 'package:test/test.dart';
 
 void main() {
   group('nip010', () {
-    test('fromTags', () {
+    test('parseTags', () {
       final List<List<String>> tags = [
         ["e", '91cf9..4e5ca', 'wss://alicerelay.com', "root"],
         ["e", '14aeb..8dad4', 'wss://bobrelay.com/nostr', "reply"],
         ["p", '612ae..e610f', 'ws://carolrelay.com/ws'],
       ];
-      final Thread thread = Nip10.fromTags(tags);
+      final Thread thread = Nip10.parseTags(tags);
       expect(thread.root.eventId, '91cf9..4e5ca');
       expect(thread.root.relayURL, 'wss://alicerelay.com');
       expect(thread.root.marker, 'root');
@@ -34,25 +34,25 @@ void main() {
       expect(thread.ptags[0].pubkey, "612ae..e610f");
     });
 
-    test('fromTags handles tags without markers (deprecated positional)', () {
+    test('parseTags handles tags without markers (deprecated positional)', () {
       final List<List<String>> tags = [
         ["e", "abc123", "wss://relay.example.com"],
         ["e", "def456"],
         ["p", "pubkey1", "wss://relay.example.com"],
       ];
-      final Thread thread = Nip10.fromTags(tags);
+      final Thread thread = Nip10.parseTags(tags);
       // Both should parse without crashing
       expect(thread.etags.length, 2);
       expect(thread.etags[0].marker, '');
       expect(thread.etags[1].marker, '');
     });
 
-    test('fromTags handles p tags with only pubkey', () {
+    test('parseTags handles p tags with only pubkey', () {
       final List<List<String>> tags = [
         ["e", "abc123", "wss://relay.com", "root"],
         // p tag without relay — should not crash
       ];
-      final Thread thread = Nip10.fromTags(tags);
+      final Thread thread = Nip10.parseTags(tags);
       expect(thread.root.eventId, 'abc123');
       expect(thread.ptags, isEmpty);
     });

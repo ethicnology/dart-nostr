@@ -40,6 +40,9 @@ void main() {
     secretKey: bobKey,
     pubkey: Keys(bobKey).public,
   );
-  assert(profile.kind == 30008);
+  // Current spec: Profile Badges is kind 10008 (was 30008 with
+  // d=profile_badges in an earlier version). The library still parses
+  // legacy 30008 events but emits 10008.
+  assert(profile.kind == 10008);
   print('Profile badges event created');
 }

@@ -167,7 +167,7 @@ void main() {
     });
 
     test('typedef alias works', () {
-      expect(LiveActivities.kindLiveEvent, 30311);
+      expect(LiveActivity.kindLiveEvent, 30311);
     });
   });
 }

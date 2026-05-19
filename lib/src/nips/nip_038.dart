@@ -54,15 +54,19 @@ class UserStatus {
   /// Parses a kind-30315 event into a [UserStatusData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 30315.
-  /// Throws [MissingTagException] if the `d` tag is absent.
-  static UserStatusData parse(Event event) {
+  /// Throws [MissingTagException] if the `d` tag is absent and
+  /// [permissive] is false. In permissive mode the missing `d` is
+  /// recorded on [UserStatusData.missingTags].
+  static UserStatusData parse(Event event, {bool permissive = false}) {
     if (event.kind != kindUserStatus) {
       throw InvalidKindException(event.kind, [kindUserStatus]);
     }
 
+    final missing = <String>{};
     final statusType = findTagValue(event.tags, 'd');
     if (statusType == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
     final url = findTagValue(event.tags, 'r');
@@ -72,7 +76,7 @@ class UserStatus {
     final coordRef = findTagValue(event.tags, 'a');
 
     return UserStatusData(
-      statusType: statusType,
+      statusType: statusType ?? '',
       content: event.content,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
@@ -82,6 +86,7 @@ class UserStatus {
       eventRef: eventRef,
       pubkeyRef: pubkeyRef,
       coordinateRef: coordRef,
+      missingTags: missing,
     );
   }
 }
@@ -115,6 +120,13 @@ class UserStatusData {
   /// Optional referenced addressable event coordinate (from `a` tag).
   final String? coordinateRef;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-38 requires `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [UserStatusData] with the given fields.
   const UserStatusData({
     required this.statusType,
@@ -126,8 +138,8 @@ class UserStatusData {
     this.eventRef,
     this.pubkeyRef,
     this.coordinateRef,
+    this.missingTags = const {},
   });
 }
 
 typedef Nip38 = UserStatus;
-typedef UserStatuses = UserStatus;

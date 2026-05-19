@@ -117,7 +117,7 @@ void main() {
         content: '',
         secretKey: secretKey,
       );
-      final repost = Reposts.parse(event);
+      final repost = Repost.parse(event);
       expect(repost.eventId, 'abc123');
     });
 

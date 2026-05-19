@@ -15,10 +15,27 @@ import 'package:nostr/nostr.dart';
 /// simple wrapper around `a` tags.
 class AppHandler {
   /// Kind for handler information events.
-  static const int handlerInfoKind = 31990;
+  static const int kindHandlerInfo = 31990;
 
   /// Kind for handler recommendation events.
-  static const int handlerRecommendationKind = 31989;
+  static const int kindHandlerRecommendation = 31989;
+
+  /// Platform names recognized by [parseHandlerInfo]. Tags whose first
+  /// element is one of these are treated as platform-URL templates;
+  /// everything else is left to the caller via `event.tags`.
+  ///
+  /// Add a platform here if you ship a kind-31990 handler under a new
+  /// platform name not already covered.
+  static const Set<String> _knownPlatforms = {
+    'web',
+    'ios',
+    'android',
+    'iphone',
+    'ipad',
+    'macos',
+    'linux',
+    'windows',
+  };
 
   /// Creates a kind-31990 handler information event.
   ///
@@ -55,25 +72,32 @@ class AppHandler {
     final content = metadata != null ? json.encode(metadata) : '';
 
     return Event.from(
-      kind: handlerInfoKind,
+      kind: kindHandlerInfo,
       tags: tags,
       content: content,
       secretKey: secretKey,
     );
   }
 
-  /// Decodes a kind-31990 event into an [AppHandlerData].
+  /// Parses a kind-31990 event into an [AppHandlerData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 31990.
-  /// Throws [MissingTagException] if the `d` tag is absent.
-  static AppHandlerData parseHandlerInfo(Event event) {
-    if (event.kind != handlerInfoKind) {
-      throw InvalidKindException(event.kind, [handlerInfoKind]);
+  /// Throws [MissingTagException] if the `d` tag is absent and
+  /// [permissive] is false. In permissive mode the missing `d` is
+  /// recorded on [AppHandlerData.missingTags].
+  static AppHandlerData parseHandlerInfo(
+    Event event, {
+    bool permissive = false,
+  }) {
+    if (event.kind != kindHandlerInfo) {
+      throw InvalidKindException(event.kind, [kindHandlerInfo]);
     }
 
+    final missing = <String>{};
     final id = findTagValue(event.tags, 'd');
     if (id == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
     // Parse supported kinds from k tags
@@ -86,19 +110,20 @@ class AppHandler {
       }
     }
 
-    // Parse platform tags — any tag that isn't a known nostr tag type
-    // and has a URL-like value is treated as a platform handler.
+    // Parse platform tags using a positive allowlist. Spec doesn't
+    // enumerate platform names but the convention in the ecosystem is
+    // the set below. Tags outside the list (including any future
+    // standardized Nostr tag) are NOT misclassified as platforms.
     final platforms = <PlatformHandler>[];
-    const reservedTags = {'d', 'k', 'p', 'e', 'a', 't', 'r', 'expiration'};
     for (final tag in event.tags) {
-      if (tag.length > 1 && !reservedTags.contains(tag[0])) {
-        final entityType = tag.length > 2 ? tag[2] : null;
-        platforms.add(PlatformHandler(
-          platform: tag[0],
-          url: tag[1],
-          entityType: entityType,
-        ));
-      }
+      if (tag.length < 2) continue;
+      if (!_knownPlatforms.contains(tag[0])) continue;
+      final entityType = tag.length > 2 ? tag[2] : null;
+      platforms.add(PlatformHandler(
+        platform: tag[0],
+        url: tag[1],
+        entityType: entityType,
+      ));
     }
 
     // Parse metadata from content JSON
@@ -112,12 +137,13 @@ class AppHandler {
     }
 
     return AppHandlerData(
-      id: id,
+      id: id ?? '',
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       supportedKinds: supportedKinds,
       platforms: platforms,
       metadata: metadata,
+      missingTags: missing,
     );
   }
 
@@ -141,28 +167,34 @@ class AppHandler {
     }
 
     return Event.from(
-      kind: handlerRecommendationKind,
+      kind: kindHandlerRecommendation,
       tags: tags,
       content: '',
       secretKey: secretKey,
     );
   }
 
-  /// Decodes a kind-31989 event into a [HandlerRecommendationData].
+  /// Parses a kind-31989 event into a [HandlerRecommendationData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 31989.
-  /// Throws [MissingTagException] if the `d` tag is absent.
-  static HandlerRecommendationData parseRecommendation(Event event) {
-    if (event.kind != handlerRecommendationKind) {
-      throw InvalidKindException(event.kind, [handlerRecommendationKind]);
+  /// Throws [MissingTagException] if the `d` tag is absent and
+  /// [permissive] is false.
+  static HandlerRecommendationData parseRecommendation(
+    Event event, {
+    bool permissive = false,
+  }) {
+    if (event.kind != kindHandlerRecommendation) {
+      throw InvalidKindException(event.kind, [kindHandlerRecommendation]);
     }
 
+    final missing = <String>{};
     final kindStr = findTagValue(event.tags, 'd');
     if (kindStr == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
-    final eventKind = int.tryParse(kindStr);
+    final eventKind = kindStr != null ? int.tryParse(kindStr) : null;
     final handlerCoords = findAllTagValues(event.tags, 'a');
 
     return HandlerRecommendationData(
@@ -170,6 +202,7 @@ class AppHandler {
       createdAt: event.createdAt,
       eventKind: eventKind,
       handlerCoords: handlerCoords,
+      missingTags: missing,
     );
   }
 }
@@ -194,6 +227,13 @@ class AppHandlerData {
   /// Optional NIP-01 style metadata parsed from the content JSON.
   final Map<String, dynamic>? metadata;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-89 requires `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates an [AppHandlerData] with the given fields.
   const AppHandlerData({
     required this.id,
@@ -202,6 +242,7 @@ class AppHandlerData {
     required this.supportedKinds,
     this.platforms = const [],
     this.metadata,
+    this.missingTags = const {},
   });
 }
 
@@ -219,12 +260,20 @@ class HandlerRecommendationData {
   /// Handler coordinates from `a` tags (e.g. "31990:pubkey:handler-id").
   final List<String> handlerCoords;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-89 requires `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [HandlerRecommendationData] with the given fields.
   const HandlerRecommendationData({
     required this.pubkey,
     required this.createdAt,
     required this.handlerCoords,
     this.eventKind,
+    this.missingTags = const {},
   });
 }
 
@@ -251,5 +300,4 @@ class PlatformHandler {
 }
 
 typedef Nip89 = AppHandler;
-typedef AppHandlers = AppHandler;
 typedef HandlerRecommendation = HandlerRecommendationData;

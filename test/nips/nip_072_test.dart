@@ -107,21 +107,79 @@ void main() {
 
     group('community approval', () {
       test('encodes an approval event', () {
+        // Per NIP-72: an approval that references a post via `e` MUST
+        // include the post JSON in content. Build a real event so the
+        // test reflects spec-compliant usage.
+        final post = Event.from(
+          kind: 1,
+          tags: [],
+          content: 'Hi',
+          secretKey: secretKey,
+        );
         final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
-          approvedEventId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          approvedEventId: post.id,
           approvedEventPubkey: moderatorPubkey,
           approvedEventKind: 1,
+          approvedEventJson: post.toJson(),
           secretKey: secretKey,
         );
         expect(event.kind, 4550);
         expect(findTagValue(event.tags, 'a'),
             '34550:$moderatorPubkey:my-community');
-        expect(findTagValue(event.tags, 'e'),
-            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        expect(findTagValue(event.tags, 'e'), post.id);
         expect(findTagValue(event.tags, 'p'), moderatorPubkey);
         expect(findTagValue(event.tags, 'k'), '1');
+      });
+
+      test('approval rejects e-tag form without approvedEventJson', () {
+        expect(
+          () => Nip72.approval(
+            communityCoord: '34550:$moderatorPubkey:my-community',
+            approvedEventId:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            approvedEventPubkey: moderatorPubkey,
+            approvedEventKind: 1,
+            secretKey: secretKey,
+          ),
+          throwsA(isA<NostrException>()),
+        );
+      });
+
+      test('approval accepts addressable post via approvedEventCoord', () {
+        final event = Nip72.approval(
+          communityCoord: '34550:$moderatorPubkey:my-community',
+          approvedEventCoord: '30023:$moderatorPubkey:my-article',
+          approvedEventPubkey: moderatorPubkey,
+          approvedEventKind: 30023,
+          secretKey: secretKey,
+        );
+        final aTags = event.tags.where((t) => t[0] == 'a').toList();
+        expect(aTags, hasLength(2));
+        expect(aTags[1][1], '30023:$moderatorPubkey:my-article');
+        expect(findTagValue(event.tags, 'e'), isNull);
+
+        // Parse round-trip exposes the post coord separately.
+        final approval = Nip72.parseApproval(event);
+        expect(approval.communityCoord, '34550:$moderatorPubkey:my-community');
+        expect(approval.approvedEventCoord,
+            '30023:$moderatorPubkey:my-article');
+        expect(approval.approvedEventId, isNull);
+      });
+
+      test('approval rejects when both e and a-coord are provided', () {
+        expect(
+          () => Nip72.approval(
+            communityCoord: '34550:$moderatorPubkey:my-community',
+            approvedEventId: 'aaaa',
+            approvedEventCoord: '30023:$moderatorPubkey:my-article',
+            approvedEventPubkey: moderatorPubkey,
+            approvedEventKind: 30023,
+            approvedEventJson: '{}',
+            secretKey: secretKey,
+          ),
+          throwsA(isA<NostrException>()),
+        );
       });
 
       test('encodes an approval with embedded event JSON', () {
@@ -143,19 +201,24 @@ void main() {
       });
 
       test('decodes an approval event', () {
+        final post = Event.from(
+          kind: 1111,
+          tags: [],
+          content: 'Comment',
+          secretKey: secretKey,
+        );
         final event = Nip72.approval(
           communityCoord: '34550:$moderatorPubkey:my-community',
-          approvedEventId:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          approvedEventId: post.id,
           approvedEventPubkey: moderatorPubkey,
           approvedEventKind: 1111,
+          approvedEventJson: post.toJson(),
           secretKey: secretKey,
         );
         final approval = Nip72.parseApproval(event);
         expect(approval.communityCoord,
             '34550:$moderatorPubkey:my-community');
-        expect(approval.approvedEventId,
-            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        expect(approval.approvedEventId, post.id);
         expect(approval.approvedEventPubkey, moderatorPubkey);
         expect(approval.approvedEventKind, 1111);
       });
@@ -206,7 +269,7 @@ void main() {
     });
 
     test('typedef ModeratedCommunities works', () {
-      final event = ModeratedCommunities.community(
+      final event = ModeratedCommunity.community(
         id: 'test',
         secretKey: secretKey,
       );

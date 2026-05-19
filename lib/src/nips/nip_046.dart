@@ -11,7 +11,7 @@ import 'package:nostr/nostr.dart';
 /// and `ping`.
 class NostrConnect {
   /// The event kind used for Nostr Connect messages.
-  static const int kind = 24133;
+  static const int kindNostrConnect = 24133;
 
   /// Creates a kind-24133 Nostr Connect event.
   ///
@@ -25,7 +25,7 @@ class NostrConnect {
     required String secretKey,
   }) {
     return Event.from(
-      kind: 24133,
+      kind: kindNostrConnect,
       tags: [
         ['p', targetPubkey],
       ],
@@ -39,8 +39,8 @@ class NostrConnect {
   /// Throws [InvalidKindException] if the event kind is not 24133.
   /// Throws [MissingTagException] if the required `p` tag is absent.
   static NostrConnectData parse(Event event) {
-    if (event.kind != 24133) {
-      throw InvalidKindException(event.kind, [24133]);
+    if (event.kind != kindNostrConnect) {
+      throw InvalidKindException(event.kind, [kindNostrConnect]);
     }
     final targetPubkey = findTagValue(event.tags, 'p');
     if (targetPubkey == null) {

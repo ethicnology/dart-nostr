@@ -6,7 +6,7 @@ import 'package:nostr/nostr.dart';
 /// The client responds with a kind 22242 ephemeral event containing the
 /// challenge and relay URL. The authenticated session is valid for the
 /// remainder of the WebSocket connection.
-class Auth {
+class RelayAuth {
   /// Event kind for authentication.
   static const int kindAuth = 22242;
 
@@ -39,16 +39,23 @@ class Auth {
 
   /// Validates an authentication event per NIP-42 spec.
   ///
-  /// Checks all 4 conditions:
-  /// 1. kind is 22242
-  /// 2. created_at is within ~10 minutes of current time
-  /// 3. challenge tag matches
-  /// 4. relay tag matches
+  /// Checks (in order):
+  /// 1. Event id + Schnorr signature are valid for the claimed pubkey
+  /// 2. kind is 22242
+  /// 3. created_at is within ~10 minutes of current time
+  /// 4. challenge tag matches
+  /// 5. relay tag matches
+  ///
+  /// The signature check is defense in depth: NIP-42 doesn't list it in
+  /// the relay's per-spec checks (NIP-01 covers signature for any event),
+  /// but a relay that calls `validate` without independent verification
+  /// would otherwise accept forged events. Mirrors NIP-98's pattern.
   static bool validate({
     required Event event,
     required String relayUrl,
     required String challenge,
   }) {
+    if (!event.isValid()) return false;
     if (event.kind != kindAuth) return false;
 
     // Timestamp must be within ~10 minutes
@@ -66,4 +73,4 @@ class Auth {
   }
 }
 
-typedef Nip42 = Auth;
+typedef Nip42 = RelayAuth;

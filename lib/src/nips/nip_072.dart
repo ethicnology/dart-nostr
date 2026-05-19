@@ -12,10 +12,10 @@ import 'package:nostr/nostr.dart';
 /// JSON-stringified approved event.
 class ModeratedCommunity {
   /// Kind for community definition events.
-  static const int communityKind = 34550;
+  static const int kindCommunity = 34550;
 
   /// Kind for community approval events.
-  static const int approvalKind = 4550;
+  static const int kindApproval = 4550;
 
   /// Creates a kind-34550 community definition event.
   ///
@@ -76,25 +76,32 @@ class ModeratedCommunity {
     }
 
     return Event.from(
-      kind: communityKind,
+      kind: kindCommunity,
       tags: tags,
       content: '',
       secretKey: secretKey,
     );
   }
 
-  /// Decodes a kind-34550 event into a [CommunityData].
+  /// Parses a kind-34550 event into a [CommunityData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 34550.
-  /// Throws [MissingTagException] if the `d` tag is absent.
-  static CommunityData parseCommunity(Event event) {
-    if (event.kind != communityKind) {
-      throw InvalidKindException(event.kind, [communityKind]);
+  /// Throws [MissingTagException] if the `d` tag is absent and
+  /// [permissive] is false. In permissive mode missing `d` is recorded
+  /// on [CommunityData.missingTags].
+  static CommunityData parseCommunity(
+    Event event, {
+    bool permissive = false,
+  }) {
+    if (event.kind != kindCommunity) {
+      throw InvalidKindException(event.kind, [kindCommunity]);
     }
 
+    final missing = <String>{};
     final id = findTagValue(event.tags, 'd');
     if (id == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
     final name = findTagValue(event.tags, 'name');
@@ -137,7 +144,7 @@ class ModeratedCommunity {
     }
 
     return CommunityData(
-      id: id,
+      id: id ?? '',
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       name: name,
@@ -147,6 +154,7 @@ class ModeratedCommunity {
       rules: rules,
       moderators: moderators,
       relays: relays,
+      missingTags: missing,
     );
   }
 
@@ -154,25 +162,47 @@ class ModeratedCommunity {
   ///
   /// [communityCoord] is the community `a` tag coordinate
   /// (e.g. "34550:pubkey:community-id").
-  /// [approvedEventId] is the event ID of the approved post.
+  /// [approvedEventId] is the event ID of the approved post (regular
+  /// events). For addressable posts use [approvedEventCoord] instead.
+  /// [approvedEventCoord] is the `a`-tag coordinate of the approved post
+  /// (addressable posts).
   /// [approvedEventPubkey] is the public key of the approved post author.
   /// [approvedEventKind] is the kind of the approved post.
-  /// [secretKey] is the hex-encoded secret key used to sign the event.
-  /// [approvedEventJson] is the optional JSON-stringified approved event
-  /// to include in the content.
+  /// [approvedEventJson] is the JSON-stringified approved event to include
+  /// in the content. Spec MUST when referencing the post via an `e` tag
+  /// ("content of an approval using an `e` tag MUST have the specific
+  /// version of the post"). Optional when referencing via [approvedEventCoord].
+  ///
+  /// Throws [NostrException] if neither (or both) of [approvedEventId] /
+  /// [approvedEventCoord] is provided, or if [approvedEventId] is set
+  /// without [approvedEventJson].
   static Event approval({
     required String communityCoord,
-    required String approvedEventId,
     required String approvedEventPubkey,
     required int approvedEventKind,
     required String secretKey,
+    String? approvedEventId,
+    String? approvedEventCoord,
     String? approvedEventJson,
   }) {
+    final hasE = approvedEventId != null;
+    final hasA = approvedEventCoord != null;
+    if (!hasE && !hasA) {
+      throw ApprovalScopeException(ApprovalScopeReason.noTarget);
+    }
+    if (hasE && hasA) {
+      throw ApprovalScopeException(ApprovalScopeReason.bothTargets);
+    }
+    if (hasE && (approvedEventJson == null || approvedEventJson.isEmpty)) {
+      throw ApprovalScopeException(ApprovalScopeReason.missingEventJson);
+    }
+
     return Event.from(
-      kind: approvalKind,
+      kind: kindApproval,
       tags: [
         ['a', communityCoord],
-        ['e', approvedEventId],
+        if (hasE) ['e', approvedEventId],
+        if (hasA) ['a', approvedEventCoord],
         ['p', approvedEventPubkey],
         ['k', approvedEventKind.toString()],
       ],
@@ -181,19 +211,32 @@ class ModeratedCommunity {
     );
   }
 
-  /// Decodes a kind-4550 event into a [CommunityApprovalData].
+  /// Parses a kind-4550 event into a [CommunityApprovalData].
+  ///
+  /// The community is identified by the first `a` tag (coordinate of the
+  /// kind-34550 definition). The approved post is referenced by either:
+  /// - an `e` tag (regular events), or
+  /// - a second `a` tag (addressable events).
   ///
   /// Throws [InvalidKindException] if the event kind is not 4550.
-  /// Throws [MissingTagException] if the `a` tag is absent.
-  static CommunityApprovalData parseApproval(Event event) {
-    if (event.kind != approvalKind) {
-      throw InvalidKindException(event.kind, [approvalKind]);
+  /// Throws [MissingTagException] if the community `a` tag is absent
+  /// and [permissive] is false.
+  static CommunityApprovalData parseApproval(
+    Event event, {
+    bool permissive = false,
+  }) {
+    if (event.kind != kindApproval) {
+      throw InvalidKindException(event.kind, [kindApproval]);
     }
 
-    final communityCoord = findTagValue(event.tags, 'a');
-    if (communityCoord == null) {
-      throw MissingTagException('a');
+    final missing = <String>{};
+    final aTags = findAllTagValues(event.tags, 'a');
+    if (aTags.isEmpty) {
+      if (!permissive) throw MissingTagException('a');
+      missing.add('a');
     }
+    final communityCoord = aTags.isNotEmpty ? aTags.first : '';
+    final approvedEventCoord = aTags.length > 1 ? aTags[1] : null;
 
     final approvedEventId = findTagValue(event.tags, 'e');
     final approvedEventPubkey = findTagValue(event.tags, 'p');
@@ -202,14 +245,16 @@ class ModeratedCommunity {
         ? int.tryParse(approvedEventKindStr)
         : null;
 
-    // Try to parse the approved event from content
+    // Try to parse the approved event from content. Verification is off
+    // because this is a third-party event copy; callers that need integrity
+    // should re-verify out of band.
     Event? approvedEvent;
     if (event.content.isNotEmpty) {
       try {
         final map = json.decode(event.content) as Map<String, dynamic>;
         approvedEvent = Event.fromMap(map, verify: false);
       } on Exception catch (_) {
-        // If parsing fails, leave approvedEvent as null
+        // Leave approvedEvent null when content isn't a parseable event.
       }
     }
 
@@ -219,9 +264,11 @@ class ModeratedCommunity {
       createdAt: event.createdAt,
       communityCoord: communityCoord,
       approvedEventId: approvedEventId,
+      approvedEventCoord: approvedEventCoord,
       approvedEventPubkey: approvedEventPubkey,
       approvedEventKind: approvedEventKind,
       approvedEvent: approvedEvent,
+      missingTags: missing,
     );
   }
 }
@@ -258,6 +305,13 @@ class CommunityData {
   /// Preferred relays from `relay` tags, with optional markers.
   final List<CommunityRelay> relays;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-72: `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [CommunityData] with the given fields.
   const CommunityData({
     required this.id,
@@ -270,6 +324,7 @@ class CommunityData {
     this.rules,
     this.moderators = const [],
     this.relays = const [],
+    this.missingTags = const {},
   });
 }
 
@@ -321,8 +376,13 @@ class CommunityApprovalData {
   /// The community coordinate from the `a` tag (e.g. "34550:pubkey:id").
   final String communityCoord;
 
-  /// The approved event's ID from the `e` tag, if present.
+  /// The approved event's ID from the `e` tag, if the post is a regular
+  /// event.
   final String? approvedEventId;
+
+  /// The approved event's `a`-tag coordinate, if the post is addressable.
+  /// Distinct from [communityCoord] (which is always the first `a` tag).
+  final String? approvedEventCoord;
 
   /// The approved event author's pubkey from the `p` tag, if present.
   final String? approvedEventPubkey;
@@ -333,6 +393,13 @@ class CommunityApprovalData {
   /// The parsed approved event from content, if valid JSON was provided.
   final Event? approvedEvent;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-72: `a`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [CommunityApprovalData] with the given fields.
   const CommunityApprovalData({
     required this.id,
@@ -340,13 +407,14 @@ class CommunityApprovalData {
     required this.createdAt,
     required this.communityCoord,
     this.approvedEventId,
+    this.approvedEventCoord,
     this.approvedEventPubkey,
     this.approvedEventKind,
     this.approvedEvent,
+    this.missingTags = const {},
   });
 }
 
 typedef Nip72 = ModeratedCommunity;
-typedef ModeratedCommunities = ModeratedCommunity;
 typedef Community = CommunityData;
 typedef CommunityApproval = CommunityApprovalData;

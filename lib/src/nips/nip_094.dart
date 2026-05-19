@@ -87,20 +87,40 @@ class FileMetadata {
   /// Parses a kind-1063 event into a [FileMetadataData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 1063.
-  /// Throws [MissingTagException] if `url`, `m`, or `x` tags are absent.
-  static FileMetadataData parse(Event event) {
+  /// Throws [MissingTagException] if `url`, `m`, or `x` tags are absent
+  /// (and [permissive] is false).
+  ///
+  /// When [permissive] is true, missing required tags don't throw —
+  /// instead the corresponding field defaults to the empty string and
+  /// the tag name is recorded in [FileMetadataData.missingTags]. Use
+  /// [FileMetadataData.isComplete] to test whether the data is
+  /// trustworthy. ~31% of kind-1063 events on public relays are missing
+  /// at least one required tag, so permissive mode is useful for
+  /// best-effort timeline display.
+  static FileMetadataData parse(Event event, {bool permissive = false}) {
     if (event.kind != kindFileMetadata) {
       throw InvalidKindException(event.kind, [kindFileMetadata]);
     }
 
+    final missing = <String>{};
+
     final url = findTagValue(event.tags, 'url');
-    if (url == null) throw MissingTagException('url');
+    if (url == null) {
+      if (!permissive) throw MissingTagException('url');
+      missing.add('url');
+    }
 
     final mimeType = findTagValue(event.tags, 'm');
-    if (mimeType == null) throw MissingTagException('m');
+    if (mimeType == null) {
+      if (!permissive) throw MissingTagException('m');
+      missing.add('m');
+    }
 
     final sha256 = findTagValue(event.tags, 'x');
-    if (sha256 == null) throw MissingTagException('x');
+    if (sha256 == null) {
+      if (!permissive) throw MissingTagException('x');
+      missing.add('x');
+    }
 
     // Parse thumb and image tags (may have a second element with SHA-256)
     ({String url, String? sha256})? thumb;
@@ -122,9 +142,9 @@ class FileMetadata {
     final sizeStr = findTagValue(event.tags, 'size');
 
     return FileMetadataData(
-      url: url,
-      mimeType: mimeType,
-      sha256: sha256,
+      url: url ?? '',
+      mimeType: mimeType ?? '',
+      sha256: sha256 ?? '',
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       content: event.content,
@@ -140,6 +160,7 @@ class FileMetadata {
       alt: findTagValue(event.tags, 'alt'),
       fallback: fallback,
       service: findTagValue(event.tags, 'service'),
+      missingTags: missing,
     );
   }
 }
@@ -200,6 +221,16 @@ class FileMetadataData {
   /// Unix timestamp of the event.
   final int createdAt;
 
+  /// Names of spec-required tags that were absent when this data was
+  /// parsed in permissive mode. Empty in strict mode (strict throws
+  /// before construction).
+  ///
+  /// For NIP-94: `'url'`, `'m'`, `'x'`.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [FileMetadataData].
   const FileMetadataData({
     required this.url,
@@ -220,6 +251,7 @@ class FileMetadataData {
     this.alt,
     this.fallback = const [],
     this.service,
+    this.missingTags = const {},
   });
 }
 

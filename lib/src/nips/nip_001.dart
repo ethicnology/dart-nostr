@@ -9,6 +9,12 @@ import 'package:nostr/nostr.dart';
 /// 1: text_note: the content is set to the plaintext content of a note
 /// (anything the user wants to say).
 class Note {
+  /// Event kind for user metadata (`set_metadata`).
+  static const int kindMetadata = 0;
+
+  /// Event kind for a short text note.
+  static const int kindShortNote = 1;
+
   /// Creates a kind-0 set_metadata event.
   ///
   /// [content] is a JSON-stringified object with `name`, `about`, `picture`.
@@ -18,7 +24,7 @@ class Note {
     required String secretKey,
   }) {
     return Event.from(
-      kind: 0,
+      kind: kindMetadata,
       tags: [],
       content: content,
       secretKey: secretKey,
@@ -72,7 +78,7 @@ class Note {
       }
     }
 
-    return Event.from(kind: 1, tags: tags, content: content, secretKey: secretKey);
+    return Event.from(kind: kindShortNote, tags: tags, content: content, secretKey: secretKey);
   }
 
   /// Extracts hashtag values from event tags.
@@ -92,23 +98,30 @@ class Note {
     return findTagValue(tags, 'h');
   }
 
-  /// Parses a kind 1, 11, or 12 event into a [NoteData].
+  /// Parses a kind 1 short text note, or kind 11 / 12 NIP-29 group
+  /// thread root / reply, into a [NoteData].
   ///
-  /// Throws [InvalidKindException] if the event kind is not 1, 11, or 12.
+  /// Throws [InvalidKindException] if the event kind is not one of these.
   static NoteData parse(Event event) {
-    if (event.kind == 1 || event.kind == 11 || event.kind == 12) {
+    if (event.kind == kindShortNote ||
+        event.kind == Group.kindGroupThreadRoot ||
+        event.kind == Group.kindGroupThreadReply) {
       return NoteData(
         id: event.id,
         pubkey: event.pubkey,
         createdAt: event.createdAt,
-        thread: Nip10.fromTags(event.tags),
+        thread: Nip10.parseTags(event.tags),
         content: event.content,
         hashTags: extractHashTags(event.tags),
         quoteRepostId: quoteRepostId(event.tags),
         groupId: groupId(event.tags),
       );
     }
-    throw InvalidKindException(event.kind, [1, 11, 12]);
+    throw InvalidKindException(event.kind, [
+      kindShortNote,
+      Group.kindGroupThreadRoot,
+      Group.kindGroupThreadReply,
+    ]);
   }
 }
 

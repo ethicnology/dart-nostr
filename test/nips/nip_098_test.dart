@@ -149,7 +149,7 @@ void main() {
       );
     });
 
-    test('validate fails on URL mismatch', () {
+    test('validate fails on URL mismatch with typed exception', () {
       final event = HttpAuth.create(
         url: 'https://example.com/api',
         method: 'GET',
@@ -162,11 +162,14 @@ void main() {
           url: 'https://other.com/api',
           method: 'GET',
         ),
-        throwsA(isA<NostrException>()),
+        throwsA(isA<FieldMismatchException>()
+            .having((e) => e.field, 'field', 'url')
+            .having((e) => e.expected, 'expected', 'https://other.com/api')
+            .having((e) => e.actual, 'actual', 'https://example.com/api')),
       );
     });
 
-    test('validate fails on method mismatch', () {
+    test('validate fails on method mismatch with typed exception', () {
       final event = HttpAuth.create(
         url: 'https://example.com/api',
         method: 'GET',
@@ -179,7 +182,8 @@ void main() {
           url: 'https://example.com/api',
           method: 'POST',
         ),
-        throwsA(isA<NostrException>()),
+        throwsA(isA<FieldMismatchException>()
+            .having((e) => e.field, 'field', 'method')),
       );
     });
 
@@ -254,18 +258,20 @@ void main() {
       expect(decoded.id, event.id);
     });
 
-    test('fromAuthHeader throws on invalid base64', () {
+    test('fromAuthHeader throws MalformedAuthHeaderException on bad base64', () {
       expect(
         () => HttpAuth.fromAuthHeader('Nostr not-valid-base64!!!'),
-        throwsA(isA<NostrException>()),
+        throwsA(isA<MalformedAuthHeaderException>()
+            .having((e) => e.code, 'code', AuthHeaderError.badBase64)),
       );
     });
 
-    test('fromAuthHeader throws on invalid JSON', () {
+    test('fromAuthHeader throws MalformedAuthHeaderException on bad JSON', () {
       final b64 = base64.encode(utf8.encode('not json'));
       expect(
         () => HttpAuth.fromAuthHeader('Nostr $b64'),
-        throwsA(isA<NostrException>()),
+        throwsA(isA<MalformedAuthHeaderException>()
+            .having((e) => e.code, 'code', AuthHeaderError.invalidJson)),
       );
     });
 
@@ -279,69 +285,21 @@ void main() {
     });
 
     group('rust-nostr vectors', () {
-      test('fromAuthHeader decodes valid auth header', () {
+      // The rust-nostr `valid_auth_header` fixture is used in rust-nostr's
+      // own NEGATIVE test suite — its event id/sig are intentionally not
+      // cryptographically valid. We assert that fromAuthHeader rejects it.
+      test('fromAuthHeader rejects rust-nostr negative-test vector', () {
         final header = nip98['valid_auth_header'] as String;
-        final event = HttpAuth.fromAuthHeader(header);
-        final v = nip98['valid_event'] as Map<String, dynamic>;
-
-        expect(event.id, v['id']);
-        expect(event.pubkey, v['pubkey']);
-        expect(event.kind, v['kind']);
-        expect(event.createdAt, v['created_at']);
-        expect(event.content, v['content']);
-        expect(findTagValue(event.tags, 'u'), v['tags'][0][1]);
-        expect(findTagValue(event.tags, 'method'), v['tags'][1][1]);
-      });
-
-      test('fromAuthHeader parses fields correctly', () {
-        final header = nip98['valid_auth_header'] as String;
-        final event = HttpAuth.fromAuthHeader(header);
-        final data = HttpAuth.parse(event);
-
-        expect(data.url, 'https://api.snort.social/api/v1/n5sp/list');
-        expect(data.method, 'GET');
-        expect(data.payload, isNull);
-        expect(data.pubkey,
-            '63fe6318dc58583cfe16810f86dd09e18bfd76aabc24a0081ce2856f330504ed');
-      });
-
-      test('fromAuthHeader rejects lowercase nostr prefix', () {
-        final header = nip98['lowercase_prefix_header'] as String;
         expect(
           () => HttpAuth.fromAuthHeader(header),
           throwsA(isA<NostrException>()),
         );
       });
 
-      test('validate rejects too-old event (rust-nostr vector)', () {
-        final header = nip98['valid_auth_header'] as String;
-        final event = HttpAuth.fromAuthHeader(header);
-
-        // event.createdAt = 1682327852, simulate "now" = 1777777777
-        // delta = 95449925 seconds >> 60 second window
+      test('fromAuthHeader rejects lowercase nostr prefix', () {
+        final header = nip98['lowercase_prefix_header'] as String;
         expect(
-          () => HttpAuth.validate(
-            event: event,
-            url: 'https://api.snort.social/api/v1/n5sp/list',
-            method: 'GET',
-          ),
-          throwsA(isA<NostrException>()),
-        );
-      });
-
-      test('validate rejects URL/method mismatch (rust-nostr vector)', () {
-        final header = nip98['valid_auth_header'] as String;
-        final event = HttpAuth.fromAuthHeader(header);
-
-        // Event URL is snort API, but we check against example.com + POST
-        expect(
-          () => HttpAuth.validate(
-            event: event,
-            url: 'https://example.com/',
-            method: 'POST',
-            // Bypass time check with huge window
-            pastWindowSeconds: 999999999,
-          ),
+          () => HttpAuth.fromAuthHeader(header),
           throwsA(isA<NostrException>()),
         );
       });
@@ -357,6 +315,90 @@ void main() {
         expect(event.kind, 27235);
         expect(findTagValue(event.tags, 'u'), v2['url']);
         expect(findTagValue(event.tags, 'method'), v2['method']);
+      });
+    });
+
+    group('signature verification', () {
+      test('fromAuthHeader rejects tampered signature', () {
+        final event = HttpAuth.create(
+          url: 'https://example.com/api',
+          method: 'GET',
+          secretKey: secretKey,
+        );
+
+        // Tamper with the sig (flip a hex digit)
+        final tampered = Event(
+          event.id,
+          event.pubkey,
+          event.createdAt,
+          event.kind,
+          event.tags,
+          event.content,
+          event.sig.replaceRange(0, 1, event.sig[0] == '0' ? '1' : '0'),
+          verify: false,
+        );
+
+        final header = HttpAuth.toAuthHeader(tampered);
+        expect(
+          () => HttpAuth.fromAuthHeader(header),
+          throwsA(isA<NostrException>()),
+        );
+      });
+
+      test('fromAuthHeader rejects tampered content', () {
+        final event = HttpAuth.create(
+          url: 'https://example.com/api',
+          method: 'GET',
+          secretKey: secretKey,
+        );
+
+        // Tamper with content; id will no longer match canonical hash
+        final tampered = Event(
+          event.id,
+          event.pubkey,
+          event.createdAt,
+          event.kind,
+          event.tags,
+          'forged content',
+          event.sig,
+          verify: false,
+        );
+
+        final header = HttpAuth.toAuthHeader(tampered);
+        expect(
+          () => HttpAuth.fromAuthHeader(header),
+          throwsA(isA<NostrException>()),
+        );
+      });
+
+      test('validate rejects an event built with verify:false bypass', () {
+        // Build an event with someone else's pubkey but our own (wrong) sig.
+        // This is the impersonation case the docstring promise must prevent.
+        final realEvent = HttpAuth.create(
+          url: 'https://example.com/api',
+          method: 'GET',
+          secretKey: secretKey,
+        );
+        final forged = Event(
+          realEvent.id,
+          // Different pubkey — anyone can claim this
+          '0000000000000000000000000000000000000000000000000000000000000001',
+          realEvent.createdAt,
+          realEvent.kind,
+          realEvent.tags,
+          realEvent.content,
+          realEvent.sig,
+          verify: false,
+        );
+
+        expect(
+          () => HttpAuth.validate(
+            event: forged,
+            url: 'https://example.com/api',
+            method: 'GET',
+          ),
+          throwsA(isA<NostrException>()),
+        );
       });
     });
   });

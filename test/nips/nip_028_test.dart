@@ -25,6 +25,50 @@ void main() {
       expect(channel.owner, event.pubkey);
     });
 
+    test('parseChannel handles spec-defined relays array', () {
+      // Per NIP-28, kind-40 content may include a `relays` array alongside
+      // name/about/picture. Pre-fix this crashed with TypeError on the
+      // Map<String, String>.from cast.
+      const json ='{"name":"hi","about":"","picture":"","relays":["wss://a","wss://b"]}';
+      final event = Event.from(
+        kind: 40,
+        tags: [],
+        content: json,
+        secretKey: secretKey,
+      );
+      final channel = PublicChat.parseChannel(event);
+      expect(channel.name, 'hi');
+      expect(channel.relays, ['wss://a', 'wss://b']);
+      expect(channel.additional, isEmpty);
+    });
+
+    test('channel emits relays array when provided', () {
+      final event = PublicChat.channel(
+        name: 'n',
+        about: '',
+        picture: '',
+        relays: ['wss://x'],
+        secretKey: secretKey,
+      );
+      final channel = PublicChat.parseChannel(event);
+      expect(channel.relays, ['wss://x']);
+    });
+
+    test('parseChannel silently drops non-string additional values', () {
+      // Forward-compat: a future client may add a structured field; we
+      // keep only string-typed fields in `additional` and don't crash.
+      const json ='{"name":"x","about":"","picture":"","verified":true,"score":42}';
+      final event = Event.from(
+        kind: 40,
+        tags: [],
+        content: json,
+        secretKey: secretKey,
+      );
+      final channel = PublicChat.parseChannel(event);
+      expect(channel.name, 'x');
+      expect(channel.additional, isEmpty);
+    });
+
     test('channelMetadata includes root marker in e tag', () {
       final event = PublicChat.channelMetadata(
         name: 'name',

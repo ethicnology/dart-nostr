@@ -92,7 +92,9 @@ void main() {
       );
     });
 
-    test('decode handles missing optional fields', () {
+    test('decode throws on missing required tags', () {
+      // Spec MUST: K, k, plus at least one root-scope (E/A/I) and one
+      // parent (e/a/i). A bare event must be rejected.
       final event = Event.partial(
         kind: 1111,
         pubkey:
@@ -101,14 +103,24 @@ void main() {
         tags: [],
         content: 'A bare comment.',
       );
+      expect(() => Nip22.parse(event), throwsA(isA<MissingTagException>()));
+    });
 
-      final comment = Nip22.parse(event);
-
-      expect(comment.rootId, isNull);
-      expect(comment.rootKind, isNull);
-      expect(comment.parentId, isNull);
-      expect(comment.parentKind, isNull);
-      expect(comment.content, 'A bare comment.');
+    test('decode throws when K tag missing', () {
+      final event = Event.partial(
+        kind: 1111,
+        pubkey:
+            'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
+        createdAt: 1700000000,
+        tags: [
+          ['E', 'root-id'],
+          ['e', 'parent-id'],
+          ['k', '1'],
+          // K is missing
+        ],
+        content: 'comment',
+      );
+      expect(() => Nip22.parse(event), throwsA(isA<MissingTagException>()));
     });
 
     test('encode comment on event', () {

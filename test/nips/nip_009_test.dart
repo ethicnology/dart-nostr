@@ -45,7 +45,7 @@ void main() {
   });
 
   test('encode creates a valid deletion event with e tags only', () {
-    final event = Nip9.request(eventIds: ["event1", "event2"], content: "Reason", secretKey: secretKey);
+    final event = Nip9.create(eventIds: ["event1", "event2"], content: "Reason", secretKey: secretKey);
     expect(event.kind, equals(5));
     expect(event.tags, equals([["e", "event1"], ["e", "event2"]]));
     expect(event.content, equals("Reason"));
@@ -53,7 +53,7 @@ void main() {
 
   test('encode supports a tags and k tags', () {
     const coord = "30023:$pubkey:my-post";
-    final event = Nip9.request(
+    final event = Nip9.create(
       eventIds: ["event1"],
       content: "Reason",
       secretKey: secretKey,
@@ -90,7 +90,7 @@ void main() {
     final vectors = json.decode(
         File('test/fixtures/rust_nostr_vectors.json').readAsStringSync());
     final nip09 = vectors['nip09'];
-    final event = Nip9.request(
+    final event = Nip9.create(
       eventIds: [nip09['event_id']],
       addressableCoords: [nip09['coordinate']],
       content: nip09['reason'],

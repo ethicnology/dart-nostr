@@ -9,14 +9,14 @@ Future<void> main() async {
   final ciphertext = await Nip44.encrypt(
     plaintext: 'Secret message for Bob',
     senderSecretKey: alice,
-    recipientPublicKey: Keys(bob).public,
+    recipientPubkey: Keys(bob).public,
   );
   print('Encrypted: $ciphertext');
 
   final plaintext = await Nip44.decrypt(
     payload: ciphertext,
     recipientSecretKey: bob,
-    senderPublicKey: Keys(alice).public,
+    senderPubkey: Keys(alice).public,
   );
   assert(plaintext == 'Secret message for Bob');
   print('Decrypted: $plaintext');

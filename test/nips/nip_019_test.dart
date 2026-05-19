@@ -118,4 +118,73 @@ void main() {
     expect(y,
         'nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhhytnc9e3k7mgpz4mhxue69uhkg6nzv9ejuumpv34kytnrdaksjlyr9p');
   });
+
+  group('naddr UTF-8 round-trip', () {
+    // NIP-19 leaves the byte encoding for naddr type-0 unspecified, but
+    // rust-nostr (`identifier.as_bytes()` on a Rust String) and nostr-tools
+    // (`utf8Encoder.encode(addr.identifier)`) both use UTF-8. These tests
+    // confirm dart-nostr matches that choice so naddr round-trips across
+    // implementations.
+
+    const author =
+        '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+    const kind = 30023;
+
+    test('ASCII identifier round-trips', () {
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: 'my-article-slug',
+        author: author,
+        kind: kind,
+      );
+      final decoded = Nip19.decodeShareableIdentifiers(payload: encoded);
+      expect(decoded.data, 'my-article-slug');
+      expect(decoded.author, author);
+      expect(decoded.kind, kind);
+    });
+
+    test('Latin-1 identifier (café) round-trips', () {
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: 'café',
+        author: author,
+        kind: kind,
+      );
+      final decoded = Nip19.decodeShareableIdentifiers(payload: encoded);
+      expect(decoded.data, 'café');
+    });
+
+    test('CJK identifier round-trips', () {
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: '日本',
+        author: author,
+        kind: kind,
+      );
+      final decoded = Nip19.decodeShareableIdentifiers(payload: encoded);
+      expect(decoded.data, '日本');
+    });
+
+    test('emoji identifier round-trips', () {
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: 'fire-🔥',
+        author: author,
+        kind: kind,
+      );
+      final decoded = Nip19.decodeShareableIdentifiers(payload: encoded);
+      expect(decoded.data, 'fire-🔥');
+    });
+
+    test('empty identifier (normal replaceable event) round-trips', () {
+      final encoded = Nip19.encodeShareableIdentifiers(
+        prefix: Nip19Prefix.naddr,
+        data: '',
+        author: author,
+        kind: kind,
+      );
+      final decoded = Nip19.decodeShareableIdentifiers(payload: encoded);
+      expect(decoded.data, '');
+    });
+  });
 }

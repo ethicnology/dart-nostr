@@ -5,6 +5,9 @@ import 'package:nostr/nostr.dart';
 /// A kind 10002 replaceable event advertising a user's preferred relays
 /// with optional read/write markers.
 class RelayList {
+  /// Event kind for relay list metadata.
+  static const int kindRelayList = 10002;
+
   /// Creates a kind 10002 relay list event.
   ///
   /// Each [RelayMetadataData] entry becomes an `r` tag:
@@ -22,7 +25,7 @@ class RelayList {
     }).toList();
 
     return Event.from(
-      kind: 10002,
+      kind: kindRelayList,
       tags: tags,
       content: '',
       secretKey: secretKey,
@@ -31,21 +34,29 @@ class RelayList {
 
   /// Decodes a kind 10002 event into a list of [RelayMetadataData].
   ///
+  /// Per NIP-65: when the marker is omitted, the relay is both read and
+  /// write. Unknown markers fall back to the same default rather than
+  /// silently dropping the relay — spec says "If the marker is omitted,
+  /// the relay is used for both purposes" without prescribing what to do
+  /// with malformed markers, so we keep the relay rather than lose it.
+  ///
   /// Throws [InvalidKindException] if the event is not kind 10002.
   static List<RelayMetadataData> parse(Event event) {
-    if (event.kind != 10002) {
-      throw InvalidKindException(event.kind, [10002]);
+    if (event.kind != kindRelayList) {
+      throw InvalidKindException(event.kind, [kindRelayList]);
     }
     final List<RelayMetadataData> relays = [];
     for (final tag in event.tags) {
-      if (tag[0] != 'r' || tag.length < 2) continue;
+      if (tag.length < 2 || tag[0] != 'r') continue;
       final url = tag[1];
-      if (tag.length == 2) {
-        relays.add(RelayMetadataData(url: url, read: true, write: true));
-      } else if (tag[2] == 'read') {
-        relays.add(RelayMetadataData(url: url, read: true, write: false));
-      } else if (tag[2] == 'write') {
-        relays.add(RelayMetadataData(url: url, read: false, write: true));
+      final marker = tag.length > 2 ? tag[2] : '';
+      switch (marker) {
+        case 'read':
+          relays.add(RelayMetadataData(url: url, read: true, write: false));
+        case 'write':
+          relays.add(RelayMetadataData(url: url, read: false, write: true));
+        default:
+          relays.add(RelayMetadataData(url: url, read: true, write: true));
       }
     }
     return relays;

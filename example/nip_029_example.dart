@@ -12,7 +12,7 @@ void main() {
     content: 'Hello group!',
   );
 
-  final msg = Nip29.parse(event);
+  final msg = Nip29.parseMessage(event);
   assert(msg.groupId == 'my-group');
   assert(msg.content == 'Hello group!');
   print('Group message in ${msg.groupId}: ${msg.content}');

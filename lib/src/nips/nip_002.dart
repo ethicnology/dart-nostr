@@ -4,21 +4,24 @@ import 'package:nostr/nostr.dart';
 ///
 /// A kind 3 event with a list of p tags representing the followed profiles.
 class FollowList {
+  /// Event kind for follow lists.
+  static const int kindFollowList = 3;
+
   /// Parses the profiles from a follow list event (kind=3).
   ///
   /// Throws [InvalidKindException] if the event kind is not 3.
   static List<ProfileData> parse(Event event) {
-    if (event.kind == 3) {
+    if (event.kind == kindFollowList) {
       return toProfiles(event.tags);
     }
-    throw InvalidKindException(event.kind, [3]);
+    throw InvalidKindException(event.kind, [kindFollowList]);
   }
 
   /// Returns profiles from event.tags.
   static List<ProfileData> toProfiles(List<List<String>> tags) {
     final List<ProfileData> result = [];
     for (final tag in tags) {
-      if (tag[0] == "p" && tag.length >= 2) {
+      if (tag.length >= 2 && tag[0] == "p") {
         result.add(ProfileData(
           pubkey: tag[1],
           relay: tag.length > 2 ? tag[2] : '',
@@ -40,7 +43,7 @@ class FollowList {
     String content = '',
   }) {
     return Event.from(
-      kind: 3,
+      kind: kindFollowList,
       tags: toTags(profiles),
       content: content,
       secretKey: secretKey,

@@ -74,31 +74,53 @@ class Comment {
 
   /// Parses a kind-1111 event into a [CommentData].
   ///
+  /// Per NIP-22 spec: tags `K` and `k` MUST be present. Root scope MUST
+  /// be identified by exactly one of uppercase `E`/`A`/`I`, parent by
+  /// exactly one of lowercase `e`/`a`/`i`.
+  ///
   /// Throws [InvalidKindException] if the event kind is not 1111.
-  static CommentData parse(Event event) {
+  /// Throws [MissingTagException] (in strict mode, default) if required
+  /// `K`/`k` (or root/parent scope tags) are absent. In permissive mode
+  /// missing tags are recorded on [CommentData.missingTags] instead.
+  static CommentData parse(Event event, {bool permissive = false}) {
     if (event.kind != kindComment) {
       throw InvalidKindException(event.kind, [kindComment]);
     }
 
-    // Root scope: uppercase E, A, or I
+    final missing = <String>{};
+
+    // Root scope: uppercase E, A, or I (at least one required)
     final rootEventId = findTagValue(event.tags, 'E');
     final rootCoordinate = findTagValue(event.tags, 'A');
     final rootExternalId = findTagValue(event.tags, 'I');
+    final String? rootId = rootEventId ?? rootCoordinate ?? rootExternalId;
+    if (rootId == null) {
+      if (!permissive) throw MissingTagException('E/A/I');
+      missing.add('E/A/I');
+    }
 
-    // Parent: lowercase e, a, or i
+    // Parent: lowercase e, a, or i (at least one required)
     final parentEventId = findTagValue(event.tags, 'e');
     final parentCoordinate = findTagValue(event.tags, 'a');
     final parentExternalId = findTagValue(event.tags, 'i');
+    final String? parentId =
+        parentEventId ?? parentCoordinate ?? parentExternalId;
+    if (parentId == null) {
+      if (!permissive) throw MissingTagException('e/a/i');
+      missing.add('e/a/i');
+    }
 
-    // Root/parent kind
+    // Root/parent kind: spec MUST
     final rootKindStr = findTagValue(event.tags, 'K');
+    if (rootKindStr == null) {
+      if (!permissive) throw MissingTagException('K');
+      missing.add('K');
+    }
     final parentKindStr = findTagValue(event.tags, 'k');
-
-    // Determine root ID (first non-null of E, A, I)
-    final String? rootId = rootEventId ?? rootCoordinate ?? rootExternalId;
-
-    // Determine parent ID (first non-null of e, a, i)
-    final String? parentId = parentEventId ?? parentCoordinate ?? parentExternalId;
+    if (parentKindStr == null) {
+      if (!permissive) throw MissingTagException('k');
+      missing.add('k');
+    }
 
     // Determine root/parent pubkeys from uppercase/lowercase P tags
     final rootPubkey = findTagValue(event.tags, 'P');
@@ -114,6 +136,7 @@ class Comment {
       content: event.content,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
+      missingTags: missing,
     );
   }
 }
@@ -147,6 +170,14 @@ class CommentData {
   /// Unix timestamp of the comment.
   final int createdAt;
 
+  /// Names of required tag groups that were absent when parsed in
+  /// permissive mode. Possible entries: `'E/A/I'`, `'e/a/i'`, `'K'`,
+  /// `'k'`. Empty in strict mode (strict throws instead).
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [CommentData] with the given fields.
   const CommentData({
     required this.content,
@@ -158,6 +189,7 @@ class CommentData {
     this.parentId,
     this.parentKind,
     this.parentPubkey,
+    this.missingTags = const {},
   });
 }
 

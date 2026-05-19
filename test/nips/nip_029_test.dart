@@ -16,7 +16,7 @@ void main() {
         content: 'Hello group!',
       );
 
-      final msg = Nip29.parse(event);
+      final msg = Nip29.parseMessage(event);
 
       expect(msg.groupId, 'mygroup123');
       expect(msg.content, 'Hello group!');
@@ -42,7 +42,7 @@ void main() {
         content: 'Let us discuss the next release.',
       );
 
-      final msg = Nip29.parse(event);
+      final msg = Nip29.parseMessage(event);
 
       expect(msg.groupId, 'devgroup');
       expect(msg.kind, 11);
@@ -63,7 +63,7 @@ void main() {
         content: 'I agree with the plan.',
       );
 
-      final msg = Nip29.parse(event);
+      final msg = Nip29.parseMessage(event);
 
       expect(msg.groupId, 'devgroup');
       expect(msg.kind, 12);
@@ -74,7 +74,7 @@ void main() {
       final event = Event.partial();
 
       expect(
-        () => Nip29.parse(event),
+        () => Nip29.parseMessage(event),
         throwsA(isA<InvalidKindException>()),
       );
     });
@@ -87,7 +87,7 @@ void main() {
       );
 
       expect(
-        () => Nip29.parse(event),
+        () => Nip29.parseMessage(event),
         throwsA(isA<MissingTagException>()),
       );
     });
@@ -163,7 +163,7 @@ void main() {
             "82fd9f805adba34c219f32921f9df6b8a18d9496875366c6d5698a6a319e8f4675bbdd50aa359cc6c17fd4ff54cdb9a3afbb3e7a9bf79ed0aca2bafa66b59434"
       });
 
-      final msg = Nip29.parse(event);
+      final msg = Nip29.parseMessage(event);
       expect(msg.groupId, 'e1cc34');
       expect(msg.content, 'hello');
       expect(msg.kind, 9);

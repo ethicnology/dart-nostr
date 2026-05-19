@@ -5,7 +5,19 @@ import 'package:nostr/nostr.dart';
 ///
 /// Mute, pin, categorized people, and categorized bookmarks, using NIP-44
 /// encryption for private content.
-class NostrList {
+class UserList {
+  /// Event kind for the mute list.
+  static const int kindMuteList = 10000;
+
+  /// Event kind for the pin list.
+  static const int kindPinList = 10001;
+
+  /// Event kind for categorized people lists.
+  static const int kindCategorizedPeople = 30000;
+
+  /// Event kind for categorized bookmark lists.
+  static const int kindCategorizedBookmarks = 30001;
+
   /// Converts a list of [Contact]s to `["p", pubkey, relay, petname]` tags.
   static List<List<String>> contactsToTags(List<Contact> items) {
     final List<List<String>> result = [];
@@ -48,7 +60,7 @@ class NostrList {
     return Nip44.encrypt(
       plaintext: content,
       senderSecretKey: secretKey,
-      recipientPublicKey: pubkey,
+      recipientPubkey: pubkey,
     );
   }
 
@@ -66,7 +78,7 @@ class NostrList {
     return Nip44.encrypt(
       plaintext: content,
       senderSecretKey: secretKey,
-      recipientPublicKey: pubkey,
+      recipientPubkey: pubkey,
     );
   }
 
@@ -87,7 +99,7 @@ class NostrList {
     final String decrypted = await Nip44.decrypt(
       payload: content,
       recipientSecretKey: secretKey,
-      senderPublicKey: pubkey,
+      senderPubkey: pubkey,
     );
     for (final List tag in json.decode(decrypted)) {
       if (tag.length < 2) continue;
@@ -117,7 +129,7 @@ class NostrList {
     String pubkey,
   ) async {
     return Event.from(
-      kind: 10000,
+      kind: kindMuteList,
       tags: contactsToTags(items),
       content: await contactsToContent(encryptedItems, secretKey, pubkey),
       secretKey: secretKey,
@@ -137,7 +149,7 @@ class NostrList {
     String pubkey,
   ) async {
     return Event.from(
-      kind: 10001,
+      kind: kindPinList,
       tags: bookmarksToTags(items),
       content: await bookmarksToContent(encryptedItems, secretKey, pubkey),
       secretKey: secretKey,
@@ -161,7 +173,7 @@ class NostrList {
     final List<List<String>> tags = contactsToTags(items);
     tags.add(["d", identifier]);
     return Event.from(
-      kind: 30000,
+      kind: kindCategorizedPeople,
       tags: tags,
       content: await contactsToContent(encryptedItems, secretKey, pubkey),
       secretKey: secretKey,
@@ -185,7 +197,7 @@ class NostrList {
     final List<List<String>> tags = bookmarksToTags(items);
     tags.add(["d", identifier]);
     return Event.from(
-      kind: 30001,
+      kind: kindCategorizedBookmarks,
       tags: tags,
       content: await bookmarksToContent(encryptedItems, secretKey, pubkey),
       secretKey: secretKey,
@@ -196,7 +208,10 @@ class NostrList {
   ///
   /// Accepts any list kind defined in the spec (10000-10102, 30000-39092, etc.).
   /// The method extracts public tags and decrypts private content using NIP-44.
-  static Future<UserListData> parse(Event event, String secretKey) async {
+  static Future<UserListData> parse(
+    Event event, {
+    required String secretKey,
+  }) async {
     String identifier = "";
     final List<Contact> contacts = [];
     final List<String> bookmarks = [];
@@ -228,7 +243,7 @@ class NostrList {
       } else {
         try {
           final content =
-              await NostrList.fromContent(event.content, secretKey, pubkey);
+              await UserList.fromContent(event.content, secretKey, pubkey);
           contacts.addAll(content.contacts);
           bookmarks.addAll(content.bookmarks);
         } on Exception {
@@ -236,8 +251,8 @@ class NostrList {
         }
       }
     }
-    if (event.kind == 10000) identifier = "Mute";
-    if (event.kind == 10001) identifier = "Pin";
+    if (event.kind == kindMuteList) identifier = "Mute";
+    if (event.kind == kindPinList) identifier = "Pin";
 
     return UserListData(
       owner: event.pubkey,
@@ -337,5 +352,4 @@ class UserListData {
   });
 }
 
-typedef Nip51 = NostrList;
-typedef Lists = NostrList;
+typedef Nip51 = UserList;

@@ -110,7 +110,7 @@ void main() {
     });
 
     test('typedef Reactions works', () {
-      final event = Reactions.create(
+      final event = Reaction.create(
         eventId: 'abc123',
         eventPubkey: 'def456',
         secretKey: secretKey,

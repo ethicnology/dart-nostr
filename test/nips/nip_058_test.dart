@@ -195,8 +195,8 @@ void main() {
     });
   });
 
-  group('NIP-58 Profile Badges (kind 30008)', () {
-    test('creates profile badges', () {
+  group('NIP-58 Profile Badges (kind 10008)', () {
+    test('creates profile badges with current spec kind 10008', () {
       final def = Badge.definition(
         badgeId: 'bravery',
         secretKey: secretKey,
@@ -213,14 +213,16 @@ void main() {
         pubkey: awardeeKey,
       );
 
-      expect(profile.kind, 30008);
-      expect(findTagValue(profile.tags, 'd'), 'profile_badges');
+      // Spec migration: was kind 30008 with d=profile_badges, now 10008
+      // as a NIP-51 standard list.
+      expect(profile.kind, 10008);
+      expect(findTagValue(profile.tags, 'd'), isNull);
 
-      final aTags = profile.tags.where((t) => t[0] == 'a').toList();
-      final eTags = profile.tags.where((t) => t[0] == 'e').toList();
-      expect(aTags, hasLength(1));
-      expect(eTags, hasLength(1));
-      expect(eTags[0][1], awardEvent.id);
+      // a and e tags should be adjacent (a immediately followed by e) per
+      // spec, so consumers that pair by adjacency match correctly.
+      expect(profile.tags[0][0], 'a');
+      expect(profile.tags[1][0], 'e');
+      expect(profile.tags[1][1], awardEvent.id);
     });
 
     test('profileBadges throws on wrong definition kind', () {
@@ -311,38 +313,91 @@ void main() {
       expect(data.badges[0].awardEventId, awardEvent.id);
     });
 
-    test('parseProfileBadges discards unpaired tags', () {
-      // Manually create an event with mismatched a/e tags
+    test('parseProfileBadges pairs by adjacency (a then e)', () {
+      // Per spec, pairs are adjacent. `a1` without a following `e` is
+      // discarded when `a2` arrives; the next `e` pairs with `a2`.
       final event = Event.from(
-        kind: 30008,
+        kind: 10008,
         tags: [
-          ['d', 'profile_badges'],
           ['a', '30009:abc:badge1'],
           ['a', '30009:abc:badge2'],
           ['e', 'event1'],
-          // second a tag has no matching e tag
         ],
         content: '',
         secretKey: secretKey,
       );
 
       final data = Badge.parseProfileBadges(event);
-      // Only 1 pair: min(2 a-tags, 1 e-tag) = 1
       expect(data.badges, hasLength(1));
+      expect(data.badges[0].coordinate, '30009:abc:badge2');
+      expect(data.badges[0].awardEventId, 'event1');
+    });
+
+    test('parseProfileBadges pairs multiple adjacent a/e tags in order', () {
+      final event = Event.from(
+        kind: 10008,
+        tags: [
+          ['a', '30009:abc:badge1'],
+          ['e', 'event1'],
+          ['a', '30009:abc:badge2'],
+          ['e', 'event2'],
+        ],
+        content: '',
+        secretKey: secretKey,
+      );
+
+      final data = Badge.parseProfileBadges(event);
+      expect(data.badges, hasLength(2));
       expect(data.badges[0].coordinate, '30009:abc:badge1');
       expect(data.badges[0].awardEventId, 'event1');
+      expect(data.badges[1].coordinate, '30009:abc:badge2');
+      expect(data.badges[1].awardEventId, 'event2');
+    });
+
+    test('parseProfileBadges accepts legacy kind 30008 events', () {
+      // Backward compat: read existing kind-30008 events from clients
+      // that pre-date the 10008 migration.
+      final event = Event.from(
+        kind: 30008,
+        tags: [
+          ['d', 'profile_badges'],
+          ['a', '30009:abc:badge1'],
+          ['e', 'event1'],
+        ],
+        content: '',
+        secretKey: secretKey,
+      );
+
+      final data = Badge.parseProfileBadges(event);
+      expect(data.badges, hasLength(1));
+      expect(data.badges[0].coordinate, '30009:abc:badge1');
     });
 
     test('parseProfileBadges throws on wrong kind', () {
       final event = Event.from(
         kind: 1,
-        tags: [['d', 'profile_badges']],
+        tags: [],
         content: '',
         secretKey: secretKey,
       );
       expect(
         () => Badge.parseProfileBadges(event),
         throwsA(isA<InvalidKindException>()),
+      );
+    });
+
+    test('award throws when awardees is empty', () {
+      final def = Badge.definition(
+        badgeId: 'test',
+        secretKey: secretKey,
+      );
+      expect(
+        () => Badge.award(
+          badgeDefinition: def,
+          awardees: const [],
+          secretKey: secretKey,
+        ),
+        throwsA(isA<NostrException>()),
       );
     });
   });

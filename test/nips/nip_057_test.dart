@@ -279,7 +279,7 @@ void main() {
     });
 
     test('typedef Zaps works', () {
-      final event = Zaps.request(
+      final event = Zap.request(
         recipientPubkey: recipientPubkey,
         relays: ['wss://relay.com'],
         secretKey: secretKey,

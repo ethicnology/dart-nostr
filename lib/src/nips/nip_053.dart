@@ -73,18 +73,22 @@ class LiveActivity {
     );
   }
 
-  /// Decodes a kind-30311 event into a [LiveActivityData].
+  /// Parses a kind-30311 event into a [LiveActivityData].
   ///
   /// Throws [InvalidKindException] if the event kind is not 30311.
-  /// Throws [MissingTagException] if the `d` tag is absent.
-  static LiveActivityData parse(Event event) {
+  /// Throws [MissingTagException] if the `d` tag is absent and
+  /// [permissive] is false. In permissive mode the missing `d` is
+  /// recorded on [LiveActivityData.missingTags].
+  static LiveActivityData parse(Event event, {bool permissive = false}) {
     if (event.kind != kindLiveEvent) {
       throw InvalidKindException(event.kind, [kindLiveEvent]);
     }
 
+    final missing = <String>{};
     final identifier = findTagValue(event.tags, 'd');
     if (identifier == null) {
-      throw MissingTagException('d');
+      if (!permissive) throw MissingTagException('d');
+      missing.add('d');
     }
 
     final title = findTagValue(event.tags, 'title');
@@ -117,7 +121,7 @@ class LiveActivity {
     }
 
     return LiveActivityData(
-      identifier: identifier,
+      identifier: identifier ?? '',
       title: title,
       summary: summary,
       image: image,
@@ -136,6 +140,7 @@ class LiveActivity {
       participants: participants,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
+      missingTags: missing,
     );
   }
 }
@@ -210,6 +215,13 @@ class LiveActivityData {
   /// Unix timestamp of the event.
   final int createdAt;
 
+  /// Names of spec-required tags that were absent when parsed in
+  /// permissive mode (NIP-53 requires `d`). Empty in strict mode.
+  final Set<String> missingTags;
+
+  /// True when every spec-required tag was present at parse time.
+  bool get isComplete => missingTags.isEmpty;
+
   /// Creates a [LiveActivityData] with the given fields.
   const LiveActivityData({
     required this.identifier,
@@ -227,8 +239,8 @@ class LiveActivityData {
     this.totalParticipants,
     this.hashtags = const [],
     this.participants = const [],
+    this.missingTags = const {},
   });
 }
 
 typedef Nip53 = LiveActivity;
-typedef LiveActivities = LiveActivity;

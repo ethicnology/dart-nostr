@@ -10,7 +10,7 @@ class DnsIdentifier {
   /// Throws [InvalidKindException] if the event kind is not 0.
   /// Throws [DeserializationException] if the content cannot be parsed.
   static Future<DnsData?> parse(Event event) async {
-    if (event.kind == 0) {
+    if (event.kind == Note.kindMetadata) {
       try {
         final Map map = json.decode(event.content);
         final String? nip05 = map['nip05'];
@@ -28,7 +28,7 @@ class DnsIdentifier {
         throw DeserializationException(e.toString());
       }
     }
-    throw InvalidKindException(event.kind, [0]);
+    throw InvalidKindException(event.kind, [Note.kindMetadata]);
   }
 
   /// Creates a kind-0 set_metadata event with NIP-05 identity.
@@ -47,9 +47,12 @@ class DnsIdentifier {
   }) {
     if (isValidName(name) && isValidDomain(domain)) {
       final String content = generateContent(name, domain, relays);
-      return Event.from(kind: 0, tags: [], content: content, secretKey: secretKey);
+      return Event.from(kind: Note.kindMetadata, tags: [], content: content, secretKey: secretKey);
     } else {
-      throw const NostrException("Invalid NIP-05 name or domain");
+      throw InvalidIdentifierException(
+        '$name@$domain',
+        'name must match [a-z0-9_.-]+ and domain must be a valid DNS name',
+      );
     }
   }
 
@@ -129,7 +132,12 @@ class DnsIdentifier {
   /// Throws [NostrException] if the identifier does not contain exactly one `@`.
   static Uri verificationUrl(String identifier) {
     final parts = identifier.split('@');
-    if (parts.length != 2) throw const NostrException('Invalid NIP-05 identifier');
+    if (parts.length != 2) {
+      throw InvalidIdentifierException(
+        identifier,
+        'NIP-05 identifier must be in the form "local@domain"',
+      );
+    }
     return Uri.https(parts[1], '/.well-known/nostr.json', {'name': parts[0]});
   }
 

@@ -14,27 +14,27 @@ import 'package:nostr/nostr.dart';
 /// the event structure without performing decryption.
 class WalletConnect {
   /// Kind for the wallet info event.
-  static const int infoKind = 13194;
+  static const int kindWalletInfo = 13194;
 
   /// Kind for encrypted request events.
-  static const int requestKind = 23194;
+  static const int kindWalletRequest = 23194;
 
   /// Kind for encrypted response events.
-  static const int responseKind = 23195;
+  static const int kindWalletResponse = 23195;
 
   /// Kind for encrypted notification events (NIP-04 legacy).
-  static const int notificationLegacyKind = 23196;
+  static const int kindWalletNotificationLegacy = 23196;
 
   /// Kind for encrypted notification events (NIP-44).
-  static const int notificationKind = 23197;
+  static const int kindWalletNotification = 23197;
 
   /// All valid NWC event kinds.
   static const List<int> _allKinds = [
-    infoKind,
-    requestKind,
-    responseKind,
-    notificationLegacyKind,
-    notificationKind,
+    kindWalletInfo,
+    kindWalletRequest,
+    kindWalletResponse,
+    kindWalletNotificationLegacy,
+    kindWalletNotification,
   ];
 
   /// Parses a kind-13194 info event into a [WalletInfoData].
@@ -42,8 +42,8 @@ class WalletConnect {
   /// The content contains space-separated supported method names.
   /// Throws [InvalidKindException] if the event kind is not 13194.
   static WalletInfoData parseInfo(Event event) {
-    if (event.kind != infoKind) {
-      throw InvalidKindException(event.kind, [infoKind]);
+    if (event.kind != kindWalletInfo) {
+      throw InvalidKindException(event.kind, [kindWalletInfo]);
     }
     final capabilities = event.content
         .split(' ')
@@ -71,12 +71,12 @@ class WalletConnect {
       throw InvalidKindException(event.kind, _allKinds);
     }
 
-    if (event.kind == infoKind) {
+    if (event.kind == kindWalletInfo) {
       throw InvalidKindException(event.kind, [
-        requestKind,
-        responseKind,
-        notificationLegacyKind,
-        notificationKind,
+        kindWalletRequest,
+        kindWalletResponse,
+        kindWalletNotificationLegacy,
+        kindWalletNotification,
       ]);
     }
 
@@ -107,7 +107,7 @@ class WalletConnect {
     required String secretKey,
   }) {
     return Event.from(
-      kind: requestKind,
+      kind: kindWalletRequest,
       tags: [
         ['p', walletServicePubkey],
       ],
@@ -129,7 +129,7 @@ class WalletConnect {
     required String secretKey,
   }) {
     return Event.from(
-      kind: responseKind,
+      kind: kindWalletResponse,
       tags: [
         ['p', clientPubkey],
         ['e', requestEventId],

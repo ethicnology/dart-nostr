@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:elliptic/ecdh.dart';
 import 'package:elliptic/elliptic.dart';
 import 'package:nostr/nostr.dart';
+import 'package:nostr/src/nips/nip_044_utils.dart';
 
 /// Versioned encryption — [NIP-44](https://github.com/nostr-protocol/nips/blob/master/44.md)
 ///
@@ -14,7 +15,7 @@ class Encryption {
   /// Encrypts [plaintext] from sender to recipient using NIP-44 v2.
   ///
   /// [senderSecretKey] is the sender's hex-encoded secret key.
-  /// [recipientPublicKey] is the recipient's hex-encoded public key.
+  /// [recipientPubkey] is the recipient's hex-encoded public key.
   /// [customNonce] is an optional 32-byte nonce (random if omitted).
   /// [conversationKey] is an optional pre-computed key (for testing with spec vectors).
   ///
@@ -22,7 +23,7 @@ class Encryption {
   static Future<String> encrypt({
     required String plaintext,
     required String senderSecretKey,
-    required String recipientPublicKey,
+    required String recipientPubkey,
     List<int>? customNonce,
     // Optional pre-computed conversation key (for testing with spec vectors).
     // When provided, the ECDH + HKDF derivation steps are skipped entirely.
@@ -33,7 +34,7 @@ class Encryption {
         deriveConversationKey(
           sharedSecret: computeSharedSecret(
             secretKeyHex: senderSecretKey,
-            publicKeyHex: recipientPublicKey,
+            publicKeyHex: recipientPubkey,
           ),
         );
 
@@ -54,14 +55,14 @@ class Encryption {
   /// Decrypts a NIP-44 v2 [payload] from sender to recipient.
   ///
   /// [recipientSecretKey] is the recipient's hex-encoded secret key.
-  /// [senderPublicKey] is the sender's hex-encoded public key.
+  /// [senderPubkey] is the sender's hex-encoded public key.
   /// [conversationKey] is an optional pre-computed key (for testing with spec vectors).
   ///
   /// Returns the decrypted plaintext string.
   static Future<String> decrypt({
     required String payload,
     required String recipientSecretKey,
-    required String senderPublicKey,
+    required String senderPubkey,
     // Optional pre-computed conversation key (for testing with spec vectors).
     // When provided, the ECDH + HKDF derivation steps are skipped entirely.
     List<int>? conversationKey,
@@ -71,7 +72,7 @@ class Encryption {
         deriveConversationKey(
           sharedSecret: computeSharedSecret(
             secretKeyHex: recipientSecretKey,
-            publicKeyHex: senderPublicKey,
+            publicKeyHex: senderPubkey,
           ),
         );
 

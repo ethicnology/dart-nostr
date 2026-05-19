@@ -168,7 +168,7 @@ void main() {
 
     test('typedef aliases work', () {
       expect(Nip38.kindUserStatus, 30315);
-      expect(UserStatuses.kindUserStatus, 30315);
+      expect(UserStatus.kindUserStatus, 30315);
     });
   });
 }

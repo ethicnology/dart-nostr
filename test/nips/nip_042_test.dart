@@ -7,7 +7,7 @@ const secretKey =
 void main() {
   group('nip042', () {
     test('create produces kind 22242 with relay and challenge tags', () {
-      final event = Auth.create(
+      final event = RelayAuth.create(
         challenge: 'abc123challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
@@ -20,7 +20,7 @@ void main() {
     });
 
     test('create produces event with recent timestamp', () {
-      final event = Auth.create(
+      final event = RelayAuth.create(
         challenge: 'test',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
@@ -31,13 +31,13 @@ void main() {
     });
 
     test('validate returns true for matching event', () {
-      final event = Auth.create(
+      final event = RelayAuth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Auth.validate(
+        RelayAuth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'my-challenge',
@@ -47,13 +47,13 @@ void main() {
     });
 
     test('validate returns false for wrong relay', () {
-      final event = Auth.create(
+      final event = RelayAuth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Auth.validate(
+        RelayAuth.validate(
           event: event,
           relayUrl: 'wss://other-relay.com',
           challenge: 'my-challenge',
@@ -63,13 +63,13 @@ void main() {
     });
 
     test('validate returns false for wrong challenge', () {
-      final event = Auth.create(
+      final event = RelayAuth.create(
         challenge: 'my-challenge',
         relayUrl: 'wss://relay.example.com',
         secretKey: secretKey,
       );
       expect(
-        Auth.validate(
+        RelayAuth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'wrong-challenge',
@@ -89,7 +89,7 @@ void main() {
         secretKey: secretKey,
       );
       expect(
-        Auth.validate(
+        RelayAuth.validate(
           event: event,
           relayUrl: 'wss://relay.example.com',
           challenge: 'test',

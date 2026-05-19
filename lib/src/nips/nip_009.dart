@@ -20,6 +20,9 @@ import 'package:nostr/nostr.dart';
 /// }
 /// ```
 class Deletion {
+  /// Event kind for deletion requests.
+  static const int kindDeletion = 5;
+
   /// Converts a list of event IDs to `["e", id]` tags.
   static List<List<String>> toTags(List<String> events) {
     return events.map((id) => ["e", id]).toList();
@@ -40,7 +43,7 @@ class Deletion {
   /// [eventIds] references regular events by ID.
   /// [addressableCoords] references replaceable/addressable events by coordinate.
   /// [kinds] optionally indicates which kinds are being deleted.
-  static Event request({
+  static Event create({
     required String secretKey,
     List<String> eventIds = const [],
     List<String> addressableCoords = const [],
@@ -48,7 +51,7 @@ class Deletion {
     String content = '',
   }) {
     return Event.from(
-      kind: 5,
+      kind: kindDeletion,
       tags: [
         ...toTags(eventIds),
         ...toATags(addressableCoords),
@@ -79,7 +82,9 @@ class Deletion {
   ///
   /// Throws [InvalidKindException] if the event kind is not 5.
   static DeletionRequestData parse(Event event) {
-    if (event.kind != 5) throw InvalidKindException(event.kind, [5]);
+    if (event.kind != kindDeletion) {
+      throw InvalidKindException(event.kind, [kindDeletion]);
+    }
     final kindStrings = findAllTagValues(event.tags, 'k');
     final kinds = <int>[];
     for (final k in kindStrings) {

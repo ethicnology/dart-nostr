@@ -9,13 +9,13 @@ Future<void> main() async {
   final giftWrap = await Nip17.create(
     message: 'Hey Bob, how are you?',
     authorSecretKey: alice,
-    receiverPubkey: Keys(bob).public,
+    recipientPubkey: Keys(bob).public,
   );
   assert(giftWrap.kind == 1059);
 
   final dm = await Nip17.parse(
     giftWrap: giftWrap,
-    receiverSecretKey: bob,
+    recipientSecretKey: bob,
   );
   assert(dm.content == 'Hey Bob, how are you?');
   print('DM: ${dm.content}');

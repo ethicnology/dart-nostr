@@ -89,4 +89,3 @@ class RepostData {
 }
 
 typedef Nip18 = Repost;
-typedef Reposts = Repost;

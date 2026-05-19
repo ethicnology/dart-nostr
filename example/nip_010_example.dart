@@ -9,7 +9,7 @@ void main() {
   assert(tags[0][3] == 'root');
   assert(tags[1][3] == 'reply');
 
-  final parsed = Nip10.fromTags(tags);
+  final parsed = Nip10.parseTags(tags);
   assert(parsed.root.eventId == 'event-root-id');
   assert(parsed.etags[0].marker == 'reply');
   print('Root: ${parsed.root.eventId}');

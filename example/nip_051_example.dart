@@ -13,7 +13,7 @@ Future<void> main() async {
   );
   assert(event.kind == 10000);
 
-  final userList = await Nip51.parse(event, secretKey);
+  final userList = await Nip51.parse(event, secretKey: secretKey);
   assert(userList.identifier == 'Mute');
   assert(userList.contacts.length == 1);
   print('Mute list: ${userList.contacts.length} contacts');

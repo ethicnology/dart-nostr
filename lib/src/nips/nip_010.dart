@@ -15,7 +15,7 @@ class Threading {
   ///     ],
   ///     ...
   /// }
-  static Thread fromTags(List<List<String>> tags) {
+  static Thread parseTags(List<List<String>> tags) {
     ETag root = const ETag();
     final List<ETag> etags = [];
     final List<PTag> ptags = [];

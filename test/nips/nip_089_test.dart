@@ -232,7 +232,7 @@ void main() {
     });
 
     test('typedef AppHandlers works', () {
-      final event = AppHandlers.handlerInfo(
+      final event = AppHandler.handlerInfo(
         id: 'test',
         secretKey: secretKey,
         supportedKinds: [1],

@@ -14,6 +14,12 @@ import 'package:nostr/nostr.dart';
 ///   1) unwrap gift => returns the "seal" event
 ///   2) unseal => returns the original rumor
 class GiftWrap {
+  /// Event kind for the inner seal that wraps the rumor.
+  static const int kindSeal = 13;
+
+  /// Event kind for the outer gift wrap broadcast to relays.
+  static const int kindGiftWrap = 1059;
+
   /// Create a full "gift wrap" (kind=1059) that hides an underlying rumor.
   ///
   /// [rumor] is a Nostr event without a signature. If it has .sig or .id,
@@ -41,6 +47,7 @@ class GiftWrap {
     if (rumor.pubkey != authorPubkey) {
       throw const CryptoException(
         "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
+        CryptoErrorCode.sealAuthorMismatch,
       );
     }
 
@@ -59,7 +66,7 @@ class GiftWrap {
     // Encrypt rumor with (authorSecretKey, recipientPubkey)
     final sealCiphertext = await Encryption.encrypt(
       plaintext: rumorJson,
-      recipientPublicKey: recipientPubkey,
+      recipientPubkey: recipientPubkey,
       senderSecretKey: authorSecretKey,
     );
 
@@ -67,7 +74,7 @@ class GiftWrap {
     // "tags must always be empty for kind=13" per the spec.
     // This event is signed by real author.
     final seal = Event.from(
-      kind: 13,
+      kind: kindSeal,
       tags: [], // Per NIP-59, MUST always be empty
       content: sealCiphertext,
       pubkey: authorPubkey,
@@ -83,7 +90,7 @@ class GiftWrap {
     // Encrypt seal with (ephemeralPriv, recipientPubkey)
     final wrapCiphertext = await Encryption.encrypt(
       plaintext: seal.toJson(),
-      recipientPublicKey: recipientPubkey,
+      recipientPubkey: recipientPubkey,
       senderSecretKey: ephemeral,
     );
 
@@ -94,7 +101,7 @@ class GiftWrap {
     ];
 
     final giftWrap = Event.from(
-      kind: 1059,
+      kind: kindGiftWrap,
       tags: tags,
       content: wrapCiphertext,
       pubkey: ephemeralPubkey,
@@ -120,30 +127,48 @@ class GiftWrap {
     required Event giftWrap,
     required String recipientSecretKey,
   }) async {
-    if (giftWrap.kind != 1059) {
-      throw const CryptoException('Not a gift wrap event (expected kind=1059)');
+    if (giftWrap.kind != kindGiftWrap) {
+      throw const CryptoException(
+        'Not a gift wrap event (expected kind=1059)',
+        CryptoErrorCode.notGiftWrapKind,
+      );
+    }
+
+    // Verify the gift wrap's own signature before decrypting. Otherwise a
+    // tampered/forged outer event with a valid-looking ephemeral pubkey
+    // would happily decrypt to garbage (the NIP-44 MAC catches that), but
+    // verifying here gives a clearer error and matches NIP-44's "Before
+    // decryption, the event's pubkey and signature MUST be validated."
+    if (!giftWrap.isValid()) {
+      throw const CryptoException(
+        'Invalid gift wrap signature',
+        CryptoErrorCode.invalidGiftWrapSignature,
+      );
     }
 
     // Decrypt the gift wrap to recover the "seal" (kind=13)
     // with (ephemeralPub = giftWrap.pubkey, recipientSecretKey)
     final sealJsonStr = await Encryption.decrypt(
       payload: giftWrap.content,
-      senderPublicKey: giftWrap.pubkey,
+      senderPubkey: giftWrap.pubkey,
       recipientSecretKey: recipientSecretKey,
     );
 
     // Reconstruct the seal event
     final seal = Event.fromJson(sealJsonStr);
 
-    if (seal.kind != 13) {
-      throw const CryptoException('Unwrapped content is not a seal (expected kind=13)');
+    if (seal.kind != kindSeal) {
+      throw const CryptoException(
+        'Unwrapped content is not a seal (expected kind=13)',
+        CryptoErrorCode.unwrappedNotSealKind,
+      );
     }
 
     // Decrypt the seal to recover the rumor
     // with (authorPub = seal.pubkey, recipientSecretKey)
     final rumorJsonStr = await Encryption.decrypt(
       payload: seal.content,
-      senderPublicKey: seal.pubkey,
+      senderPubkey: seal.pubkey,
       recipientSecretKey: recipientSecretKey,
     );
 
@@ -168,12 +193,16 @@ class GiftWrap {
     if (seal.pubkey != rumor.pubkey) {
       throw const CryptoException(
         "Beware impersonation: The seal pubkey doesn't match the rumor pubkey",
+        CryptoErrorCode.sealAuthorMismatch,
       );
     }
 
     if (rumor.sig.isNotEmpty) {
       // If it is signed, the message might leak to relays and become fully public.
-      throw const CryptoException('Rumor should be unsigned');
+      throw const CryptoException(
+        'Rumor should be unsigned',
+        CryptoErrorCode.rumorMustBeUnsigned,
+      );
     }
 
     // The rumor is intentionally unsigned per NIP-59. It can be any kind of event, but .sig is empty. Return it:
