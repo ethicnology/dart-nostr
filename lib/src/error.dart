@@ -124,6 +124,10 @@ enum CryptoErrorCode {
   /// NIP-59: the rumor came back with a non-empty signature. Rumors MUST
   /// be unsigned per spec — a signed rumor risks leaking the author.
   rumorMustBeUnsigned,
+
+  /// NIP-59: the seal (kind 13) carries tags. Per spec, seal events MUST
+  /// have an empty tags array.
+  sealMustHaveEmptyTags,
 }
 
 /// Thrown when an encryption or decryption operation fails.

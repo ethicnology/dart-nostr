@@ -125,6 +125,14 @@ class Event {
         'malformed pubkey or signature: ${e.message}',
         EventValidationReason.malformedSignature,
       );
+    } on FormatException catch (e) {
+      // hex.decode throws FormatException on non-hex characters in
+      // pubkey/sig — promote it to the same malformed-signature reason
+      // so isValid() can return false instead of leaking the raw error.
+      throw EventValidationException(
+        'malformed pubkey or signature: ${e.message}',
+        EventValidationReason.malformedSignature,
+      );
     }
   }
 

@@ -2,11 +2,18 @@ import 'package:nostr/nostr.dart';
 
 /// Reactions — [NIP-25](https://github.com/nostr-protocol/nips/blob/master/25.md)
 ///
-/// A kind 7 event used to react to other events. The content field indicates
-/// the reaction value: `+` for like, `-` for dislike, or an emoji.
+/// Kind 7: reaction to a Nostr event. The content field carries the
+/// reaction value: `+` for like, `-` for dislike, or an emoji.
+///
+/// Kind 17: reaction to a website (or any external content addressed by
+/// a URL or other external identifier). Uses an `r` tag for the URL or
+/// an `i` tag for external identifiers (NIP-73 form).
 class Reaction {
-  /// Event kind for reactions.
+  /// Event kind for reactions to other Nostr events.
   static const int kindReaction = 7;
+
+  /// Event kind for reactions to external content (e.g. a website).
+  static const int kindReactionToWebsite = 17;
 
   /// Creates a kind 7 reaction event.
   ///
@@ -34,6 +41,39 @@ class Reaction {
 
     return Event.from(
       kind: kindReaction,
+      tags: tags,
+      content: content,
+      secretKey: secretKey,
+    );
+  }
+
+  /// Creates a kind-17 reaction to a website (or external content).
+  ///
+  /// [url] is the URL the reaction targets — stored as a single `r` tag.
+  /// [content] is the reaction value (`+`, `-`, or an emoji).
+  /// [secretKey] is the hex-encoded secret key.
+  ///
+  /// To react to non-URL external content (book ISBN, podcast episode,
+  /// etc. — anything addressable via NIP-73), pass [externalId] instead
+  /// of [url]; it is stored as an `i` tag.
+  static Event createForWebsite({
+    required String secretKey,
+    String? url,
+    String? externalId,
+    String content = '+',
+  }) {
+    if ((url == null) == (externalId == null)) {
+      throw InvalidArgumentException(
+        'url/externalId',
+        'exactly one of url or externalId must be supplied',
+      );
+    }
+    final tags = <List<String>>[
+      if (url != null) ['r', url],
+      if (externalId != null) ['i', externalId],
+    ];
+    return Event.from(
+      kind: kindReactionToWebsite,
       tags: tags,
       content: content,
       secretKey: secretKey,
@@ -80,6 +120,25 @@ class Reaction {
       createdAt: event.createdAt,
     );
   }
+
+  /// Parses a kind-17 website reaction into a [WebsiteReactionData].
+  ///
+  /// Returns the target URL (from the `r` tag) or external identifier
+  /// (from the `i` tag, NIP-73 form), whichever is present.
+  ///
+  /// Throws [InvalidKindException] if the event is not kind 17.
+  static WebsiteReactionData parseWebsiteReaction(Event event) {
+    if (event.kind != kindReactionToWebsite) {
+      throw InvalidKindException(event.kind, [kindReactionToWebsite]);
+    }
+    return WebsiteReactionData(
+      url: findTagValue(event.tags, 'r'),
+      externalId: findTagValue(event.tags, 'i'),
+      content: event.content,
+      pubkey: event.pubkey,
+      createdAt: event.createdAt,
+    );
+  }
 }
 
 /// A decoded reaction (kind 7).
@@ -117,6 +176,32 @@ class ReactionData {
     this.reactedKind,
     this.relay,
     this.addressableCoord,
+  });
+}
+
+/// A decoded reaction to a website / external content (kind 17).
+class WebsiteReactionData {
+  /// Target URL from the `r` tag, if any.
+  final String? url;
+
+  /// External identifier (NIP-73) from the `i` tag, if any.
+  final String? externalId;
+
+  /// Reaction value (`+`, `-`, or an emoji).
+  final String content;
+
+  /// The reacting user's public key.
+  final String pubkey;
+
+  /// Unix timestamp in seconds.
+  final int createdAt;
+
+  const WebsiteReactionData({
+    required this.content,
+    required this.pubkey,
+    required this.createdAt,
+    this.url,
+    this.externalId,
   });
 }
 

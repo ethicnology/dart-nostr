@@ -236,4 +236,24 @@ void main() {
     );
     expect(emptyEvent.isValid(), true);
   });
+
+  test('Event.isValid returns false for non-hex pubkey/sig (not FormatException)', () {
+    // Schnorr.verify calls hex.decode() which throws FormatException on
+    // non-hex chars. isValid() must catch that and return false rather
+    // than leak the FormatException to callers.
+    final event = Event.partial(
+      pubkey: 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+      createdAt: 1700000000,
+      content: 'x',
+      // sig with non-hex chars
+      sig: 'gg' * 64,
+      // id with non-hex chars (so id-mismatch fires first? no — id is
+      // checked first and would mismatch anyway, but the FormatException
+      // would still surface on the pubkey hex decode in Schnorr.verify
+      // if the id check is bypassed. Compute the id correctly to force
+      // the signature check.
+    );
+    event.id = event.getEventId();
+    expect(event.isValid(), isFalse);
+  });
 }

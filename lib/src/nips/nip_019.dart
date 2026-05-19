@@ -53,7 +53,9 @@ class Bech32Entity {
   /// Throws [DeserializationException] if the payload cannot be decoded.
   static ShareableIdentifierData decodeAny({required String payload}) {
     _assertLength(payload);
-    final probe = bech32Decode(payload);
+    // Probe with the actual payload length — bech32's default cap is 90,
+    // which rejects any real nprofile/nevent/naddr that carries a relay URL.
+    final probe = bech32Decode(payload, length: payload.length);
     if (_shareableIdentifiersPrefixes.contains(probe.prefix)) {
       return decodeShareableIdentifiers(payload: payload);
     }

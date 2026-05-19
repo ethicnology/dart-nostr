@@ -83,7 +83,8 @@ class Note {
 
   /// Extracts hashtag values from event tags.
   ///
-  /// Returns a list of strings from all `t` tags, or null if none.
+  /// Returns the values of every `t` tag in [tags], or an empty list
+  /// when none are present.
   static List<String> extractHashTags(List<List<String>> tags) {
     return findAllTagValues(tags, 't');
   }

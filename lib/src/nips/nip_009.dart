@@ -43,6 +43,10 @@ class Deletion {
   /// [eventIds] references regular events by ID.
   /// [addressableCoords] references replaceable/addressable events by coordinate.
   /// [kinds] optionally indicates which kinds are being deleted.
+  ///
+  /// Per NIP-09 spec, a deletion request MUST reference at least one
+  /// event — supply [eventIds] or [addressableCoords] (or both).
+  /// Throws [InvalidArgumentException] when both are empty.
   static Event create({
     required String secretKey,
     List<String> eventIds = const [],
@@ -50,6 +54,13 @@ class Deletion {
     List<int> kinds = const [],
     String content = '',
   }) {
+    if (eventIds.isEmpty && addressableCoords.isEmpty) {
+      throw InvalidArgumentException(
+        'eventIds/addressableCoords',
+        'must contain at least one entry — per NIP-09 a deletion request '
+            'MUST reference at least one event',
+      );
+    }
     return Event.from(
       kind: kindDeletion,
       tags: [

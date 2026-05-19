@@ -164,6 +164,16 @@ class GiftWrap {
       );
     }
 
+    // Per NIP-59: "tags must always be empty in a kind:13". A seal with
+    // tags could be used to smuggle metadata that the wrap was meant to
+    // hide. Reject it.
+    if (seal.tags.isNotEmpty) {
+      throw const CryptoException(
+        'Seal (kind 13) MUST have empty tags',
+        CryptoErrorCode.sealMustHaveEmptyTags,
+      );
+    }
+
     // Decrypt the seal to recover the rumor
     // with (authorPub = seal.pubkey, recipientSecretKey)
     final rumorJsonStr = await Encryption.decrypt(

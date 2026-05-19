@@ -128,4 +128,87 @@ void main() {
       expect(() => Nip25.parse(event), throwsA(isA<InvalidKindException>()));
     });
   });
+
+  group('Reaction.createForWebsite (kind 17)', () {
+    const secretKey =
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+    test('builds a kind-17 event with r tag for URL', () {
+      final event = Reaction.createForWebsite(
+        secretKey: secretKey,
+        url: 'https://example.com/post',
+      );
+      expect(event.kind, Reaction.kindReactionToWebsite);
+      expect(event.content, '+');
+      final r = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'r');
+      expect(r[1], 'https://example.com/post');
+    });
+
+    test('builds a kind-17 event with i tag for external id', () {
+      final event = Reaction.createForWebsite(
+        secretKey: secretKey,
+        externalId: 'isbn:9780321765723',
+        content: '🔥',
+      );
+      expect(event.kind, Reaction.kindReactionToWebsite);
+      final i = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'i');
+      expect(i[1], 'isbn:9780321765723');
+    });
+
+    test('throws when neither url nor externalId is supplied', () {
+      expect(
+        () => Reaction.createForWebsite(secretKey: secretKey),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('throws when both url and externalId are supplied', () {
+      expect(
+        () => Reaction.createForWebsite(
+          secretKey: secretKey,
+          url: 'https://x',
+          externalId: 'isbn:x',
+        ),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+  });
+
+  group('Reaction.parseWebsiteReaction', () {
+    const secretKey =
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+
+    test('parses kind-17 with URL', () {
+      final event = Reaction.createForWebsite(
+        secretKey: secretKey,
+        url: 'https://example.com/post',
+      );
+      final data = Reaction.parseWebsiteReaction(event);
+      expect(data.url, 'https://example.com/post');
+      expect(data.externalId, isNull);
+      expect(data.content, '+');
+    });
+
+    test('parses kind-17 with external id', () {
+      final event = Reaction.createForWebsite(
+        secretKey: secretKey,
+        externalId: 'isbn:9780321765723',
+      );
+      final data = Reaction.parseWebsiteReaction(event);
+      expect(data.externalId, 'isbn:9780321765723');
+      expect(data.url, isNull);
+    });
+
+    test('rejects non-kind-17 events', () {
+      final event = Reaction.create(
+        eventId: 'a' * 64,
+        eventPubkey: 'b' * 64,
+        secretKey: secretKey,
+      );
+      expect(
+        () => Reaction.parseWebsiteReaction(event),
+        throwsA(isA<InvalidKindException>()),
+      );
+    });
+  });
 }

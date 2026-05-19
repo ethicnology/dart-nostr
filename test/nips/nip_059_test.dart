@@ -121,5 +121,63 @@ void main() {
       expect(giftWrap.createdAt, lessThanOrEqualTo(now));
       expect(giftWrap.createdAt, greaterThanOrEqualTo(now - twoDays));
     });
+
+    test('unwrap rejects a seal carrying non-empty tags', () async {
+      // Forge a seal with a tag inside the wrap. NIP-59 says kind-13
+      // tags MUST be empty; the unwrap path should refuse this even if
+      // the outer signature and decryption succeed.
+      final realRecipientPub = Keys(recipientSecretKey).public;
+      final ephemeral = Keys.generate();
+      final author = Keys(authorSecretKey);
+
+      // Build a rumor + encrypt it into a seal, but cheat the seal by
+      // hand-crafting one with a tag.
+      final rumor = Event.partial(
+        pubkey: author.public,
+        content: 'hidden',
+        tags: [],
+        createdAt: 1700000000,
+      );
+      final sealCiphertext = await Encryption.encrypt(
+        plaintext: rumor.toJson(),
+        senderSecretKey: authorSecretKey,
+        recipientPubkey: realRecipientPub,
+      );
+      final forgedSeal = Event.from(
+        kind: GiftWrap.kindSeal,
+        tags: [
+          ['SMUGGLED', 'data'],
+        ],
+        content: sealCiphertext,
+        secretKey: authorSecretKey,
+        createdAt: 1700000000,
+      );
+      // Wrap the forged seal with an ephemeral key as normal.
+      final wrapCiphertext = await Encryption.encrypt(
+        plaintext: forgedSeal.toJson(),
+        senderSecretKey: ephemeral.secret,
+        recipientPubkey: realRecipientPub,
+      );
+      final wrap = Event.from(
+        kind: GiftWrap.kindGiftWrap,
+        tags: [
+          ['p', realRecipientPub],
+        ],
+        content: wrapCiphertext,
+        secretKey: ephemeral.secret,
+      );
+
+      await expectLater(
+        Nip59.unwrap(
+          giftWrap: wrap,
+          recipientSecretKey: recipientSecretKey,
+        ),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.sealMustHaveEmptyTags,
+        )),
+      );
+    });
   });
 }

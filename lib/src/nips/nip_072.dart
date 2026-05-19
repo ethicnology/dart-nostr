@@ -235,8 +235,27 @@ class ModeratedCommunity {
       if (!permissive) throw MissingTagException('a');
       missing.add('a');
     }
-    final communityCoord = aTags.isNotEmpty ? aTags.first : '';
-    final approvedEventCoord = aTags.length > 1 ? aTags[1] : null;
+
+    // Disambiguate by prefix, not position: community `a` tags always
+    // start with "34550:" per spec. Anything else with an `a` tag is the
+    // approved-event coord. This is robust against out-of-order tags.
+    String? communityCoord;
+    String? approvedEventCoord;
+    for (final coord in aTags) {
+      if (coord.startsWith('$kindCommunity:')) {
+        communityCoord ??= coord;
+      } else {
+        approvedEventCoord ??= coord;
+      }
+    }
+    // Fallback for malformed inputs: if no `34550:` prefix was found, fall
+    // back to the historical "first a is community" behaviour so we still
+    // surface *something* rather than swallow the tag.
+    if (communityCoord == null && aTags.isNotEmpty) {
+      communityCoord = aTags.first;
+      approvedEventCoord ??= aTags.length > 1 ? aTags[1] : null;
+    }
+    final resolvedCommunityCoord = communityCoord ?? '';
 
     final approvedEventId = findTagValue(event.tags, 'e');
     final approvedEventPubkey = findTagValue(event.tags, 'p');
@@ -262,7 +281,7 @@ class ModeratedCommunity {
       id: event.id,
       pubkey: event.pubkey,
       createdAt: event.createdAt,
-      communityCoord: communityCoord,
+      communityCoord: resolvedCommunityCoord,
       approvedEventId: approvedEventId,
       approvedEventCoord: approvedEventCoord,
       approvedEventPubkey: approvedEventPubkey,
