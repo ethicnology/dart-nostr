@@ -1,5 +1,7 @@
 ## 2.0.0
 
+First major rewrite since v1.5.0. The library is now pure-protocol (no transport / WebSocket dependency), Flutter Web compatible, and spec-aligned against the upstream `nostr-protocol/nips` master. NIP-04 plaintext DMs are gone, every NIP has typed parse output, and all crypto runs through `Schnorr` / `Encryption` (no direct `bip340`).
+
 ### Breaking Changes
 
 **NIP-04 removed** — Use `Nip17` / `DirectMessage` (NIP-17 over NIP-59 gift wrap) instead.
@@ -44,11 +46,11 @@
 | `Nip29` | `Group` | `typedef Nip29 = Group` |
 | `Nip32` | `Label` | `typedef Nip32 = Label` |
 | `Nip38` | `UserStatus` | `typedef Nip38 = UserStatus` |
-| `Nip42` | `Auth` | `typedef Nip42 = Auth` |
+| `Nip42` | `RelayAuth` | `typedef Nip42 = RelayAuth` |
 | `Nip44` | `Encryption` | `typedef Nip44 = Encryption` |
 | `Nip46` | `NostrConnect` | `typedef Nip46 = NostrConnect` |
 | `Nip47` | `WalletConnect` | `typedef Nip47 = WalletConnect` |
-| `Nip51` | `NostrList` | `typedef Nip51 = NostrList` |
+| `Nip51` | `UserList` | `typedef Nip51 = UserList` |
 | `Nip53` | `LiveActivity` | `typedef Nip53 = LiveActivity` |
 | `Nip57` | `Zap` | `typedef Nip57 = Zap` |
 | `Nip59` | `GiftWrap` | `typedef Nip59 = GiftWrap` |
@@ -67,7 +69,7 @@
 | `Nip2.decode()` | `FollowList.parse()` |
 | `Nip5.encode()` | `DnsIdentifier.create()` |
 | `Nip5.decode()` | `DnsIdentifier.parse()` |
-| `Nip9.encode()` | `Deletion.requestDeletion()` |
+| `Nip9.encode()` | `Deletion.create()` |
 | `Nip9.decode()` | `Deletion.parse()` |
 | `Nip25.encode()` | `Reaction.create()` |
 | `Nip25.decode()` | `Reaction.parse()` |
@@ -75,8 +77,11 @@
 | `Nip28.getChannelCreation()` | `PublicChat.parseChannel()` |
 | `Nip47.encodeRequest()` | `WalletConnect.request()` |
 | `Nip47.decodeInfo()` | `WalletConnect.parseInfo()` |
-| `Nip51.createMutePeople()` | `NostrList.mutePeople()` |
-| `Nip51.getLists()` | `NostrList.parse()` |
+| `Nip51.createMutePeople()` | `UserList.mutePeople()` |
+| `Nip51.getLists()` | `UserList.parse()` |
+| `Group.parse(event)` | `Group.parseMessage(event)` |
+| `Encryption.encrypt(recipientPublicKey:)` | `recipientPubkey:` |
+| `Encryption.decrypt(senderPublicKey:)` | `senderPubkey:` |
 | `Nip57.encodeZapRequest()` | `Zap.request()` |
 | `Nip57.decodeZapReceipt()` | `Zap.parseReceipt()` |
 
@@ -98,6 +103,11 @@
 | `ZapRequest` / `ZapReceipt` | `ZapRequestData` / `ZapReceiptData` |
 | `ShareableIdentifiers` | `ShareableIdentifierData` |
 | `UserList` | `UserListData` |
+
+**Event-kind constants standardised to `kindXxx` prefix on every NIP
+class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
+`ModeratedCommunity.kindCommunity`, `AppHandler.kindHandlerInfo`,
+`NostrConnect.kindNostrConnect`, `Deletion.kindDeletion`).
 
 **Other breaking changes:**
 
@@ -121,12 +131,87 @@
 - `Nip21.encode()` rejects `nsec` identifiers per spec
 - NIP-51 `getLists()` handles both plaintext JSON and NIP-44 encrypted content
 - Semantic typedef aliases for every NIP (`TextNote`, `FollowList`, `DirectMessage`, etc.)
-- 13 new NIP implementations: 18, 22, 25, 29, 32, 38, 42, 46, 47, 53, 57, 65, 72, 89
+- New NIP implementations since v1.5.0: 11, 17, 18, 22, 23, 25, 27, 29, 32, 38, 40, 42, 44, 46, 47, 51 (expanded), 53, 57, 58, 59, 65, 72, 89, 94, 98
+- Top-level `Tag = List<String>` and `Tags = List<Tag>` typedefs
+- **`Filter.tagFilters: Map<String, List<String>>?`** — generic
+  single-letter tag filter map (`#d` / `#t` / `#k` / `#r`, etc.).
+  `Filter.fromJson` collects every `#X` key into this map;
+  `eTags` / `aTags` / `pTags` still take precedence when set.
+- **NIP-13 mining** — `nonceTag(value, target)`, `targetFromTag`,
+  `meetsTarget(event)`, and `mine(difficulty, kind, content, secretKey,
+  ...)` for actually producing PoW events. Previously only
+  `countLeadingZeroes` was exposed.
+- **NIP-11** — relay information document: `RelayInfo.fetch(relayUrl)`
+  returns `RelayInfoData` with `supportedNips`, `limitation`,
+  `software`, `version`, and operator contact fields. URL scheme
+  rewritten from `wss://` / `ws://` to `https://` / `http://`
+  automatically. Tolerant of wrong-typed fields commonly seen in
+  the wild.
+- **NIP-94** — file metadata events (kind 1063).
+- **NIP-98** — HTTP auth (kind 27235): `create`, `validate`,
+  `payloadHash`, `toAuthHeader` / `fromAuthHeader`.
+- **NIP-58** Profile Badges migrated to **kind 10008** per spec;
+  `parseProfileBadges` accepts the legacy kind 30008 form too.
+- **NIP-29** write helpers (`message`, `threadRoot`, `threadReply`,
+  `joinRequest`, `leaveRequest`) and parsers for `parseAdmins`
+  (kind 39001) / `parseMembers` (kind 39002).
+- **`MissingTagException` permissive mode** — every `parse(...)`
+  method now accepts `{bool permissive = false}`; in permissive mode
+  the missing-tag set is recorded on `<Data>.missingTags` and
+  `<Data>.isComplete` instead of throwing, so consumers can still
+  display whatever is salvageable on the ~31 % of real-world events
+  that violate spec requirements.
 - rust-nostr cross-implementation test vectors (NIP-19, 13, 21, 44, 59, 05, 09)
 - Real-world relay event fixture tests for 20+ event kinds
 
-### Bug Fixes
+### Bug Fixes & Spec Compliance
 
+**HIGH (security / correctness)**
+
+- **NIP-44** (`unpad`): enforce `padded.length == 2 + calcPaddedLen(unpaddedLen)`
+  per spec pseudocode — prevents accepting malleable / over-sized padded
+  buffers.
+- **NIP-19** (`encodeShareableIdentifiers` / `decodeShareableIdentifiers`):
+  switch naddr identifier and relay byte encoding from `String.codeUnits`
+  (UTF-16) to `utf8.encode` / `utf8.decode`. Matches rust-nostr and
+  nostr-tools; unblocks non-ASCII `d`-tags (e.g. `café`, `日本`, emoji).
+- **NIP-98** (`fromAuthHeader`, `validate`): `fromAuthHeader` verifies
+  id + signature on the decoded event. `validate` calls
+  `event.isValid()` first for defense in depth.
+- **NIP-42** (`validate`) and **NIP-59** (`unwrap`) call
+  `event.isValid()` at the top so forged events are caught before any
+  request- or decrypt-specific check.
+
+**Spec gaps closed**
+
+- **NIP-22** (`parse`): throws `MissingTagException` when required `K`,
+  `k`, root-scope (`E`/`A`/`I`), or parent (`e`/`a`/`i`) tags are absent.
+- **NIP-25** (`parse`): when multiple `e`/`p` tags exist, the target is
+  the LAST one per spec. Surfaces the `e` relay hint and optional `a`.
+- **NIP-29** (`parseMetadata`): throws on missing `d` tag (group
+  identifier — required by NIP-01 for addressable events).
+- **NIP-65** (`parse`): unknown markers fall back to read+write instead
+  of silently dropping the relay.
+- **NIP-72** (`approval`): `approvedEventJson` required when referenced
+  via `e` (spec MUST). Added `approvedEventCoord` for addressable
+  posts; rejects when neither (or both) of `e`/`a` is provided.
+- **NIP-89** (`parseHandlerInfo`): platform-handler detection uses a
+  positive allowlist (`web`, `ios`, `android`, `iphone`, `ipad`,
+  `macos`, `linux`, `windows`) instead of a brittle exclude-list.
+- **NIP-19**: `encodeShareableIdentifiers` requires `author` and `kind`
+  for `naddr`. 5000-char soft cap on encode and decode. Added
+  `decodeAny()` dispatcher.
+
+**Real bugs**
+
+- **NIP-28** (`parseChannel` / `parseMetadata`): channel content with
+  the spec-defined `relays` array no longer crashes
+  `Map<String, String>.from`. `ChannelData` exposes
+  `relays: List<String>` separately from string `additional`.
+- **NIP-21** (`decode`): rejects `nostr:nsec1…` and any prefix outside
+  `{npub, note, nprofile, nevent, naddr}`.
+- Tag-bounds bugs (RangeError on empty tags) fixed in `nip_002.dart`,
+  `nip_028.dart`, `nip_065.dart`.
 - fix(nip59): `_randomPastTimestamp` now covers the full 2-day window (was ~172 seconds)
 - fix(nip10): bounds check on tags without markers (prevents `RangeError`)
 - fix(nip44): stale error message expectations in test vectors
@@ -134,6 +219,18 @@
 - fix(nip05): `isValidName` now allows hyphens and dots per spec
 - fix(nip23): replaced private `_getTagValue` helpers with shared `findTagValue`
 - fix: copy-paste doc errors in `Eose` and `Nip20`
+
+### Architecture
+
+- **`bip340` direct imports removed** from `event.dart` and `keys.dart`;
+  both route through `Schnorr`. Added `Schnorr.derivePublicKey` with
+  32-byte input validation. `Event.isValid` catches
+  `InvalidKeyException` and returns false instead of propagating.
+- **`nip_044_utils.dart` no longer re-exported** from `nostr.dart`. The
+  raw crypto primitives (`pad`, `unpad`, `chacha20`, `hkdf`,
+  `calculateMac`, `parsePayload`, etc.) are easy to misuse and now stay
+  internal. Use `Encryption.encrypt` / `Encryption.decrypt`. Tests that
+  need the primitives import the file path directly.
 
 ## 1.5.0
 

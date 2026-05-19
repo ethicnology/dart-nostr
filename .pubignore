@@ -1,0 +1,7 @@
+# Files that live in git but should NOT ship to pub.dev consumers.
+# Tests, fixtures, and dev tooling aren't useful to library users and
+# inflate the package download size.
+
+test/
+tool/
+.devcontainer/

@@ -19,6 +19,7 @@ flutter pub add nostr
 - [x] [NIP-05 DNS-based Internet Identifiers](https://github.com/nostr-protocol/nips/blob/master/05.md)
 - [x] [NIP-09 Event Deletion Request](https://github.com/nostr-protocol/nips/blob/master/09.md)
 - [x] [NIP-10 Text Note Threading](https://github.com/nostr-protocol/nips/blob/master/10.md)
+- [x] [NIP-11 Relay Information Document](https://github.com/nostr-protocol/nips/blob/master/11.md)
 - [x] [NIP-13 Proof of Work](https://github.com/nostr-protocol/nips/blob/master/13.md)
 - [x] [NIP-17 Private Direct Messages](https://github.com/nostr-protocol/nips/blob/master/17.md)
 - [x] [NIP-18 Reposts](https://github.com/nostr-protocol/nips/blob/master/18.md)
@@ -36,10 +37,10 @@ flutter pub add nostr
 - [x] [NIP-40 Expiration Timestamp](https://github.com/nostr-protocol/nips/blob/master/40.md)
 - [x] [NIP-42 Authentication](https://github.com/nostr-protocol/nips/blob/master/42.md)
 - [x] [NIP-44 Encrypted Payloads (Versioned)](https://github.com/nostr-protocol/nips/blob/master/44.md)
-- [x] [NIP-46 Nostr Connect](https://github.com/nostr-protocol/nips/blob/master/46.md)
-- [x] [NIP-47 Wallet Connect](https://github.com/nostr-protocol/nips/blob/master/47.md)
+- [~] [NIP-46 Nostr Connect](https://github.com/nostr-protocol/nips/blob/master/46.md) — kind 24133 event envelope only. No `bunker://` / `nostrconnect://` URI parsing, no JSON-RPC method encoders. Bring your own.
+- [~] [NIP-47 Wallet Connect](https://github.com/nostr-protocol/nips/blob/master/47.md) — kind 13194/2319x event envelopes only. No `nostr+walletconnect://` URI parsing, no JSON-RPC method encoders.
 - [x] [NIP-50 Search Capability](https://github.com/nostr-protocol/nips/blob/master/50.md)
-- [x] [NIP-51 Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
+- [~] [NIP-51 Lists](https://github.com/nostr-protocol/nips/blob/master/51.md) — create helpers for kinds 10000/10001/30000/30001 only. Other list kinds (10003-10102, 30002-30030, etc.) need to be built by hand using `Event.from`.
 - [x] [NIP-53 Live Activities](https://github.com/nostr-protocol/nips/blob/master/53.md)
 - [x] [NIP-57 Lightning Zaps](https://github.com/nostr-protocol/nips/blob/master/57.md)
 - [x] [NIP-58 Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
