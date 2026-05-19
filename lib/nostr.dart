@@ -16,6 +16,7 @@ export 'src/nips/nip_002.dart';
 export 'src/nips/nip_005.dart';
 export 'src/nips/nip_009.dart';
 export 'src/nips/nip_010.dart';
+export 'src/nips/nip_011.dart';
 export 'src/nips/nip_013.dart';
 export 'src/nips/nip_017.dart';
 export 'src/nips/nip_018.dart';
@@ -33,7 +34,11 @@ export 'src/nips/nip_038.dart';
 export 'src/nips/nip_040.dart';
 export 'src/nips/nip_042.dart';
 export 'src/nips/nip_044.dart';
-export 'src/nips/nip_044_utils.dart';
+// nip_044_utils.dart intentionally not exported. The low-level primitives
+// (pad, unpad, chacha20, hkdf, calculateMac, etc.) are easy to misuse and
+// should not be part of the public surface. Use `Encryption.encrypt` /
+// `Encryption.decrypt` from `nip_044.dart` instead. Tests that need the
+// primitives import the file path directly.
 export 'src/nips/nip_046.dart';
 export 'src/nips/nip_047.dart';
 export 'src/nips/nip_051.dart';
