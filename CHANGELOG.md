@@ -71,17 +71,28 @@ First major rewrite since v1.5.0. The library is now pure-protocol (no transport
 | `Nip5.decode()` | `DnsIdentifier.parse()` |
 | `Nip9.encode()` | `Deletion.create()` |
 | `Nip9.decode()` | `Deletion.parse()` |
+| `Nip10.fromTags(tags)` | `Threading.parseTags(tags)` |
 | `Nip25.encode()` | `Reaction.create()` |
 | `Nip25.decode()` | `Reaction.parse()` |
 | `Nip28.createChannel()` | `PublicChat.channel()` |
+| `Nip28.setChannelMetaData()` | `PublicChat.channelMetadata()` |
+| `Nip28.sendChannelMessage()` | `PublicChat.channelMessage()` |
+| `Nip28.hideChannelMessage()` | `PublicChat.hideMessage()` |
+| `Nip28.muteUser()` | `PublicChat.muteUser()` |
 | `Nip28.getChannelCreation()` | `PublicChat.parseChannel()` |
+| `Nip28.getChannelMetadata()` | `PublicChat.parseMetadata()` |
+| `Nip28.getChannelMessage()` | `PublicChat.parseMessage()` |
+| `Nip28.getMessageHidden()` | `PublicChat.parseHidden()` |
+| `Nip28.getUserMuted()` | `PublicChat.parseMuted()` |
 | `Nip47.encodeRequest()` | `WalletConnect.request()` |
 | `Nip47.decodeInfo()` | `WalletConnect.parseInfo()` |
 | `Nip51.createMutePeople()` | `UserList.mutePeople()` |
-| `Nip51.getLists()` | `UserList.parse()` |
-| `Group.parse(event)` | `Group.parseMessage(event)` |
-| `Encryption.encrypt(recipientPublicKey:)` | `recipientPubkey:` |
-| `Encryption.decrypt(senderPublicKey:)` | `senderPubkey:` |
+| `Nip51.createPinEvent()` | `UserList.pinEvent()` |
+| `Nip51.createCategorizedPeople()` | `UserList.categorizedPeople()` |
+| `Nip51.createCategorizedBookmarks()` | `UserList.categorizedBookmarks()` |
+| `Nip51.peoplesToTags()` | `UserList.contactsToTags()` |
+| `Nip51.peoplesToContent()` | `UserList.contactsToContent()` |
+| `Nip51.getLists(event, secretKey)` | `UserList.parse(event, secretKey: ...)` |
 | `Nip57.encodeZapRequest()` | `Zap.request()` |
 | `Nip57.decodeZapReceipt()` | `Zap.parseReceipt()` |
 
@@ -98,6 +109,9 @@ First major rewrite since v1.5.0. The library is now pure-protocol (no transport
 | `Comment` (model) | `CommentData` |
 | `Nip23Article` | `ArticleData` |
 | `Channel` | `ChannelData` |
+| `ChannelMessage` | `ChannelMessageData` |
+| `ChannelMessageHidden` | `ChannelMessageHiddenData` |
+| `ChannelUserMuted` | `ChannelUserMutedData` |
 | `UserStatus` (model) | `UserStatusData` |
 | `LiveActivity` (model) | `LiveActivityData` |
 | `ZapRequest` / `ZapReceipt` | `ZapRequestData` / `ZapReceiptData` |
@@ -109,28 +123,55 @@ class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
 `ModeratedCommunity.kindCommunity`, `AppHandler.kindHandlerInfo`,
 `NostrConnect.kindNostrConnect`, `Deletion.kindDeletion`).
 
+**Signature changes (same name, different shape):**
+
+| Before | After |
+|--------|-------|
+| `Close.deserialize(dynamic)` | `Close.deserialize(String payload)` |
+| `Eose.deserialize(dynamic)` | `Eose.deserialize(String payload)` |
+| `Request.deserialize(dynamic)` | `Request.deserialize(String payload)` |
+| `Message.deserialize(dynamic)` | `Message.deserialize(String payload)` |
+| `Nip20.deserialize(dynamic)` | `CommandResult.deserialize(String payload)` |
+| `MessageType.fromName(String)` | `MessageType.from(String)` |
+| `Keychain.sign(String message)` | `Keys.sign({required String message})` |
+| `UserList.parse(event, privkey)` *(sync)* | `UserList.parse(event, {required secretKey})` *(async, named arg)* |
+| `UserList.fromContent(...)` *(sync)* | `UserList.fromContent(...)` *(async)* |
+| `Event.from(secretKey, kind, tags, content, createdAt)` | `Event.from({required kind, required tags, required content, required secretKey, createdAt?, …})` |
+
+**Removed without direct replacement:**
+
+| Removed | Migration |
+|---------|-----------|
+| `Keychain` class | Use `Keys` |
+| `Keychain.verify(pubkey, message, sig)` | Use `Schnorr.verify(...)` |
+| `Nip4` / `EncryptedDirectMessage` (NIP-04) | Use `DirectMessage` (NIP-17 over NIP-59) |
+| `Nip19.encodePubkey/encodePrivkey/encodeNote` | Use `Bech32Entity.encode(prefix: ..., data: ...)` |
+| `Nip19.decodePubkey/decodePrivkey/decodeNote` | Use `Bech32Entity.decode(payload: ...)` or `Bech32Entity.decodeAny(...)` |
+| `kepler.dart`, `crypto/operator.dart`, `crypto/nip_004.dart` | Internal NIP-04 helpers, gone with NIP-04 |
+| `Contact.aliasPubKey` field | Field removed; `Contact(pubkey, mainRelay, petName)` is 3-arg |
+
 **Other breaking changes:**
 
 | Before | After |
 |--------|-------|
-| `Keys.from(secretKey: ...)` | Removed — use `Keys(secretKey)` |
-| `Nip9.toDeleteEvent(event)` | Removed — use `Deletion.parse(event)` |
 | `Filter` fields mutable | `Filter` fields `final`, constructor `const` |
 | All model positional ctors | All model named `const` constructors |
+| `bip340` re-exported via `package:nostr` | Internal; use `Schnorr.sign / verify / derivePublicKey` |
+| `nip_044_utils.dart` re-exported | Internal; use `Encryption.encrypt / decrypt` |
 
 ### New Features
 
 - `Keys.nsec` / `Keys.npub` getters
 - `Keys()` now validates exact 64-char hex length
 - `MessageType.closed` (CLOSED relay message per NIP-01)
-- `Nip2.encode()` creates kind-3 follow list events
-- `Nip23.encode()` creates kind-30023 article events
-- `Nip5.verify()` DNS identity verification with no-redirect per spec
-- `Nip5.verificationUrl()` helper
-- `Nip9` now supports `a` tags (addressable events) and `k` tags (kind indication)
-- `Nip21.encode()` rejects `nsec` identifiers per spec
-- NIP-51 `getLists()` handles both plaintext JSON and NIP-44 encrypted content
-- Semantic typedef aliases for every NIP (`TextNote`, `FollowList`, `DirectMessage`, etc.)
+- `FollowList.create()` (kind-3 follow list events)
+- `Article.create()` (kind-30023 / 30024 long-form events)
+- `DnsIdentifier.verify()` DNS identity verification with no-redirect per spec
+- `DnsIdentifier.verificationUrl()` helper
+- `Deletion` now supports `a` tags (addressable events) and `k` tags (kind indication)
+- `NostrUri.encode()` rejects `nsec` identifiers per spec
+- `UserList.parse()` handles both plaintext JSON and NIP-44 encrypted content
+- Semantic typedef aliases for every NIP (`TextNote`, `Profile`, `DirectMessage`, etc.)
 - New NIP implementations since v1.5.0: 11, 17, 18, 22, 23, 25, 27, 29, 32, 38, 40, 42, 44, 46, 47, 51 (expanded), 53, 57, 58, 59, 65, 72, 89, 94, 98
 - Top-level `Tag = List<String>` and `Tags = List<Tag>` typedefs
 - **`Filter.tagFilters: Map<String, List<String>>?`** — generic
