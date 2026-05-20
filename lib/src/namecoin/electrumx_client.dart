@@ -217,9 +217,11 @@ class DefaultElectrumxClient implements ElectrumxClient {
       if (scriptPubKey is! Map<String, dynamic>) continue;
       final hexScript = scriptPubKey['hex'];
       if (hexScript is! String) continue;
-      // NAME_UPDATE scripts start with OP_3 (0x53). Skip anything
-      // else without the cost of a hex decode.
-      if (!hexScript.startsWith('53')) continue;
+      // NAME_UPDATE scripts start with OP_3 (0x53); NAME_FIRSTUPDATE
+      // scripts start with OP_2 (0x52). Both carry the current value
+      // at the time of that on-chain operation. Skip anything else
+      // without the cost of a hex decode.
+      if (!hexScript.startsWith('53') && !hexScript.startsWith('52')) continue;
       List<int> bytes;
       try {
         bytes = _hexToBytes(hexScript);

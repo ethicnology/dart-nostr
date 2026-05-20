@@ -8,6 +8,8 @@ import 'package:nostr/src/utils.dart' show sha256;
 /// `NAME_UPDATE` outputs. Matches the ElectrumX Namecoin fork
 /// (`electrumx/lib/coins.py`) and the canonical Go reference at
 /// `mstrofnone/nostrlib-nip05-namecoin`.
+const int opNameFirstUpdate =
+    0x52; // OP_2, repurposed by Namecoin as OP_NAME_FIRSTUPDATE
 const int opNameUpdate = 0x53; // OP_3, repurposed by Namecoin as OP_NAME_UPDATE
 const int op2Drop = 0x6d;
 const int opDrop = 0x75;
@@ -63,22 +65,40 @@ class NameScript {
   const NameScript({required this.name, required this.value});
 }
 
-/// Extracts the name and value from a `NAME_UPDATE` output script.
+/// Extracts the name and value from a `NAME_UPDATE` or
+/// `NAME_FIRSTUPDATE` output script.
 ///
-/// Layout:
+/// `NAME_UPDATE` layout:
 ///
 ///     OP_NAME_UPDATE <push(name)> <push(value)> OP_2DROP OP_DROP <address-script>
 ///
-/// Only the leading push-data pair is decoded; the address script
-/// portion is ignored. Returns `null` if [script] is not a
-/// `NAME_UPDATE` or is malformed.
+/// `NAME_FIRSTUPDATE` layout (carries the initial value at the time
+/// the name is first registered, with an extra `<rand>` push that is
+/// not relevant for value extraction):
+///
+///     OP_NAME_FIRSTUPDATE <push(name)> <push(rand)> <push(value)> OP_2DROP OP_2DROP <address-script>
+///
+/// Only the leading push-data sequence is decoded; the address script
+/// portion is ignored. Returns `null` if [script] is neither a
+/// `NAME_UPDATE` nor a `NAME_FIRSTUPDATE`, or is malformed. Matching
+/// `NAME_FIRSTUPDATE` is required for names that have never been
+/// re-updated on-chain (they would otherwise resolve to `null`).
 NameScript? parseNameScript(List<int> script) {
-  if (script.isEmpty || script[0] != opNameUpdate) return null;
+  if (script.isEmpty) return null;
+  final op = script[0];
+  if (op != opNameUpdate && op != opNameFirstUpdate) return null;
 
   var pos = 1;
   final nameRead = _readPushData(script, pos);
   if (nameRead == null) return null;
   pos = nameRead.next;
+
+  // FIRSTUPDATE has an extra <rand> push between name and value; skip it.
+  if (op == opNameFirstUpdate) {
+    final randRead = _readPushData(script, pos);
+    if (randRead == null) return null;
+    pos = randRead.next;
+  }
 
   final valueRead = _readPushData(script, pos);
   if (valueRead == null) return null;
