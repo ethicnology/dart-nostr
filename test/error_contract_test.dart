@@ -132,17 +132,17 @@ void main() {
     });
   });
 
-  group('Filter.fromJson rejects wrong-typed fields', () {
+  group('Filter.fromMap rejects wrong-typed fields', () {
     test('kinds is a string', () {
       expect(
-        () => Filter.fromJson({'kinds': 'not a list'}),
+        () => Filter.fromMap({'kinds': 'not a list'}),
         throwsA(isA<DeserializationException>()),
       );
     });
 
     test('ids contains non-strings', () {
       expect(
-        () => Filter.fromJson({
+        () => Filter.fromMap({
           'ids': [1, 2, 3]
         }),
         throwsA(isA<DeserializationException>()),
@@ -151,14 +151,14 @@ void main() {
 
     test('since is a string', () {
       expect(
-        () => Filter.fromJson({'since': 'now'}),
+        () => Filter.fromMap({'since': 'now'}),
         throwsA(isA<DeserializationException>()),
       );
     });
 
     test('search is an int', () {
       expect(
-        () => Filter.fromJson({'search': 42}),
+        () => Filter.fromMap({'search': 42}),
         throwsA(isA<DeserializationException>()),
       );
     });
@@ -258,7 +258,9 @@ void main() {
     test('PublicChat.parseMetadata with non-JSON content throws', () {
       expect(
         () => PublicChat.parseMetadata(
-          makeEvent(41, 'not json', [['e', 'a' * 64]]),
+          makeEvent(41, 'not json', [
+            ['e', 'a' * 64]
+          ]),
         ),
         throwsA(isA<DeserializationException>()),
       );
@@ -291,7 +293,10 @@ void main() {
     });
 
     test('AppHandler.parseHandlerInfo with array content does not leak', () {
-      final ev = makeEvent(31990, '[1,2,3]', [['d', 'app'], ['k', '1']]);
+      final ev = makeEvent(31990, '[1,2,3]', [
+        ['d', 'app'],
+        ['k', '1']
+      ]);
       expect(() => AppHandler.parseHandlerInfo(ev), returnsNormally);
     });
 
@@ -343,6 +348,149 @@ void main() {
       } on DeserializationException catch (e) {
         expect(e.message.contains('leakplease'), isFalse);
       }
+    });
+  });
+
+  group('NIP-19 encodeShareableIdentifiers validates kind range', () {
+    // setUint32 silently masks to 32 bits — a too-large kind would
+    // round-trip to a different value without this guard.
+    test('rejects kind > 2^32-1', () {
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.nevent,
+          data: 'a' * 64,
+          kind: 0x100000000, // 2^32
+        ),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('rejects negative kind', () {
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.nevent,
+          data: 'a' * 64,
+          kind: -1,
+        ),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('accepts kind = 2^32-1 (uint32 max)', () {
+      expect(
+        () => Bech32Entity.encodeShareableIdentifiers(
+          prefix: Nip19Prefix.nevent,
+          data: 'a' * 64,
+          kind: 0xFFFFFFFF,
+        ),
+        returnsNormally,
+      );
+    });
+  });
+
+  group('NIP-29 group metadata flag presence', () {
+    Event metadataEvent(List<List<String>> tags) {
+      return Event.from(
+        kind: Group.kindGroupMetadata,
+        tags: [
+          ['d', 'g'],
+          ...tags
+        ],
+        content: '',
+        secretKey: 'a' * 64,
+      );
+    }
+
+    test('parses all five flags independently', () {
+      final m = Group.parseMetadata(metadataEvent([
+        ['open'],
+        ['closed'],
+        ['public'],
+        ['private'],
+        ['broadcast'],
+      ]));
+      expect(m.isOpen, isTrue);
+      expect(m.isClosed, isTrue);
+      expect(m.isPublic, isTrue);
+      expect(m.isPrivate, isTrue);
+      expect(m.isBroadcast, isTrue);
+    });
+
+    test('no flags present → all false', () {
+      final m = Group.parseMetadata(metadataEvent(const []));
+      expect(m.isOpen, isFalse);
+      expect(m.isClosed, isFalse);
+      expect(m.isPublic, isFalse);
+      expect(m.isPrivate, isFalse);
+      expect(m.isBroadcast, isFalse);
+    });
+  });
+
+  group('NIP-005 / NIP-019 error messages do not echo input', () {
+    test('NIP-05 parse of malformed JSON does not leak content', () async {
+      final event = Event.from(
+        kind: Note.kindMetadata,
+        content: 'leakme-not-json-{{}',
+        secretKey: 'a' * 64,
+      );
+      try {
+        await DnsIdentifier.parse(event);
+        fail('expected DeserializationException');
+      } on DeserializationException catch (e) {
+        expect(e.message.contains('leakme'), isFalse);
+      }
+    });
+
+    test('Bech32Entity.decodeShareableIdentifiers rejects garbage cleanly', () {
+      try {
+        Bech32Entity.decodeShareableIdentifiers(
+          payload: 'nprofile1leakplease',
+        );
+        fail('expected DeserializationException');
+      } on DeserializationException catch (e) {
+        expect(e.message.contains('leakplease'), isFalse);
+      }
+    });
+  });
+
+  group('NIP-57 Zap.request validates amount', () {
+    final sk = 'a' * 64;
+    final pk = 'b' * 64;
+
+    test('rejects negative amount on request', () {
+      expect(
+        () => Zap.request(
+          recipientPubkey: pk,
+          relays: const ['wss://relay.example'],
+          secretKey: sk,
+          amount: BigInt.from(-1),
+        ),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('rejects negative amount on anonymousRequest', () {
+      expect(
+        () => Zap.anonymousRequest(
+          recipientPubkey: pk,
+          relays: const ['wss://relay.example'],
+          amount: BigInt.from(-1000),
+        ),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('preserves amount > 2^53 (web-safe via BigInt)', () {
+      // 10^16 millisats = 100 000 BTC — outside JS safe-int range.
+      final big = BigInt.parse('10000000000000000');
+      final event = Zap.request(
+        recipientPubkey: pk,
+        relays: const ['wss://relay.example'],
+        secretKey: sk,
+        amount: big,
+      );
+      final parsed = Zap.parseRequest(event);
+      expect(parsed.amount, equals(big));
     });
   });
 }

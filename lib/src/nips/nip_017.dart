@@ -19,7 +19,10 @@ class DirectMessage {
   }) async {
     final authorPubkey = Keys(authorSecretKey).public;
 
-    final rumor = Event.partial(
+    // Kind 14s MUST never be signed. If it were, the message might leak to
+    // relays and become fully public. `Event.unsigned` builds the rumor
+    // with a canonical id and an empty `sig`.
+    final rumor = Event.unsigned(
       pubkey: authorPubkey,
       kind: kindDirectMessage,
       content: message,
@@ -27,10 +30,6 @@ class DirectMessage {
         ['p', recipientPubkey]
       ],
     );
-    rumor.id = rumor.getEventId();
-    // Kind 14s MUST never be signed.
-    // If it is signed, the message might leak to relays and become fully public.
-    rumor.sig = '';
 
     return Nip59.wrap(
       rumor: rumor,

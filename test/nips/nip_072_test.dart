@@ -29,8 +29,7 @@ void main() {
         expect(findTagValue(event.tags, 'relay'), 'wss://relay.com');
 
         // Image tag with dimensions
-        final imageTag =
-            event.tags.firstWhere((t) => t[0] == 'image');
+        final imageTag = event.tags.firstWhere((t) => t[0] == 'image');
         expect(imageTag[1], 'https://example.com/image.png');
         expect(imageTag[2], '1024x768');
 
@@ -162,8 +161,8 @@ void main() {
         // Parse round-trip exposes the post coord separately.
         final approval = Nip72.parseApproval(event);
         expect(approval.communityCoord, '34550:$moderatorPubkey:my-community');
-        expect(approval.approvedEventCoord,
-            '30023:$moderatorPubkey:my-article');
+        expect(
+            approval.approvedEventCoord, '30023:$moderatorPubkey:my-article');
         expect(approval.approvedEventId, isNull);
       });
 
@@ -216,8 +215,7 @@ void main() {
           secretKey: secretKey,
         );
         final approval = Nip72.parseApproval(event);
-        expect(approval.communityCoord,
-            '34550:$moderatorPubkey:my-community');
+        expect(approval.communityCoord, '34550:$moderatorPubkey:my-community');
         expect(approval.approvedEventId, post.id);
         expect(approval.approvedEventPubkey, moderatorPubkey);
         expect(approval.approvedEventKind, 1111);

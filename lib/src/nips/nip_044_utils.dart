@@ -247,7 +247,8 @@ void verifyMac(
   List<int> mac,
 ) {
   final calculatedMac = calculateMac(hmacKey, nonce, ciphertext);
-  if (calculatedMac.length != mac.length || !_constantTimeEqual(calculatedMac, mac)) {
+  if (calculatedMac.length != mac.length ||
+      !_constantTimeEqual(calculatedMac, mac)) {
     throw const CryptoException('Invalid MAC', CryptoErrorCode.invalidMac);
   }
 }

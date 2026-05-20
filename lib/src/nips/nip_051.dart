@@ -206,12 +206,21 @@ class UserList {
 
   /// Parses a NIP-51 list event into a [UserListData].
   ///
-  /// Accepts any list kind defined in the spec (10000-10102, 30000-39092, etc.).
-  /// The method extracts public tags and decrypts private content using NIP-44.
+  /// Accepts only kinds in the NIP-51 list ranges: `10000-10999` (replaceable
+  /// lists, including mute / pin / bookmarks / search relays / interests /
+  /// emojis) and `30000-39999` (addressable lists, including categorized
+  /// people / bookmarks / relay sets / interest sets). Throws
+  /// [InvalidKindException] otherwise — pass a NIP-23 article or NIP-58
+  /// badge here and the parser would happily return malformed data.
   static Future<UserListData> parse(
     Event event, {
     required String secretKey,
   }) async {
+    final isReplaceableList = event.kind >= 10000 && event.kind < 11000;
+    final isAddressableList = event.kind >= 30000 && event.kind < 40000;
+    if (!isReplaceableList && !isAddressableList) {
+      throw InvalidKindException(event.kind, const [10000, 30000]);
+    }
     String identifier = "";
     final List<Contact> contacts = [];
     final List<String> bookmarks = [];

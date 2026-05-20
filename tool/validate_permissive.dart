@@ -47,9 +47,11 @@ void main() {
     }
   }
 
-  print('Permissive validation across $attempted events with a permissive parser:\n');
+  print(
+      'Permissive validation across $attempted events with a permissive parser:\n');
   print('  COMPLETE   : $complete  (every spec tag present)');
-  print('  RESCUED    : $permissiveRescued  (strict would throw, permissive returned partial data)');
+  print(
+      '  RESCUED    : $permissiveRescued  (strict would throw, permissive returned partial data)');
   print('  UNEXPECTED : $unexpectedThrow  (any throw — should be 0)');
 
   if (rescues.isNotEmpty) {
@@ -92,8 +94,7 @@ Set<String>? _parsePermissive(Event ev) {
       case AppHandler.kindHandlerInfo:
         return AppHandler.parseHandlerInfo(ev, permissive: true).missingTags;
       case AppHandler.kindHandlerRecommendation:
-        return AppHandler.parseRecommendation(ev, permissive: true)
-            .missingTags;
+        return AppHandler.parseRecommendation(ev, permissive: true).missingTags;
       case FileMetadata.kindFileMetadata:
         return FileMetadata.parse(ev, permissive: true).missingTags;
       case HttpAuth.kindHttpAuth:

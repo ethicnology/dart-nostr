@@ -128,7 +128,8 @@ class ArticleData {
   /// recorded on [missingTags] instead.
   factory ArticleData.fromEvent(Event event, {bool permissive = false}) {
     if (event.kind != Article.kindArticle && event.kind != Article.kindDraft) {
-      throw InvalidKindException(event.kind, [Article.kindArticle, Article.kindDraft]);
+      throw InvalidKindException(
+          event.kind, [Article.kindArticle, Article.kindDraft]);
     }
 
     final missing = <String>{};

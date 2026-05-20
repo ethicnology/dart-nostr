@@ -24,9 +24,12 @@ void main() {
 
     test('toTags', () {
       final ETag root = Nip10.rootTag('91cf9..4e5ca', 'wss://alicerelay.com');
-      const ETag eTag =
-          ETag(eventId: "14aeb..8dad4", relayURL: "wss://bobrelay.com/nostr", marker: "reply");
-      const PTag pTag = PTag(pubkey: "612ae..e610f", relayURL: "ws://carolrelay.com/ws");
+      const ETag eTag = ETag(
+          eventId: "14aeb..8dad4",
+          relayURL: "wss://bobrelay.com/nostr",
+          marker: "reply");
+      const PTag pTag =
+          PTag(pubkey: "612ae..e610f", relayURL: "ws://carolrelay.com/ws");
       final Thread thread = Thread(root: root, etags: [eTag], ptags: [pTag]);
 
       expect(thread.root.eventId, '91cf9..4e5ca');

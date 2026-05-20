@@ -261,8 +261,10 @@ class PublicChat {
     List<ETag>? etags,
     List<PTag>? ptags,
   }) {
-    final Thread thread =
-        Thread(root: Threading.rootTag(channelId, relay ?? ''), etags: etags ?? [], ptags: ptags ?? []);
+    final Thread thread = Thread(
+        root: Threading.rootTag(channelId, relay ?? ''),
+        etags: etags ?? [],
+        ptags: ptags ?? []);
     return Event.from(
       kind: kindChannelMessage,
       tags: Threading.toTags(thread),

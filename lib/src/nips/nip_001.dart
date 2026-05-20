@@ -78,7 +78,11 @@ class Note {
       }
     }
 
-    return Event.from(kind: kindShortNote, tags: tags, content: content, secretKey: secretKey);
+    return Event.from(
+        kind: kindShortNote,
+        tags: tags,
+        content: content,
+        secretKey: secretKey);
   }
 
   /// Extracts hashtag values from event tags.
@@ -137,8 +141,11 @@ class NoteData {
   /// Unix timestamp of the event creation.
   final int createdAt;
 
-  /// Thread references parsed from `e` and `p` tags.
-  final Thread? thread;
+  /// Thread references parsed from `e` and `p` tags. A note with no
+  /// such tags yields a [Thread] with an empty-sentinel `root` and
+  /// empty `etags`/`ptags` lists — check `thread.root.eventId.isEmpty`
+  /// (and the lists) to detect a thread-less note.
+  final Thread thread;
 
   /// The plaintext content of the note.
   final String content;
@@ -158,7 +165,7 @@ class NoteData {
     required this.pubkey,
     required this.createdAt,
     required this.content,
-    this.thread,
+    required this.thread,
     this.hashTags = const [],
     this.quoteRepostId,
     this.groupId,

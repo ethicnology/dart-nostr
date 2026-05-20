@@ -45,7 +45,8 @@ class Badge {
     if (name != null) tags.add(['name', name]);
     if (description != null) tags.add(['description', description]);
     if (image != null) {
-      tags.add(imageSize != null ? ['image', image, imageSize] : ['image', image]);
+      tags.add(
+          imageSize != null ? ['image', image, imageSize] : ['image', image]);
     }
     for (final thumb in thumbnails) {
       tags.add(thumb.size != null
@@ -89,8 +90,7 @@ class Badge {
     if (dTag == null) throw MissingTagException('d');
 
     // Build the "a" coordinate: kind:pubkey:d-tag
-    final coordinate =
-        '$kindDefinition:${badgeDefinition.pubkey}:$dTag';
+    final coordinate = '$kindDefinition:${badgeDefinition.pubkey}:$dTag';
 
     final tags = <List<String>>[
       ['a', coordinate],
@@ -154,8 +154,7 @@ class Badge {
       final dTag = findTagValue(badge.definition.tags, 'd');
       if (dTag == null) throw MissingTagException('d');
 
-      final coordinate =
-          '$kindDefinition:${badge.definition.pubkey}:$dTag';
+      final coordinate = '$kindDefinition:${badge.definition.pubkey}:$dTag';
       // Emit `a` immediately followed by `e` so consumers that pair by
       // adjacency (per spec) match the pair correctly.
       tags.add(['a', coordinate]);
@@ -214,9 +213,8 @@ class Badge {
       badgeId: badgeId ?? '',
       name: findTagValue(event.tags, 'name'),
       description: findTagValue(event.tags, 'description'),
-      image: imageUrl != null
-          ? BadgeImage(url: imageUrl, size: imageSize)
-          : null,
+      image:
+          imageUrl != null ? BadgeImage(url: imageUrl, size: imageSize) : null,
       thumbnails: thumbnails,
       pubkey: event.pubkey,
       createdAt: event.createdAt,

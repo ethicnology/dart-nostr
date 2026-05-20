@@ -19,13 +19,13 @@ import 'package:nostr/src/utils.dart';
 /// - "sig": "64-bytes signature of the sha256 hash of the serialized event data, which is the same as the 'id' field"
 class Event {
   /// 32-bytes hex-encoded sha256 of the the serialized event data (hex).
-  late String id;
+  final String id;
 
   /// 32-bytes hex-encoded public key of the event creator (hex).
-  late String pubkey;
+  final String pubkey;
 
   /// Unix timestamp in seconds indicating when the event was created.
-  late int createdAt;
+  final int createdAt;
 
   /// The event kind, which determines how the event content and tags
   /// should be interpreted.
@@ -33,22 +33,22 @@ class Event {
   /// -  0: set_metadata: the content is set to a stringified JSON object {name: username, about: string, picture: url} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
   /// -  1: text_note: the content is set to the text content of a note (anything the user wants to say). Non-plaintext notes should instead use kind 1000-10000 as described in NIP-16.
   /// -  2: recommend_server: the content is set to the URL (e.g., wss://somerelay.com) of a relay the event creator wants to recommend to its followers.
-  late int kind;
+  final int kind;
 
   /// The tags array can store a tag identifier as the first element of each subarray, plus arbitrary information afterward (always as strings).
   ///
   /// This NIP defines "p" -- meaning "pubkey", which points to a pubkey of someone that is referred to in the event --, and "e" -- meaning "event", which points to the id of an event this event is quoting, replying to or referring to somehow.
-  late List<List<String>> tags;
+  final List<List<String>> tags;
 
   /// Arbitrary string content of the event.
-  String content = "";
+  final String content;
 
   /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field.
-  late String sig;
+  final String sig;
 
   /// Optional subscription identifier, present when the event was received
   /// as part of a subscription response.
-  String? subscriptionId;
+  final String? subscriptionId;
 
   /// Default constructor.
   ///
@@ -82,7 +82,7 @@ class Event {
   ///```
   Event(
     this.id,
-    this.pubkey,
+    String pubkey,
     this.createdAt,
     this.kind,
     this.tags,
@@ -90,9 +90,38 @@ class Event {
     this.sig, {
     this.subscriptionId,
     bool verify = true,
-  }) {
-    pubkey = pubkey.toLowerCase();
+  }) : pubkey = pubkey.toLowerCase() {
     if (verify) _assertValid();
+  }
+
+  /// Returns a copy of this event with the given fields replaced.
+  ///
+  /// Use this when you need to attach a `subscriptionId` after constructing
+  /// (e.g., when reading from a relay frame) or to selectively update
+  /// fields without re-deriving everything. Pass `verify: true` to
+  /// re-validate the resulting event.
+  Event copyWith({
+    String? id,
+    String? pubkey,
+    int? createdAt,
+    int? kind,
+    List<List<String>>? tags,
+    String? content,
+    String? sig,
+    String? subscriptionId,
+    bool verify = false,
+  }) {
+    return Event(
+      id ?? this.id,
+      pubkey ?? this.pubkey,
+      createdAt ?? this.createdAt,
+      kind ?? this.kind,
+      tags ?? this.tags,
+      content ?? this.content,
+      sig ?? this.sig,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      verify: verify,
+    );
   }
 
   /// Runs the same checks as [isValid] but throws a typed
@@ -136,22 +165,14 @@ class Event {
     }
   }
 
-  /// Partial constructor, you have to fill the fields yourself.
+  /// Partial constructor — used internally for unsigned scratch events.
   ///
   /// By default [verify] is `false`, so no validation is performed.
+  /// Defaults to empty `id` / `pubkey` / `sig` and a `kind` of 1.
   ///
-  /// ```dart
-  /// var partialEvent = Event.partial();
-  /// assert(partialEvent.isValid() == false);
-  /// partialEvent.createdAt = currentUnixTimestampSeconds();
-  /// partialEvent.pubkey =
-  ///     "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
-  /// partialEvent.id = partialEvent.getEventId();
-  /// partialEvent.sig = partialEvent.getSignature(
-  ///   "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
-  /// );
-  /// assert(partialEvent.isValid() == true);
-  /// ```
+  /// Use [Event.unsigned] when you have the author key + payload and want
+  /// an event with a precomputed id but no signature (e.g., NIP-17 rumors,
+  /// NIP-13 mining probes).
   factory Event.partial({
     String id = "",
     String pubkey = "",
@@ -219,6 +240,35 @@ class Event {
     );
   }
 
+  /// Constructs an event with a precomputed `id` and an empty `sig`.
+  ///
+  /// Used for NIP-17 rumors (kind 14) and similar unsigned-payload flows
+  /// where the canonical id is required but signing is forbidden by spec.
+  /// The returned event has `verify: false` because it has no signature
+  /// to verify.
+  factory Event.unsigned({
+    required String pubkey,
+    required int kind,
+    required String content,
+    int? createdAt,
+    List<List<String>> tags = const [],
+    String? subscriptionId,
+  }) {
+    createdAt ??= currentUnixTimestampSeconds();
+    final id = _processEventId(pubkey, createdAt, kind, tags, content);
+    return Event(
+      id,
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+      '',
+      subscriptionId: subscriptionId,
+      verify: false,
+    );
+  }
+
   /// Deserializes an event from a JSON map.
   ///
   /// If [verify] is `true` (the default), the signature is validated.
@@ -226,7 +276,11 @@ class Event {
   ///
   /// Throws a [DeserializationException] if any required field is missing
   /// or has the wrong type.
-  factory Event.fromMap(Map<String, dynamic> map, {bool verify = true}) {
+  factory Event.fromMap(
+    Map<String, dynamic> map, {
+    bool verify = true,
+    String? subscriptionId,
+  }) {
     final id = getRequiredField<String>(map, 'id');
     final sig = getRequiredField<String>(map, 'sig');
     final pubkey = getRequiredField<String>(map, 'pubkey');
@@ -235,13 +289,21 @@ class Event {
     final content = getRequiredField<String>(map, 'content');
     final rawTags = getRequiredField<List>(map, 'tags');
 
-    var tags = [<String>[]];
-    try {
-      tags = rawTags
-          .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-          .toList();
-    } catch (e) {
-      throw DeserializationException("Invalid 'tags' format: $e");
+    final tags = <List<String>>[];
+    for (var i = 0; i < rawTags.length; i++) {
+      final row = rawTags[i];
+      if (row is! List) {
+        throw DeserializationException("tag at index $i is not a list");
+      }
+      final inner = <String>[];
+      for (var j = 0; j < row.length; j++) {
+        final value = row[j];
+        if (value is! String) {
+          throw DeserializationException("tag[$i][$j] is not a string");
+        }
+        inner.add(value);
+      }
+      tags.add(inner);
     }
 
     return Event(
@@ -253,6 +315,7 @@ class Event {
       content,
       sig,
       verify: verify,
+      subscriptionId: subscriptionId,
     );
   }
 
@@ -353,7 +416,7 @@ class Event {
       throw const DeserializationException('invalid event frame shape');
     }
 
-    return Event.fromMap(event, verify: verify)..subscriptionId = subscriptionId;
+    return Event.fromMap(event, verify: verify, subscriptionId: subscriptionId);
   }
 
   /// Computes and returns the event id by SHA-256 hashing the serialized

@@ -13,17 +13,31 @@ const pubkey =
 void main() {
   test('toTags converts event IDs to e tags', () {
     final tags = Nip9.toTags(["event1", "event2"]);
-    expect(tags, equals([["e", "event1"], ["e", "event2"]]));
+    expect(
+        tags,
+        equals([
+          ["e", "event1"],
+          ["e", "event2"]
+        ]));
   });
 
   test('toATags converts coordinates to a tags', () {
     final tags = Nip9.toATags(["30023:$pubkey:my-article"]);
-    expect(tags, equals([["a", "30023:$pubkey:my-article"]]));
+    expect(
+        tags,
+        equals([
+          ["a", "30023:$pubkey:my-article"]
+        ]));
   });
 
   test('toKTags converts kind numbers to k tags', () {
     final tags = Nip9.toKTags([1, 30023]);
-    expect(tags, equals([["k", "1"], ["k", "30023"]]));
+    expect(
+        tags,
+        equals([
+          ["k", "1"],
+          ["k", "30023"]
+        ]));
   });
 
   test('tagsToList extracts event IDs from e tags', () {
@@ -40,14 +54,22 @@ void main() {
       ["e", "event1"],
       ["a", "30023:$pubkey:article"],
     ];
-    expect(Nip9.tagsToAddressableCoords(tags),
-        equals(["30023:$pubkey:article"]));
+    expect(
+        Nip9.tagsToAddressableCoords(tags), equals(["30023:$pubkey:article"]));
   });
 
   test('encode creates a valid deletion event with e tags only', () {
-    final event = Nip9.create(eventIds: ["event1", "event2"], content: "Reason", secretKey: secretKey);
+    final event = Nip9.create(
+        eventIds: ["event1", "event2"],
+        content: "Reason",
+        secretKey: secretKey);
     expect(event.kind, equals(5));
-    expect(event.tags, equals([["e", "event1"], ["e", "event2"]]));
+    expect(
+        event.tags,
+        equals([
+          ["e", "event1"],
+          ["e", "event2"]
+        ]));
     expect(event.content, equals("Reason"));
   });
 

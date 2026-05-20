@@ -8,8 +8,7 @@ void main() {
   final event = FileMetadata.create(
     url: 'https://image.nostr.build/example.jpg',
     mimeType: 'image/jpeg',
-    sha256:
-        '1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02',
+    sha256: '1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02',
     secretKey: secretKey,
     content: 'A beautiful sunset photo',
     originalSha256:

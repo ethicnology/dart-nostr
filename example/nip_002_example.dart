@@ -10,7 +10,8 @@ void main() {
       ["p", "612ae..e610f", "ws://carolrelay.com/ws", "carol"],
     ],
     content: "",
-    secretKey: "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+    secretKey:
+        "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
 
   final someProfiles = Nip2.parse(event);

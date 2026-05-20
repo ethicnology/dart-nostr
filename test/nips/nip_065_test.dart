@@ -107,7 +107,9 @@ void main() {
 
     test('typedef alias works', () {
       final event = RelayList.create(
-        relays: [const RelayMetadata(url: 'wss://a.com', read: true, write: true)],
+        relays: [
+          const RelayMetadata(url: 'wss://a.com', read: true, write: true)
+        ],
         secretKey: secretKey,
       );
       expect(event.kind, 10002);

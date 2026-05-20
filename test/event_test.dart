@@ -224,36 +224,36 @@ void main() {
     expect(() => Event.deserialize(json.encode([])), throwsException);
   });
 
-  test('Event.partial', () {
-    final emptyEvent = Event.partial();
-    expect(emptyEvent.isValid(), false);
-    emptyEvent.createdAt = currentUnixTimestampSeconds();
-    emptyEvent.pubkey =
-        "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
-    emptyEvent.id = emptyEvent.getEventId();
-    emptyEvent.sig = emptyEvent.getSignature(
-      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+  test('Event.unsigned + copyWith signs a valid event', () {
+    final unsigned = Event.unsigned(
+      pubkey:
+          "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b",
+      kind: 1,
+      content: "",
+      createdAt: currentUnixTimestampSeconds(),
     );
-    expect(emptyEvent.isValid(), true);
+    expect(unsigned.isValid(), false);
+    final signed = unsigned.copyWith(
+      sig: unsigned.getSignature(
+        "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+      ),
+    );
+    expect(signed.isValid(), true);
   });
 
-  test('Event.isValid returns false for non-hex pubkey/sig (not FormatException)', () {
+  test(
+      'Event.isValid returns false for non-hex pubkey/sig (not FormatException)',
+      () {
     // Schnorr.verify calls hex.decode() which throws FormatException on
     // non-hex chars. isValid() must catch that and return false rather
     // than leak the FormatException to callers.
-    final event = Event.partial(
-      pubkey: 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+    final event = Event.unsigned(
+      pubkey:
+          'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+      kind: 1,
       createdAt: 1700000000,
       content: 'x',
-      // sig with non-hex chars
-      sig: 'gg' * 64,
-      // id with non-hex chars (so id-mismatch fires first? no — id is
-      // checked first and would mismatch anyway, but the FormatException
-      // would still surface on the pubkey hex decode in Schnorr.verify
-      // if the id check is bypassed. Compute the id correctly to force
-      // the signature check.
-    );
-    event.id = event.getEventId();
+    ).copyWith(sig: 'gg' * 64);
     expect(event.isValid(), isFalse);
   });
 }

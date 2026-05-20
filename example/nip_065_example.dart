@@ -9,7 +9,8 @@ void main() {
     relays: [
       const RelayMetadata(url: 'wss://relay.damus.io', read: true, write: true),
       const RelayMetadata(url: 'wss://nos.lol', read: true, write: false),
-      const RelayMetadata(url: 'wss://relay.nostr.band', read: false, write: true),
+      const RelayMetadata(
+          url: 'wss://relay.nostr.band', read: false, write: true),
     ],
     secretKey: secretKey,
   );

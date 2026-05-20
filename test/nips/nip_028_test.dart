@@ -29,7 +29,8 @@ void main() {
       // Per NIP-28, kind-40 content may include a `relays` array alongside
       // name/about/picture. Pre-fix this crashed with TypeError on the
       // Map<String, String>.from cast.
-      const json ='{"name":"hi","about":"","picture":"","relays":["wss://a","wss://b"]}';
+      const json =
+          '{"name":"hi","about":"","picture":"","relays":["wss://a","wss://b"]}';
       final event = Event.from(
         kind: 40,
         tags: [],
@@ -57,7 +58,8 @@ void main() {
     test('parseChannel silently drops non-string additional values', () {
       // Forward-compat: a future client may add a structured field; we
       // keep only string-typed fields in `additional` and don't crash.
-      const json ='{"name":"x","about":"","picture":"","verified":true,"score":42}';
+      const json =
+          '{"name":"x","about":"","picture":"","verified":true,"score":42}';
       final event = Event.from(
         kind: 40,
         tags: [],
@@ -74,7 +76,8 @@ void main() {
         name: 'name',
         about: 'about',
         picture: 'http://image.jpg',
-        channelId: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+        channelId:
+            'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         relayURL: 'wss://example.com',
         secretKey: secretKey,
       );
@@ -94,7 +97,8 @@ void main() {
 
     test('channelMessage', () {
       final event = PublicChat.channelMessage(
-        channelId: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+        channelId:
+            'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         content: 'content',
         secretKey: secretKey,
       );
@@ -106,14 +110,17 @@ void main() {
 
     test('channelMessage with replies', () {
       const eTag = ETag(
-          eventId: '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181',
+          eventId:
+              '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181',
           relayURL: 'wss://example.com',
           marker: 'reply');
       const pTag = PTag(
-          pubkey: '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1',
+          pubkey:
+              '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1',
           relayURL: 'wss://example.com');
       final event = PublicChat.channelMessage(
-        channelId: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+        channelId:
+            'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         content: 'reply',
         secretKey: secretKey,
         etags: [eTag],
@@ -128,7 +135,8 @@ void main() {
 
     test('hideMessage', () {
       final event = PublicChat.hideMessage(
-        messageId: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+        messageId:
+            'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         reason: 'spam',
         secretKey: secretKey,
       );
@@ -140,7 +148,8 @@ void main() {
 
     test('muteUser', () {
       final event = PublicChat.muteUser(
-        pubkey: 'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
+        pubkey:
+            'b83a3326b63470df6a86dca9456184e09ea1a237b2b41b36e0af740badf329e9',
         reason: 'harassment',
         secretKey: secretKey,
       );

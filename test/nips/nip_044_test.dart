@@ -93,30 +93,15 @@ Future<void> assertCryptPriv(
 Future<String> decryptMessageWithConversationKey(
   String payload,
   Uint8List conversationKey,
-) async {
-  final parsed = parsePayload(payload);
-  final nonce = parsed['nonce'];
-  final ciphertext = parsed['ciphertext'];
-  final mac = parsed['mac'];
-  final version = parsed['version'];
-
-  if (version != 2) {
-    throw FormatException('Unsupported version: $version');
-  }
-
-  final keys = deriveMessageKeys(conversationKey, nonce);
-  final chachaKey = keys['chachaKey']!;
-  final chachaNonce = keys['chachaNonce']!;
-  final hmacKey = keys['hmacKey']!;
-
-  verifyMac(hmacKey, nonce, ciphertext, mac);
-
-  final paddedPlaintext = chacha20(chachaKey, chachaNonce, ciphertext, false);
-
-  final plaintextBytes = unpad(paddedPlaintext);
-
-  return utf8.decode(plaintextBytes);
-}
+) =>
+    // Delegate to the public test hook — earlier this helper duplicated the
+    // production decrypt path and drifted, masking canonical vectors.
+    Encryption.decrypt(
+      payload: payload,
+      recipientSecretKey: '',
+      senderPubkey: '',
+      conversationKey: conversationKey,
+    );
 
 Future<void> assertDecryptFail(
   String conversationKeyHex,
@@ -283,8 +268,8 @@ void main() {
     late Map<String, dynamic> vectors;
 
     setUpAll(() {
-      vectors = json.decode(
-          File('test/fixtures/nip44.vectors.json').readAsStringSync());
+      vectors = json
+          .decode(File('test/fixtures/nip44.vectors.json').readAsStringSync());
     });
 
     test('calc_padded_len matches all 24 vectors', () {
@@ -310,8 +295,7 @@ void main() {
     });
 
     test('encrypt_decrypt matches all vectors', () async {
-      final cryptVectors =
-          vectors['v2']['valid']['encrypt_decrypt'] as List;
+      final cryptVectors = vectors['v2']['valid']['encrypt_decrypt'] as List;
       for (final v in cryptVectors) {
         final ec = elliptic.getS256();
         final sk2 = elliptic.PrivateKey.fromHex(ec, v['sec2']);
@@ -592,7 +576,7 @@ void main() {
       'cff7bd6a3e29a450fd27f6c125d5edeb0987c475fd1e8d97591e0d4d8a89763c',
       r'¯\_(ツ)_/¯',
       'Agn/l3ULCEAS4V7LhGFM6IGA17jsDUaFCKhrbXDANholyySBfeh+EN8wNB9gaLlg4j6wdBYh+3oK+mnxWu3NKRbSvQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-      'Unsupported version: null',
+      'Invalid MAC',
     );
   });
 
@@ -601,7 +585,7 @@ void main() {
       'cfcc9cf682dfb00b11357f65bdc45e29156b69db424d20b3596919074f5bf957',
       '🥎',
       'AmWxSwuUmqp9UsQX63U7OQ6K1thLI69L7G2b+j4DoIr0oRWQ8avl4OLqWZiTJ10vIgKrNqjoaX+fNhE9RqmR5g0f6BtUg1ijFMz71MO1D4lQLQfW7+UHva8PGYgQ1QpHlKgR',
-      'Unsupported version: null',
+      'Invalid MAC',
     );
   });
 
@@ -610,7 +594,7 @@ void main() {
       '5254827d29177622d40a7b67cad014fe7137700c3c523903ebbe3e1b74d40214',
       'elliptic-curve cryptography',
       'Anq2XbuLvCuONcr7V0UxTh8FAyWoZNEdBHXvdbNmDZHB573MI7R7rrTYftpqmvUpahmBC2sngmI14/L0HjOZ7lWGJlzdh6luiOnGPc46cGxf08MRC4CIuxx3i2Lm0KqgJ7vA',
-      'Unsupported version: null',
+      'Invalid padding',
     );
   });
 
@@ -619,7 +603,7 @@ void main() {
       'fea39aca9aa8340c3a78ae1f0902aa7e726946e4efcd7783379df8096029c496',
       'noble',
       'An1Cg+O1TIhdav7ogfSOYvCj9dep4ctxzKtZSniCw5MwRrrPJFyAQYZh5VpjC2QYzny5LIQ9v9lhqmZR4WBYRNJ0ognHVNMwiFV1SHpvUFT8HHZN/m/QarflbvDHAtO6pY16',
-      'Unsupported version: null',
+      'Invalid padding',
     );
   });
 
@@ -628,7 +612,7 @@ void main() {
       '0c4cffb7a6f7e706ec94b2e879f1fc54ff8de38d8db87e11787694d5392d5b3f',
       'censorship-resistant and global social network',
       'Am+f1yZnwnOs0jymZTcRpwhDRHTdnrFcPtsBzpqVdD6b2NZDaNm/TPkZGr75kbB6tCSoq7YRcbPiNfJXNch3Tf+o9+zZTMxwjgX/nm3yDKR2kHQMBhVleCB9uPuljl40AJ8kXRD0gjw+aYRJFUMK9gCETZAjjmrsCM+nGRZ1FfNsHr6Z',
-      'Unsupported version: null',
+      'Invalid padding',
     );
   });
 
@@ -1274,8 +1258,7 @@ void main() {
   group('strict padded-length check (NIP-44 v2 §unpad)', () {
     // unpaddedLen = 5, so calcPaddedLen(5) = 32 and the spec-correct
     // padded buffer length must be 34 (2-byte header + 32-byte block).
-    test('unpad rejects buffer larger than 2 + calcPaddedLen(unpaddedLen)',
-        () {
+    test('unpad rejects buffer larger than 2 + calcPaddedLen(unpaddedLen)', () {
       // unpaddedLen=5 header, then 32 zero bytes, then 16 EXTRA zeros — the
       // shape used by a malleability attempt that the prior implementation
       // happily accepted.

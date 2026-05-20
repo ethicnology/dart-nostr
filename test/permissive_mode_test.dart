@@ -85,9 +85,10 @@ void main() {
         ['k', '1'],
         ['K', '1'],
       ]);
-      expect(() => Comment.parse(event),
-          throwsA(isA<MissingTagException>()
-              .having((e) => e.tag, 'tag', 'E/A/I')));
+      expect(
+          () => Comment.parse(event),
+          throwsA(
+              isA<MissingTagException>().having((e) => e.tag, 'tag', 'E/A/I')));
     });
 
     test('permissive surfaces all missing tag groups', () {

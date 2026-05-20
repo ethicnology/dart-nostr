@@ -73,7 +73,8 @@ void main() {
 
     test('nsec encode/decode matches rust-nostr', () {
       final nip19 = vectors['nip19']['nsec'];
-      final encoded = Nip19.encode(prefix: Nip19Prefix.nsec, data: nip19['hex']);
+      final encoded =
+          Nip19.encode(prefix: Nip19Prefix.nsec, data: nip19['hex']);
       expect(encoded, nip19['bech32']);
       final decoded = Nip19.decode(payload: nip19['bech32']);
       expect(decoded.data, nip19['hex']);
@@ -82,7 +83,8 @@ void main() {
 
     test('npub encode/decode matches rust-nostr', () {
       final nip19 = vectors['nip19']['npub'];
-      final encoded = Nip19.encode(prefix: Nip19Prefix.npub, data: nip19['hex']);
+      final encoded =
+          Nip19.encode(prefix: Nip19Prefix.npub, data: nip19['hex']);
       expect(encoded, nip19['bech32']);
       final decoded = Nip19.decode(payload: nip19['bech32']);
       expect(decoded.data, nip19['hex']);
@@ -91,7 +93,8 @@ void main() {
 
     test('note encode/decode matches rust-nostr', () {
       final nip19 = vectors['nip19']['note'];
-      final encoded = Nip19.encode(prefix: Nip19Prefix.note, data: nip19['hex']);
+      final encoded =
+          Nip19.encode(prefix: Nip19Prefix.note, data: nip19['hex']);
       expect(encoded, nip19['bech32']);
       final decoded = Nip19.decode(payload: nip19['bech32']);
       expect(decoded.data, nip19['hex']);
@@ -100,7 +103,8 @@ void main() {
 
     test('nprofile decode matches rust-nostr', () {
       final nip19 = vectors['nip19']['nprofile'];
-      final decoded = Nip19.decodeShareableIdentifiers(payload: nip19['bech32']);
+      final decoded =
+          Nip19.decodeShareableIdentifiers(payload: nip19['bech32']);
       expect(decoded.prefix, Nip19Prefix.nprofile);
       expect(decoded.data, nip19['pubkey']);
       expect(decoded.relays, nip19['relays'].cast<String>());
@@ -110,8 +114,7 @@ void main() {
   test('encode nprofile', () {
     final y = Nip19.encodeShareableIdentifiers(
       prefix: Nip19Prefix.nprofile,
-      data:
-          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d',
+      data: '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d',
       relays: ['wss://r.x.com', 'wss://djbas.sadkb.com'],
     );
 
@@ -263,7 +266,9 @@ void main() {
       );
     });
 
-    test('decodeShareableIdentifiers wraps inner errors in DeserializationException', () {
+    test(
+        'decodeShareableIdentifiers wraps inner errors in DeserializationException',
+        () {
       // Passing an npub (no TLV body) to the TLV decoder should fail
       // gracefully with DeserializationException, not leak a RangeError.
       const pubkey =
@@ -275,7 +280,9 @@ void main() {
       );
     });
 
-    test('encode rejects shareable-identifier prefixes (must use shareable encoder)', () {
+    test(
+        'encode rejects shareable-identifier prefixes (must use shareable encoder)',
+        () {
       expect(
         () => Bech32Entity.encode(
           prefix: Nip19Prefix.nprofile,

@@ -37,18 +37,22 @@ void main() async {
   );
   assert(oneEvent.id == signed.id);
 
-  // Create a partial event from nothing and fill it with data until it is valid
-  final partialEvent = Event.partial();
-  assert(partialEvent.isValid() == false);
-  partialEvent
-    ..createdAt = currentUnixTimestampSeconds()
-    ..pubkey =
-        "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b"
-    ..id = partialEvent.getEventId()
-    ..sig = partialEvent.getSignature(
+  // Compose a valid event step-by-step. `Event.unsigned(...)` builds the
+  // canonical id from the payload; signing then promotes it to a full
+  // event via `copyWith`.
+  final unsigned = Event.unsigned(
+    pubkey: "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b",
+    kind: 1,
+    content: "",
+    createdAt: currentUnixTimestampSeconds(),
+  );
+  final signed2 = unsigned.copyWith(
+    sig: unsigned.getSignature(
       "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
-    );
-  assert(partialEvent.isValid() == true);
+    ),
+    verify: true,
+  );
+  assert(signed2.isValid() == true);
 
   // Instantiate an event with a partial data and let the library sign the event with your secret key
   final Event anotherEvent = Event.from(

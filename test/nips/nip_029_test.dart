@@ -192,7 +192,8 @@ void main() {
       expect(event.content, 'hi');
       final h = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'h');
       expect(h[1], 'g1');
-      final previous = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'previous');
+      final previous =
+          event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'previous');
       expect(previous, ['previous', 'aaaaaaaa', 'bbbbbbbb']);
       final e = event.tags.firstWhere((t) => t.isNotEmpty && t[0] == 'e');
       expect(e[1], 'a' * 64);
@@ -253,7 +254,8 @@ void main() {
         content: '',
         secretKey: secret,
       );
-      expect(() => Group.parseAdmins(event), throwsA(isA<MissingTagException>()));
+      expect(
+          () => Group.parseAdmins(event), throwsA(isA<MissingTagException>()));
     });
 
     test('parseAdmins permissive records missing d', () {

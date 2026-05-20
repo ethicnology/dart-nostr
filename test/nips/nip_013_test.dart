@@ -52,7 +52,11 @@ void main() {
     });
 
     test('targetFromTag returns null on missing nonce tag', () {
-      expect(Nip13.targetFromTag([['p', 'pk']]), isNull);
+      expect(
+          Nip13.targetFromTag([
+            ['p', 'pk']
+          ]),
+          isNull);
     });
 
     test('targetFromTag returns null when nonce has no target', () {

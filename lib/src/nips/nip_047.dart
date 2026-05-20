@@ -45,10 +45,8 @@ class WalletConnect {
     if (event.kind != kindWalletInfo) {
       throw InvalidKindException(event.kind, [kindWalletInfo]);
     }
-    final capabilities = event.content
-        .split(' ')
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final capabilities =
+        event.content.split(' ').where((s) => s.isNotEmpty).toList();
 
     final encryption = findAllTagValues(event.tags, 'encryption');
     final notifications = findAllTagValues(event.tags, 'notifications');

@@ -62,7 +62,7 @@ void main() {
         "search": "test",
       };
 
-      final Filter filter = Filter.fromJson(json);
+      final Filter filter = Filter.fromMap(json);
       expect(filter.ids, json['ids']);
       expect(filter.authors, json['authors']);
       expect(filter.kinds, json['kinds']);
@@ -81,10 +81,10 @@ void main() {
         pTags: ['def456'],
         aTags: ['30023:pk:id'],
       );
-      final json = filter.toJson();
-      expect(json['#e'], ['abc123']);
-      expect(json['#p'], ['def456']);
-      expect(json['#a'], ['30023:pk:id']);
+      final map = filter.toMap();
+      expect(map['#e'], ['abc123']);
+      expect(map['#p'], ['def456']);
+      expect(map['#a'], ['30023:pk:id']);
     });
 
     test('tagFilters serializes generic #X keys', () {
@@ -95,14 +95,14 @@ void main() {
           'r': ['wss://relay.example.com'],
         },
       );
-      final json = filter.toJson();
-      expect(json['#t'], ['nostr', 'bitcoin']);
-      expect(json['#d'], ['my-article-id']);
-      expect(json['#r'], ['wss://relay.example.com']);
+      final map = filter.toMap();
+      expect(map['#t'], ['nostr', 'bitcoin']);
+      expect(map['#d'], ['my-article-id']);
+      expect(map['#r'], ['wss://relay.example.com']);
     });
 
     test('fromJson collects generic #X keys into tagFilters', () {
-      final filter = Filter.fromJson({
+      final filter = Filter.fromMap({
         '#t': ['nostr'],
         '#d': ['article-1'],
         '#k': ['1'],
@@ -119,7 +119,7 @@ void main() {
           'e': ['from-tagFilters'],
         },
       );
-      expect(filter.toJson()['#e'], ['from-eTags']);
+      expect(filter.toMap()['#e'], ['from-eTags']);
     });
 
     test('non-letter and multi-char tag-filter keys are ignored', () {
@@ -130,8 +130,8 @@ void main() {
           '#': ['z'],
         },
       );
-      final json = filter.toJson();
-      expect(json.keys.where((k) => k.startsWith('#')), isEmpty);
+      final map = filter.toMap();
+      expect(map.keys.where((k) => k.startsWith('#')), isEmpty);
     });
 
     test('round-trip preserves every populated field', () {
@@ -169,7 +169,7 @@ void main() {
     });
 
     test('accepts uppercase single-letter tag keys (e.g. #K, #A)', () {
-      final filter = Filter.fromJson({
+      final filter = Filter.fromMap({
         '#K': ['1'],
         '#A': ['30023:author:slug'],
       });
@@ -179,7 +179,7 @@ void main() {
 
     test('rejects non-ASCII single-letter tag keys', () {
       // Unicode "letter" Ω is not allowed by NIP-01; ASCII-only.
-      final filter = Filter.fromJson({
+      final filter = Filter.fromMap({
         '#Ω': ['x'],
         '#t': ['nostr'],
       });

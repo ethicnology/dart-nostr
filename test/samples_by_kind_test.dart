@@ -30,7 +30,15 @@ void main() {
     expect(samples, isNotEmpty);
     for (final entry in samples.entries) {
       final ev = entry.value as Map<String, dynamic>;
-      for (final field in ['id', 'pubkey', 'created_at', 'kind', 'tags', 'content', 'sig']) {
+      for (final field in [
+        'id',
+        'pubkey',
+        'created_at',
+        'kind',
+        'tags',
+        'content',
+        'sig'
+      ]) {
         expect(ev.containsKey(field), isTrue,
             reason: 'kind ${entry.key} sample missing field "$field"');
       }
@@ -51,8 +59,7 @@ void main() {
         failures.add('kind ${entry.key}: ${e.runtimeType}: $e');
       }
     }
-    expect(failures, isEmpty,
-        reason: failures.take(10).join('\n'));
+    expect(failures, isEmpty, reason: failures.take(10).join('\n'));
   });
 
   // Per-kind parser smoke. We only run a kind-specific parser when the

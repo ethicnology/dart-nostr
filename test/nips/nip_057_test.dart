@@ -34,7 +34,7 @@ void main() {
           eventId:
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           addressableCoord: '30023:pubkey:slug',
-          amount: 21000,
+          amount: BigInt.from(21000),
           lnurl: 'lnurl1dp68gurn8ghj7...',
         );
         expect(event.kind, 9734);
@@ -66,13 +66,13 @@ void main() {
           relays: ['wss://relay1.com', 'wss://relay2.com'],
           secretKey: secretKey,
           content: 'Nice!',
-          amount: 5000,
+          amount: BigInt.from(5000),
         );
         final request = Nip57.parseRequest(event);
         expect(request.recipientPubkey, recipientPubkey);
         expect(request.relays, ['wss://relay1.com', 'wss://relay2.com']);
         expect(request.content, 'Nice!');
-        expect(request.amount, 5000);
+        expect(request.amount, BigInt.from(5000));
         expect(request.pubkey, event.pubkey);
       });
 
@@ -98,7 +98,7 @@ void main() {
           relays: ['wss://relay.com'],
           secretKey: secretKey,
           content: 'Zap!',
-          amount: 1000,
+          amount: BigInt.from(1000),
         );
 
         // Create a zap receipt that embeds the request in the description tag
@@ -126,7 +126,7 @@ void main() {
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         expect(receipt.embeddedRequest, isNotNull);
         expect(receipt.embeddedRequest!.content, 'Zap!');
-        expect(receipt.embeddedRequest!.amount, 1000);
+        expect(receipt.embeddedRequest!.amount, BigInt.from(1000));
         expect(receipt.embeddedRequest!.recipientPubkey, recipientPubkey);
       });
 
@@ -232,7 +232,7 @@ void main() {
         recipientPubkey: recipientPubkey,
         relays: ['wss://relay.damus.io'],
         content: 'Anonymous zap!',
-        amount: 1000,
+        amount: BigInt.from(1000),
       );
       expect(event.kind, 9734);
       expect(findTagValue(event.tags, 'p'), recipientPubkey);
@@ -253,7 +253,7 @@ void main() {
         relays: ['wss://relay.damus.io'],
         secretKey: secretKey,
         content: 'Private zap message!',
-        amount: 21000,
+        amount: BigInt.from(21000),
       );
 
       expect(privateZap.kind, 9734);
@@ -274,7 +274,7 @@ void main() {
       // Inner event reveals real sender and message
       expect(decrypted.pubkey, Keys(secretKey).public);
       expect(decrypted.content, 'Private zap message!');
-      expect(decrypted.amount, 21000);
+      expect(decrypted.amount, BigInt.from(21000));
       expect(decrypted.recipientPubkey, recipientPub);
     });
 

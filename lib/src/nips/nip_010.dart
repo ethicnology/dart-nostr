@@ -49,7 +49,8 @@ class Threading {
   static List<PTag> pTags(List<String> pubkeys, List<String> relays) {
     final List<PTag> result = [];
     for (int i = 0; i < pubkeys.length; ++i) {
-      result.add(PTag(pubkey: pubkeys[i], relayURL: relays.length > i ? relays[i] : ''));
+      result.add(PTag(
+          pubkey: pubkeys[i], relayURL: relays.length > i ? relays[i] : ''));
     }
     return result;
   }
@@ -113,7 +114,8 @@ class Thread {
   final List<PTag> ptags;
 
   /// Creates a [Thread] with the given fields.
-  const Thread({required this.root, this.etags = const [], this.ptags = const []});
+  const Thread(
+      {required this.root, this.etags = const [], this.ptags = const []});
 }
 
 typedef Nip10 = Threading;

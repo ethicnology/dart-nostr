@@ -203,8 +203,7 @@ class InvalidNostrUriException extends NostrException {
   final NostrUriRejection reason;
   final String input;
 
-  InvalidNostrUriException(this.reason, this.input)
-      : super(_describe(reason));
+  InvalidNostrUriException(this.reason, this.input) : super(_describe(reason));
 
   // The raw input is deliberately NOT embedded in the message — if a
   // caller accidentally passes an nsec (or any other secret) here, the

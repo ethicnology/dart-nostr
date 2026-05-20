@@ -21,7 +21,8 @@ void main() {
       final Event event = await UserList.categorizedPeople(
           "friends", [publicFriend], [privateFriend], user.secret, user.public);
 
-      final UserListData list = await UserList.parse(event, secretKey: user.secret);
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
       expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.contacts[0].petName, 'alias');
@@ -39,7 +40,8 @@ void main() {
       final Event event = await UserList.categorizedBookmarks("bookmarks",
           [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      final UserListData list = await UserList.parse(event, secretKey: user.secret);
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
       expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.bookmarks[1],
@@ -60,7 +62,8 @@ void main() {
       );
       final Event event = await UserList.mutePeople(
           [publicFriend], [privateFriend], user.secret, user.public);
-      final UserListData list = await UserList.parse(event, secretKey: user.secret);
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
       expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.contacts[0].petName, 'alias');
@@ -78,7 +81,8 @@ void main() {
       final Event event = await UserList.pinEvent(
           [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      final UserListData list = await UserList.parse(event, secretKey: user.secret);
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
       expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
       expect(list.bookmarks[1],

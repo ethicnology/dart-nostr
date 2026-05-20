@@ -28,8 +28,10 @@ void main() {
         image: 'https://example.com/badge.png',
         imageSize: '1024x1024',
         thumbnails: [
-          const BadgeImage(url: 'https://example.com/thumb-512.png', size: '512x512'),
-          const BadgeImage(url: 'https://example.com/thumb-64.png', size: '64x64'),
+          const BadgeImage(
+              url: 'https://example.com/thumb-512.png', size: '512x512'),
+          const BadgeImage(
+              url: 'https://example.com/thumb-64.png', size: '64x64'),
         ],
       );
 
@@ -39,13 +41,11 @@ void main() {
       expect(findTagValue(event.tags, 'description'),
           'Awarded for outstanding contribution');
 
-      final imageTag =
-          event.tags.firstWhere((t) => t[0] == 'image');
+      final imageTag = event.tags.firstWhere((t) => t[0] == 'image');
       expect(imageTag[1], 'https://example.com/badge.png');
       expect(imageTag[2], '1024x1024');
 
-      final thumbTags =
-          event.tags.where((t) => t[0] == 'thumb').toList();
+      final thumbTags = event.tags.where((t) => t[0] == 'thumb').toList();
       expect(thumbTags, hasLength(2));
       expect(thumbTags[0][1], 'https://example.com/thumb-512.png');
       expect(thumbTags[0][2], '512x512');
@@ -60,7 +60,8 @@ void main() {
         image: 'https://example.com/brave.png',
         imageSize: '256x256',
         thumbnails: [
-          const BadgeImage(url: 'https://example.com/brave-sm.png', size: '64x64'),
+          const BadgeImage(
+              url: 'https://example.com/brave-sm.png', size: '64x64'),
         ],
       );
 
@@ -77,7 +78,9 @@ void main() {
     test('parseDefinition throws on wrong kind', () {
       final event = Event.from(
         kind: 1,
-        tags: [['d', 'test']],
+        tags: [
+          ['d', 'test']
+        ],
         content: '',
         secretKey: secretKey,
       );
@@ -128,7 +131,9 @@ void main() {
     test('award throws on wrong definition kind', () {
       final notADef = Event.from(
         kind: 1,
-        tags: [['d', 'test']],
+        tags: [
+          ['d', 'test']
+        ],
         content: '',
         secretKey: secretKey,
       );
@@ -168,7 +173,11 @@ void main() {
         badgeDefinition: def,
         awardees: [
           (pubkey: awardeeKey, relay: 'wss://relay.example.com'),
-          (pubkey: '0000000000000000000000000000000000000000000000000000000000000001', relay: null),
+          (
+            pubkey:
+                '0000000000000000000000000000000000000000000000000000000000000001',
+            relay: null
+          ),
         ],
         secretKey: secretKey,
       );
@@ -228,13 +237,17 @@ void main() {
     test('profileBadges throws on wrong definition kind', () {
       final notDef = Event.from(
         kind: 1,
-        tags: [['d', 'test']],
+        tags: [
+          ['d', 'test']
+        ],
         content: '',
         secretKey: secretKey,
       );
       final awardEvent = Event.from(
         kind: 8,
-        tags: [['p', awardeeKey]],
+        tags: [
+          ['p', awardeeKey]
+        ],
         content: '',
         secretKey: secretKey,
       );
@@ -255,7 +268,9 @@ void main() {
       );
       final notAward = Event.from(
         kind: 1,
-        tags: [['p', awardeeKey]],
+        tags: [
+          ['p', awardeeKey]
+        ],
         content: '',
         secretKey: secretKey,
       );
@@ -284,7 +299,8 @@ void main() {
         () => Badge.profileBadges(
           badges: [(definition: def, award: awardEvent)],
           secretKey: secretKey,
-          pubkey: '0000000000000000000000000000000000000000000000000000000000000001',
+          pubkey:
+              '0000000000000000000000000000000000000000000000000000000000000001',
         ),
         throwsA(isA<NostrException>()),
       );

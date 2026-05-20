@@ -37,9 +37,8 @@ class RelayInfo {
 
     final client = http.Client();
     try {
-      final response = await client
-          .get(url, headers: const {'Accept': 'application/nostr+json'})
-          .timeout(timeout);
+      final response = await client.get(url,
+          headers: const {'Accept': 'application/nostr+json'}).timeout(timeout);
 
       if (response.statusCode != 200) return null;
 

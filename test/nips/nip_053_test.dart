@@ -39,8 +39,7 @@ void main() {
       expect(activity.summary, 'A great stream about Nostr development');
       expect(activity.image, 'https://example.com/image.jpg');
       expect(activity.streaming, 'https://stream.example.com/live.m3u8');
-      expect(activity.recording,
-          'https://stream.example.com/recording.mp4');
+      expect(activity.recording, 'https://stream.example.com/recording.mp4');
       expect(activity.status, 'live');
       expect(activity.starts, 1700000000);
       expect(activity.ends, 1700100000);

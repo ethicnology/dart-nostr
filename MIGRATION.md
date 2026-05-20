@@ -82,7 +82,7 @@ and String variants for clarity.
 +final map     = event.toMap();          // Map only
 +final parsed  = Event.fromMap(map);     // Map -> Event
 +final parsedFromStr = Event.fromJson(jsonStr); // String -> Event
-+final wire = Event.deserialize(['EVENT', subId, map]); // relay frame -> Event
++final wire = Event.deserialize('["EVENT","$subId",${event.toJson()}]'); // relay frame -> Event
 ```
 
 `Event.isValid()` still returns `bool` but is no longer based on the
@@ -270,7 +270,7 @@ is provided so old code still compiles.
 +  identifier: 'alice@example.com',
 +  pubkey: 'expected-hex-pubkey',
 +);
-+```
+```
 
 ---
 
@@ -489,7 +489,114 @@ If your v1 code uses one of these and you can't find it:
 
 ---
 
-## 20. Smoke-test your migration
+## 20. `NoteData.thread` is now non-nullable
+
+```diff
+-final Thread? t = note.thread;          // Thread?
+-if (t == null) print('no thread refs');
++final Thread t = note.thread;           // Thread (always non-null)
++if (t.root.eventId.isEmpty && t.etags.isEmpty && t.ptags.isEmpty) {
++  print('no thread refs');
++}
+```
+
+`Note.parse` already returned a non-null sentinel `Thread` for plain
+notes — the declared `Thread?` type was wrong. Code using `?.` for
+chained access will still compile but should drop the `?`.
+
+---
+
+## 21. NIP-29 `GroupMetadataData` gained three flag fields
+
+```diff
+-isOpen, isPublic
++isOpen, isClosed, isPublic, isPrivate, isBroadcast
+```
+
+`parseMetadata` reports presence of each NIP-29 metadata flag tag
+independently. The pairs `open/closed` and `public/private` are
+mutually exclusive per spec, but the library doesn't enforce that —
+relays may emit either, both, or neither, and consumers decide what
+"unspecified" means for their UI.
+
+---
+
+## 22. `Filter.fromJson` / `toJson` are now String-based
+
+```diff
+-final filter = Filter.fromJson(jsonMap);          // Map  -> Filter
+-final jsonMap = filter.toJson();                  // Filter -> Map
++final filter = Filter.fromJson(jsonString);       // String -> Filter
++final jsonString = filter.toJson();               // Filter -> String
++
++// The Map variants moved to `fromMap` / `toMap`:
++final filter = Filter.fromMap(jsonMap);
++final jsonMap = filter.toMap();
+```
+
+This matches the convention used by `Event`, `Close`, `Eose`, `Request`,
+`Message`, and `CommandResult`. Internal callers (NIP-01 REQ frame
+assembly) now go through `toMap`.
+
+---
+
+## 23. `Event` is now immutable
+
+```diff
+-final e = Event.partial();
+-e.createdAt = currentUnixTimestampSeconds();
+-e.pubkey   = '...';
+-e.id       = e.getEventId();
+-e.sig      = e.getSignature(secretKey);
++final unsigned = Event.unsigned(
++  pubkey: '...',
++  kind: 1,
++  content: '',
++  createdAt: currentUnixTimestampSeconds(),
++);
++final signed = unsigned.copyWith(
++  sig: unsigned.getSignature(secretKey),
++);
+```
+
+Every `Event` field is `final`. The previous v1.5-era idiom of
+mutating fields on a `partial` event no longer compiles. Two helpers
+replace it:
+
+- **`Event.unsigned({pubkey, kind, content, createdAt, tags})`** —
+  builds an event with the canonical `id` precomputed and `sig` empty.
+  Use this for NIP-17 rumors (which MUST never be signed) and NIP-13
+  mining probes (where signing per attempt is wasted work).
+- **`event.copyWith({...})`** — returns a new event with the named
+  fields replaced. Useful when promoting an unsigned event to signed
+  (pass `sig:`), or when attaching a `subscriptionId` after the fact.
+
+`Event.partial(...)` still exists as a thin "skip validation"
+constructor — handy in tests — but it can no longer be mutated.
+
+---
+
+## 24. NIP-57 `amount` is now `BigInt`
+
+```diff
+-final zap = Zap.request(
+-  ..., amount: 21000,                     // int
+-);
+-final amount = parsed.amount;             // int?
++final zap = Zap.request(
++  ..., amount: BigInt.from(21000),
++);
++final amount = parsed.amount;             // BigInt?
+```
+
+Bitcoin's total supply exceeds 2^53 millisats. When the library is
+compiled to JavaScript (Flutter Web), values above `2^53` lose
+precision through `int`. Switching to `BigInt` keeps every realistic
+zap amount exact. Constants like `21000` become `BigInt.from(21000)`.
+
+---
+
+## 25. Smoke-test your migration
 
 After all errors compile away, run the upstream-vector tests and live
 relay validation that ship with the library to confirm your imports
@@ -501,7 +608,7 @@ dart analyze
 dart test
 ```
 
-You should see **470 / 470 passing** and a clean analyzer. If you
+You should see all tests passing and a clean analyzer. If you
 forked the library, the `tool/` directory has scripts that capture
 real-world events from popular relays and run them through every
 parser — a strong end-to-end check before shipping.

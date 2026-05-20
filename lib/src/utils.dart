@@ -59,7 +59,7 @@ String? findTagValue(List<List<String>> tags, String name) {
 /// Finds all values for tags with the given [name].
 List<String> findAllTagValues(List<List<String>> tags, String name) {
   return tags
-    .where((t) => t.isNotEmpty && t[0] == name && t.length > 1)
-    .map((t) => t[1])
-    .toList();
+      .where((t) => t.isNotEmpty && t[0] == name && t.length > 1)
+      .map((t) => t[1])
+      .toList();
 }

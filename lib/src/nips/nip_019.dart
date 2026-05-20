@@ -31,12 +31,13 @@ class Bech32Entity {
   /// Throws [NostrException] if the payload is a shareable identifier
   /// (nprofile, nevent, naddr) — use [decodeShareableIdentifiers] instead.
   /// Throws [DeserializationException] if the payload exceeds the 5000-char
-  /// soft limit.
+  /// length cap.
   static ({Nip19Prefix prefix, String data}) decode({required String payload}) {
     _assertLength(payload);
     final decoded = bech32Decode(payload);
     if (_shareableIdentifiersPrefixes.contains(decoded.prefix)) {
-      throw WrongDecodeMethodException('Bech32Entity.decodeShareableIdentifiers');
+      throw WrongDecodeMethodException(
+          'Bech32Entity.decodeShareableIdentifiers');
     }
     return decoded;
   }
@@ -65,7 +66,7 @@ class Bech32Entity {
   static void _assertLength(String payload) {
     if (payload.length > _maxBech32Length) {
       throw const DeserializationException(
-        'bech32 payload exceeds NIP-19 soft cap',
+        'bech32 payload exceeds NIP-19 5000-char cap',
       );
     }
   }
@@ -82,7 +83,8 @@ class Bech32Entity {
     required String data,
   }) {
     if (_shareableIdentifiersPrefixes.contains(prefix)) {
-      throw WrongDecodeMethodException('Bech32Entity.encodeShareableIdentifiers');
+      throw WrongDecodeMethodException(
+          'Bech32Entity.encodeShareableIdentifiers');
     }
     final encoded = bech32Encode(prefix, data);
     _assertLength(encoded);
@@ -124,6 +126,10 @@ class Bech32Entity {
       }
     }
 
+    // Build the TLV with a StringBuffer to avoid O(n²) repeated string
+    // concat — naïve `result = '$result...'` blows up with many relays.
+    final buf = StringBuffer();
+
     // 0: data
     //
     // For naddr the value is the `d`-tag string. NIP-19 leaves the byte
@@ -132,8 +138,9 @@ class Bech32Entity {
     if (prefix == Nip19Prefix.naddr) {
       data = hex.encode(utf8.encode(data));
     }
-    var result =
-        '00${hex.decode(data).length.toRadixString(16).padLeft(2, '0')}$data';
+    buf.write('00');
+    buf.write((data.length ~/ 2).toRadixString(16).padLeft(2, '0'));
+    buf.write(data);
 
     // 1: relay
     //
@@ -142,33 +149,39 @@ class Bech32Entity {
     // matches what rust-nostr / nostr-tools do.
     if (relays != null) {
       for (final relay in relays) {
-        result = '${result}01';
-        final value = hex.encode(utf8.encode(relay));
-        result =
-            '$result${hex.decode(value).length.toRadixString(16).padLeft(2, '0')}$value';
+        final bytes = utf8.encode(relay);
+        buf.write('01');
+        buf.write(bytes.length.toRadixString(16).padLeft(2, '0'));
+        buf.write(hex.encode(bytes));
       }
     }
 
     // 2: author
     if (author != null) {
-      result = '${result}02';
-      result =
-          '$result${hex.decode(author).length.toRadixString(16).padLeft(2, '0')}$author';
+      buf.write('02');
+      buf.write((author.length ~/ 2).toRadixString(16).padLeft(2, '0'));
+      buf.write(author);
     }
 
     // 3: kind
+    //
+    // NIP-19 encodes `kind` as 4 bytes (uint32). `setUint32` silently masks
+    // anything past 32 bits to zero, so reject out-of-range values up-front
+    // — otherwise `kind = 2^32` would round-trip to `0`.
     if (kind != null) {
-      result = '${result}03';
-      final byteData = ByteData(4);
-      byteData.setUint32(0, kind);
-      final value = List.generate(
-              byteData.lengthInBytes,
-              (index) =>
-                  byteData.getUint8(index).toRadixString(16).padLeft(2, '0'))
-          .join();
-      result =
-          '$result${hex.decode(value).length.toRadixString(16).padLeft(2, '0')}$value';
+      if (kind < 0 || kind > 0xFFFFFFFF) {
+        throw InvalidArgumentException(
+            'kind', 'must fit in uint32 (0..2^32-1)');
+      }
+      final byteData = ByteData(4)..setUint32(0, kind);
+      buf.write('03');
+      buf.write('04');
+      for (var i = 0; i < 4; i++) {
+        buf.write(byteData.getUint8(i).toRadixString(16).padLeft(2, '0'));
+      }
     }
+
+    final result = buf.toString();
     final encoded = bech32Encode(prefix, result, length: result.length + 90);
     _assertLength(encoded);
     return encoded;
@@ -215,7 +228,8 @@ class Bech32Entity {
         final type = tlvBytes[index++];
         final length = tlvBytes[index++];
 
-        final value = Uint8List.fromList(tlvBytes.sublist(index, index + length));
+        final value =
+            Uint8List.fromList(tlvBytes.sublist(index, index + length));
         index += length;
 
         if (type == 0) {
@@ -243,8 +257,14 @@ class Bech32Entity {
         author: author,
         kind: kind,
       );
-    } catch (e) {
-      throw DeserializationException('Failed to decode shareable entity: $e');
+    } on NostrException {
+      rethrow;
+    } on Object catch (e) {
+      // Don't echo `$e` — TLV inputs include hex from bech32 payloads, and
+      // `package:hex` / `ByteData` exception messages can embed a snippet.
+      throw DeserializationException(
+        'failed to decode shareable entity: ${e.runtimeType}',
+      );
     }
   }
 }

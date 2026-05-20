@@ -23,8 +23,7 @@ void main() {
 
       expect(event.kind, 27235);
       expect(event.content, '');
-      expect(findTagValue(event.tags, 'u'),
-          'https://example.com/api/resource');
+      expect(findTagValue(event.tags, 'u'), 'https://example.com/api/resource');
       expect(findTagValue(event.tags, 'method'), 'GET');
       expect(findTagValue(event.tags, 'payload'), isNull);
     });
@@ -258,7 +257,8 @@ void main() {
       expect(decoded.id, event.id);
     });
 
-    test('fromAuthHeader throws MalformedAuthHeaderException on bad base64', () {
+    test('fromAuthHeader throws MalformedAuthHeaderException on bad base64',
+        () {
       expect(
         () => HttpAuth.fromAuthHeader('Nostr not-valid-base64!!!'),
         throwsA(isA<MalformedAuthHeaderException>()

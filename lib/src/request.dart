@@ -26,13 +26,13 @@ class Request {
   /// Returns a JSON-encoded string:
   /// `["REQ", subscription_id, filter JSON, filter JSON, ...]`.
   String serialize() {
-    final theFilters = filters.map((item) => item.toJson()).toList();
+    final theFilters = filters.map((item) => item.toMap()).toList();
 
     return json.encode(
       [
         "REQ",
         subscriptionId,
-        if (filters.isEmpty) const Filter() else ...theFilters,
+        if (filters.isEmpty) const Filter().toMap() else ...theFilters,
       ],
     );
   }
@@ -83,7 +83,7 @@ class Request {
           'REQ filter at index $i must be a JSON object',
         );
       }
-      filters.add(Filter.fromJson(entry));
+      filters.add(Filter.fromMap(entry));
     }
 
     return Request(subscriptionId: subscriptionId, filters: filters);

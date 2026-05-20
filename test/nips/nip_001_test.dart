@@ -28,7 +28,8 @@ void main() {
         replyEventRelay: 'wss://relay.example',
       );
       // Two e tags: root and reply, in that order
-      final eTags = event.tags.where((t) => t.isNotEmpty && t[0] == 'e').toList();
+      final eTags =
+          event.tags.where((t) => t.isNotEmpty && t[0] == 'e').toList();
       expect(eTags, hasLength(2));
       expect(eTags[0][3], 'root');
       expect(eTags[1][3], 'reply');
@@ -42,11 +43,13 @@ void main() {
         replyUserRelays: ['wss://x', 'wss://y'],
         hashTags: ['nostr', 'dart'],
       );
-      final pTags = event.tags.where((t) => t.isNotEmpty && t[0] == 'p').toList();
+      final pTags =
+          event.tags.where((t) => t.isNotEmpty && t[0] == 'p').toList();
       expect(pTags, hasLength(2));
       expect(pTags[0][1], 'c' * 64);
       expect(pTags[1][2], 'wss://y');
-      final tTags = event.tags.where((t) => t.isNotEmpty && t[0] == 't').toList();
+      final tTags =
+          event.tags.where((t) => t.isNotEmpty && t[0] == 't').toList();
       expect(tTags.map((t) => t[1]), ['nostr', 'dart']);
     });
   });

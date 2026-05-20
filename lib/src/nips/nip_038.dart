@@ -81,8 +81,7 @@ class UserStatus {
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       url: url,
-      expiration:
-          expirationStr != null ? int.tryParse(expirationStr) : null,
+      expiration: expirationStr != null ? int.tryParse(expirationStr) : null,
       eventRef: eventRef,
       pubkeyRef: pubkeyRef,
       coordinateRef: coordRef,

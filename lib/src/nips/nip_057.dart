@@ -39,9 +39,13 @@ class Zap {
     String content = '',
     String? eventId,
     String? addressableCoord,
-    int? amount,
+    BigInt? amount,
     String? lnurl,
   }) {
+    if (amount != null && amount.isNegative) {
+      throw InvalidArgumentException(
+          'amount', 'must be non-negative millisats');
+    }
     final List<List<String>> tags = [
       ['relays', ...relays],
       ['p', recipientPubkey],
@@ -71,7 +75,6 @@ class Zap {
     );
   }
 
-
   /// Creates an anonymous kind-9734 zap request event.
   ///
   /// Uses a random throwaway key pair so the sender's identity is hidden.
@@ -82,9 +85,13 @@ class Zap {
     String content = '',
     String? eventId,
     String? addressableCoord,
-    int? amount,
+    BigInt? amount,
     String? lnurl,
   }) {
+    if (amount != null && amount.isNegative) {
+      throw InvalidArgumentException(
+          'amount', 'must be non-negative millisats');
+    }
     final throwaway = Keys.generate();
     final List<List<String>> tags = [
       ['relays', ...relays],
@@ -118,9 +125,13 @@ class Zap {
     String content = '',
     String? eventId,
     String? addressableCoord,
-    int? amount,
+    BigInt? amount,
     String? lnurl,
   }) async {
+    if (amount != null && amount.isNegative) {
+      throw InvalidArgumentException(
+          'amount', 'must be non-negative millisats');
+    }
     // Create the real zap request signed by sender
     final innerEvent = request(
       recipientPubkey: recipientPubkey,
@@ -317,7 +328,7 @@ class Zap {
     final eventId = findTagValue(event.tags, 'e');
     final addressableCoord = findTagValue(event.tags, 'a');
     final amountStr = findTagValue(event.tags, 'amount');
-    final amount = amountStr != null ? int.tryParse(amountStr) : null;
+    final amount = amountStr != null ? BigInt.tryParse(amountStr) : null;
     final lnurl = findTagValue(event.tags, 'lnurl');
 
     return ZapRequestData(
@@ -372,8 +383,10 @@ class ZapRequestData {
   /// The NIP-33 event coordinate, from the `a` tag.
   final String? addressableCoord;
 
-  /// The amount in millisats from the `amount` tag.
-  final int? amount;
+  /// The amount in millisats from the `amount` tag. Typed as [BigInt] so
+  /// values above `2^53` round-trip without precision loss when compiled
+  /// to JavaScript (Flutter Web).
+  final BigInt? amount;
 
   /// The bech32-encoded LNURL from the `lnurl` tag.
   final String? lnurl;

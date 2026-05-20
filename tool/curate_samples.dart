@@ -28,12 +28,14 @@ Future<void> main() async {
   final corpus = File(_corpusPath);
   final samples = File(_samplesPath);
   if (!corpus.existsSync()) {
-    stderr.writeln('No corpus at $_corpusPath. Run tool/capture_events.dart first.');
+    stderr.writeln(
+        'No corpus at $_corpusPath. Run tool/capture_events.dart first.');
     exit(1);
   }
 
   // Load existing samples (kind → event map). Keys are stringified kinds.
-  final existing = json.decode(samples.readAsStringSync()) as Map<String, dynamic>;
+  final existing =
+      json.decode(samples.readAsStringSync()) as Map<String, dynamic>;
   final existingKinds = existing.keys.map(int.parse).toSet();
 
   // Bucket the corpus by kind.

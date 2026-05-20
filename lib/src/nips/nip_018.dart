@@ -5,6 +5,12 @@ import 'package:nostr/nostr.dart';
 /// Kind 6 for text note reposts (kind 1 only), kind 16 for generic reposts
 /// (any other kind). The content is the stringified JSON of the reposted event.
 class Repost {
+  /// Event kind for a text-note repost (the original event is kind 1).
+  static const int kindRepost = 6;
+
+  /// Event kind for a generic repost (the original event is any other kind).
+  static const int kindGenericRepost = 16;
+
   /// Creates a repost event.
   ///
   /// Uses kind 6 if the original event is kind 1, otherwise kind 16.
@@ -15,8 +21,8 @@ class Repost {
     required String secretKey,
     required String relay,
   }) {
-    final isTextNote = originalEvent.kind == 1;
-    final kind = isTextNote ? 6 : 16;
+    final isTextNote = originalEvent.kind == Note.kindShortNote;
+    final kind = isTextNote ? kindRepost : kindGenericRepost;
 
     final List<List<String>> tags = [
       ["e", originalEvent.id, relay],
@@ -36,8 +42,8 @@ class Repost {
   ///
   /// Throws [InvalidKindException] if the event is not kind 6 or 16.
   static RepostData parse(Event event) {
-    if (event.kind != 6 && event.kind != 16) {
-      throw InvalidKindException(event.kind, [6, 16]);
+    if (event.kind != kindRepost && event.kind != kindGenericRepost) {
+      throw InvalidKindException(event.kind, [kindRepost, kindGenericRepost]);
     }
     final eventId = findTagValue(event.tags, 'e') ?? '';
     final repostedPubkey = findTagValue(event.tags, 'p') ?? '';

@@ -101,8 +101,7 @@ class LiveActivity {
     final endsStr = findTagValue(event.tags, 'ends');
     final currentParticipantsStr =
         findTagValue(event.tags, 'current_participants');
-    final totalParticipantsStr =
-        findTagValue(event.tags, 'total_participants');
+    final totalParticipantsStr = findTagValue(event.tags, 'total_participants');
     final hashtags = findAllTagValues(event.tags, 't');
 
     // Extract p tags with roles

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:nostr/src/error.dart';
 
 /// A filter determines what events will be sent in a Nostr subscription.
@@ -76,7 +78,7 @@ class Filter {
   ///
   /// Throws [DeserializationException] if any field has the wrong type
   /// (e.g. `kinds` is a string instead of a list of ints).
-  factory Filter.fromJson(Map<String, dynamic> json) {
+  factory Filter.fromMap(Map<String, dynamic> json) {
     final tagFilters = <String, List<String>>{};
     for (final entry in json.entries) {
       final key = entry.key;
@@ -101,6 +103,26 @@ class Filter {
       limit: _optionalInt(json['limit'], '"limit"'),
       search: _optionalString(json['search'], '"search"'),
     );
+  }
+
+  /// Deserializes a [Filter] from a JSON string.
+  ///
+  /// Wraps `dart:convert`'s `json.decode` so callers can use the same
+  /// `fromJson(String) / toJson(): String` shape as `Event`, `Close`,
+  /// `Request`, etc.
+  factory Filter.fromJson(String source) {
+    final Object? decoded;
+    try {
+      decoded = json.decode(source);
+    } on FormatException {
+      throw const DeserializationException('filter is not valid JSON');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const DeserializationException(
+        'filter must be a JSON object',
+      );
+    }
+    return Filter.fromMap(decoded);
   }
 
   static List<String>? _optionalStringList(Object? value, String label) {
@@ -161,7 +183,7 @@ class Filter {
   ///
   /// `#e`/`#a`/`#p` come from [eTags]/[aTags]/[pTags] when set; otherwise
   /// from [tagFilters]. Any other `#X` keys come from [tagFilters].
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     final Map<String, dynamic> data = <String, dynamic>{};
     if (ids != null) data['ids'] = ids;
     if (authors != null) data['authors'] = authors;
@@ -184,6 +206,12 @@ class Filter {
     if (search != null) data['search'] = search;
     return data;
   }
+
+  /// Serializes this filter to a JSON string.
+  ///
+  /// Symmetric with [Filter.fromJson] and matches the `Event.toJson` /
+  /// `Close.toJson` / `Request.serialize` convention across the library.
+  String toJson() => json.encode(toMap());
 
   static bool _isLetter(String c) {
     if (c.length != 1) return false;

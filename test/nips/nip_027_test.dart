@@ -67,8 +67,7 @@ void main() {
     test('extracts multiple mentions', () {
       const pubkey =
           '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
-      final npub =
-          Bech32Entity.encode(prefix: Nip19Prefix.npub, data: pubkey);
+      final npub = Bech32Entity.encode(prefix: Nip19Prefix.npub, data: pubkey);
       final content = 'nostr:$npub said hello to nostr:$npub again';
       final mentions = TextNoteReference.extractMentions(content);
 
@@ -78,8 +77,7 @@ void main() {
     });
 
     test('returns empty list for content without mentions', () {
-      final mentions =
-          TextNoteReference.extractMentions('Just a regular note');
+      final mentions = TextNoteReference.extractMentions('Just a regular note');
       expect(mentions, isEmpty);
     });
 
@@ -99,8 +97,7 @@ void main() {
     test('position indices are correct', () {
       const pubkey =
           '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
-      final npub =
-          Bech32Entity.encode(prefix: Nip19Prefix.npub, data: pubkey);
+      final npub = Bech32Entity.encode(prefix: Nip19Prefix.npub, data: pubkey);
       const prefix = 'Hey ';
       const suffix = ' how are you?';
       final content = '$prefix${'nostr:$npub'}$suffix';
@@ -110,8 +107,7 @@ void main() {
       expect(mentions[0].start, prefix.length);
       expect(mentions[0].end, prefix.length + 'nostr:$npub'.length);
       expect(
-          content.substring(mentions[0].start, mentions[0].end),
-          'nostr:$npub');
+          content.substring(mentions[0].start, mentions[0].end), 'nostr:$npub');
     });
 
     test('typedef Nip27 works', () {

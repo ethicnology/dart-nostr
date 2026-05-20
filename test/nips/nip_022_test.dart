@@ -13,10 +13,20 @@ void main() {
             'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
         createdAt: 1700000000,
         tags: [
-          ['E', 'root-event-id-hex', 'wss://relay.example.com', 'root-pubkey-hex'],
+          [
+            'E',
+            'root-event-id-hex',
+            'wss://relay.example.com',
+            'root-pubkey-hex'
+          ],
           ['K', '1'],
           ['P', 'root-pubkey-hex'],
-          ['e', 'parent-event-id-hex', 'wss://relay.example.com', 'parent-pubkey-hex'],
+          [
+            'e',
+            'parent-event-id-hex',
+            'wss://relay.example.com',
+            'parent-pubkey-hex'
+          ],
           ['k', '1111'],
           ['p', 'parent-pubkey-hex'],
         ],
@@ -131,7 +141,12 @@ void main() {
         secretKey: secretKey,
         rootTag: ['E', 'root-id', 'wss://relay.example.com', 'root-pubkey'],
         rootKind: '1',
-        parentTag: ['e', 'parent-id', 'wss://relay.example.com', 'parent-pubkey'],
+        parentTag: [
+          'e',
+          'parent-id',
+          'wss://relay.example.com',
+          'parent-pubkey'
+        ],
         parentKind: '1111',
         rootPubkey: 'root-pubkey',
         parentPubkey: 'parent-pubkey',

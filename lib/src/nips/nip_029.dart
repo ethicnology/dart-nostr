@@ -128,19 +128,24 @@ class Group {
     final picture = findTagValue(event.tags, 'picture');
     final about = findTagValue(event.tags, 'about');
 
-    // Privacy flags: presence of these tags indicates the property
-    final bool isOpen =
-        event.tags.any((t) => t.isNotEmpty && t[0] == 'open');
-    final bool isPublic =
-        event.tags.any((t) => t.isNotEmpty && t[0] == 'public');
+    // Privacy flags: presence of these single-element tags signals the
+    // property. NIP-29 defines mutually-exclusive pairs `public/private`
+    // and `open/closed`, plus the standalone `broadcast` opt-in. The
+    // library reports raw presence so callers can distinguish "flag set"
+    // from "flag unspecified" (the relay's default applies).
+    bool has(String name) =>
+        event.tags.any((t) => t.isNotEmpty && t[0] == name);
 
     return GroupMetadataData(
       groupId: groupId ?? '',
       name: name,
       picture: picture,
       about: about,
-      isOpen: isOpen,
-      isPublic: isPublic,
+      isOpen: has('open'),
+      isClosed: has('closed'),
+      isPublic: has('public'),
+      isPrivate: has('private'),
+      isBroadcast: has('broadcast'),
       pubkey: event.pubkey,
       createdAt: event.createdAt,
       missingTags: missing,
@@ -374,11 +379,20 @@ class GroupMetadataData {
   /// The group description.
   final String? about;
 
-  /// Whether the group allows anyone to join.
+  /// Whether the group has an `open` tag (anyone can join).
   final bool isOpen;
 
-  /// Whether the group's events are visible to non-members.
+  /// Whether the group has a `closed` tag (admin approval required).
+  final bool isClosed;
+
+  /// Whether the group has a `public` tag (events visible to non-members).
   final bool isPublic;
+
+  /// Whether the group has a `private` tag (only members read events).
+  final bool isPrivate;
+
+  /// Whether the group has a `broadcast` tag (only admins post).
+  final bool isBroadcast;
 
   /// The relay's public key that signed this metadata.
   final String pubkey;
@@ -402,7 +416,10 @@ class GroupMetadataData {
     this.picture,
     this.about,
     this.isOpen = false,
+    this.isClosed = false,
     this.isPublic = false,
+    this.isPrivate = false,
+    this.isBroadcast = false,
     this.missingTags = const {},
   });
 }

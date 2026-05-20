@@ -59,8 +59,8 @@ void main() {
         content: encryptedContent,
         secretKey: secretKey,
       );
-      expect(() => NostrConnect.parse(event),
-          throwsA(isA<MissingTagException>()));
+      expect(
+          () => NostrConnect.parse(event), throwsA(isA<MissingTagException>()));
     });
 
     test('round-trip create then parse', () {

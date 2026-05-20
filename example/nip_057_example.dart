@@ -13,7 +13,7 @@ void main() {
     secretKey: secretKey,
     content: 'Great post!',
     eventId: 'a60679692533b308f1d862c2a5ca5c08a304e5157b1df5cde0ff0454b9920605',
-    amount: 21000, // millisats
+    amount: BigInt.from(21000), // millisats
   );
   assert(zapRequest.kind == 9734);
   assert(findTagValue(zapRequest.tags, 'p') == recipientPubkey);
@@ -22,7 +22,7 @@ void main() {
   // Decode a zap request
   final decoded = Nip57.parseRequest(zapRequest);
   assert(decoded.recipientPubkey == recipientPubkey);
-  assert(decoded.amount == 21000);
+  assert(decoded.amount == BigInt.from(21000));
   assert(decoded.content == 'Great post!');
   assert(decoded.relays.length == 2);
 }

@@ -17,10 +17,12 @@ class Keys {
   late final String public;
 
   /// Returns the Bech32-encoded secret key (`nsec1...`).
-  String get nsec => Bech32Entity.encode(prefix: Nip19Prefix.nsec, data: secret);
+  String get nsec =>
+      Bech32Entity.encode(prefix: Nip19Prefix.nsec, data: secret);
 
   /// Returns the Bech32-encoded public key (`npub1...`).
-  String get npub => Bech32Entity.encode(prefix: Nip19Prefix.npub, data: public);
+  String get npub =>
+      Bech32Entity.encode(prefix: Nip19Prefix.npub, data: public);
 
   /// Instantiates [Keys] from a secret key in HEX or Bech32 (`nsec`) encoding.
   ///

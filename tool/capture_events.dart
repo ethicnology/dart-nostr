@@ -147,8 +147,7 @@ Future<void> main() async {
   print('\nTargeted pass for rare kinds: $_targetedKinds');
   await Future.wait(_relays.map((relay) async {
     try {
-      final events =
-          await _captureTargetedFromRelay(relay, _targetedKinds);
+      final events = await _captureTargetedFromRelay(relay, _targetedKinds);
       for (final ev in events) {
         final id = ev['id'] as String?;
         if (id == null) continue;

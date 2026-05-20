@@ -17,17 +17,33 @@ First major rewrite since v1.5.0. The library is now pure-protocol (no transport
 | `Event.fromJson(Map)` | `Event.fromMap(Map)` |
 | `Event.toJson()` → `Map` | `Event.toMap()` |
 | `Event.deserialize(dynamic)` | `Event.deserialize(String)` |
+| `Event` mutable fields (`late`) | `Event` immutable (`final`); use `Event.copyWith(...)` or `Event.unsigned(...)` |
+| `Filter.fromJson(Map)` | `Filter.fromMap(Map)` |
+| `Filter.toJson()` → `Map` | `Filter.toMap()` |
 | `Request('id', [filter])` | `Request(subscriptionId: 'id', filters: [filter])` |
 | `Filter(e: [...])` | `Filter(eTags: [...])` |
 | `Filter(p: [...])` | `Filter(pTags: [...])` |
 | `Filter(a: [...])` | `Filter(aTags: [...])` |
+| `Zap.request(amount: int)` | `Zap.request(amount: BigInt)` |
+| `ZapRequestData.amount: int?` | `ZapRequestData.amount: BigInt?` |
 | `MessageType.name` | `MessageType.label` |
 | `generate64RandomHexChars()` | `generateRandomHex()` |
 
-> The names `Event.fromJson` and `Event.toJson` still exist but are now
-> strictly String-based: `fromJson(String)` returns an `Event` and
+> `Event.fromJson` / `toJson` and `Filter.fromJson` / `toJson` now match
+> the rest of the library: `fromJson(String)` returns an Event/Filter,
 > `toJson()` returns a JSON string. The Map variants live on the new
-> `fromMap` / `toMap` names. See `MIGRATION.md` §2 for the full picture.
+> `fromMap` / `toMap` names. See `MIGRATION.md` §2 + §22 for details.
+>
+> `Event` is now fully immutable — every field is `final`. Use
+> `Event.unsigned(...)` to build an event with a precomputed id and
+> empty sig (NIP-17 rumors, NIP-13 mining probes), and `event.copyWith(...)`
+> to derive a modified copy. The old "mutate `partialEvent.id = ...`"
+> idiom no longer compiles. See `MIGRATION.md` §23.
+>
+> `Zap.request` / `anonymousRequest` / `privateRequest` now take
+> `amount: BigInt?` (was `int?`). `ZapRequestData.amount` is also
+> `BigInt?`. This keeps precision for amounts > 2^53 millisats when the
+> library is compiled to JavaScript (Flutter Web). See `MIGRATION.md` §24.
 
 **NIP classes renamed — domain name is now the primary class, `Nip*` is the alias:**
 
@@ -141,7 +157,7 @@ class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
 | `Keychain.sign(String message)` | `Keys.sign({required String message})` |
 | `UserList.parse(event, privkey)` *(sync)* | `UserList.parse(event, {required secretKey})` *(async, named arg)* |
 | `UserList.fromContent(...)` *(sync)* | `UserList.fromContent(...)` *(async)* |
-| `Event.from(secretKey, kind, tags, content, createdAt)` | `Event.from({required kind, required tags, required content, required secretKey, createdAt?, …})` |
+| `Event.from(secretKey, kind, tags, content, createdAt)` | `Event.from({required kind, required content, required secretKey, tags?, createdAt?, …})` |
 
 **Removed without direct replacement:**
 
@@ -246,7 +262,7 @@ class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
   positive allowlist (`web`, `ios`, `android`, `iphone`, `ipad`,
   `macos`, `linux`, `windows`) instead of a brittle exclude-list.
 - **NIP-19**: `encodeShareableIdentifiers` requires `author` and `kind`
-  for `naddr`. 5000-char soft cap on encode and decode. Added
+  for `naddr`. 5000-char cap enforced on encode and decode. Added
   `decodeAny()` dispatcher.
 
 **Exception contract — all errors are now `NostrException`**
@@ -304,6 +320,10 @@ documented contract in `error.dart`. Callers only need `on NostrException`.
   canonical serialization is ~1000× faster than signing. The winning
   nonce is signed once at the end. Previously high-difficulty PoW was
   effectively unreachable.
+- **NIP-19** `encodeShareableIdentifiers` no longer O(n²) in relay
+  count. Rebuilt the TLV with a `StringBuffer` instead of repeated
+  string concat — 100 000 relays went from ~80 s to ~300 ms (after
+  which the 5000-char length cap rejects).
 
 **Real bugs**
 
@@ -317,11 +337,45 @@ documented contract in `error.dart`. Callers only need `on NostrException`.
   `nip_028.dart`, `nip_065.dart`.
 - fix(nip59): `_randomPastTimestamp` now covers the full 2-day window (was ~172 seconds)
 - fix(nip10): bounds check on tags without markers (prevents `RangeError`)
-- fix(nip44): stale error message expectations in test vectors
+- fix(nip44): stale error message expectations in test vectors — the
+  decrypt-fail vectors 004–008 were exercising a vestigial helper
+  that always tripped a fake version check; they now go through
+  `Encryption.decrypt` and validate canonical MAC + padding errors
 - fix(nip28): safe null handling instead of force-unwraps on malformed events
 - fix(nip05): `isValidName` now allows hyphens and dots per spec
+- fix(nip05): `parse` wraps malformed-JSON content as
+  `DeserializationException` and no longer echoes the content in the
+  error message
+- fix(nip19): silent uint32 truncation on `kind` parameter of
+  `encodeShareableIdentifiers` — `kind = 2^32` would round-trip to
+  `0`. Now rejects out-of-range kinds with `InvalidArgumentException`
+- fix(nip57): `Zap.request` / `anonymousRequest` / `privateRequest`
+  reject negative `amount` values (spec is unsigned millisats)
+- fix(nip01): `NoteData.thread` typed as non-nullable `Thread` (was
+  `Thread?`) — `Note.parse` was always returning a non-null sentinel,
+  contradicting the declared type. See MIGRATION.md.
+- fix(nip29): `parseMetadata` now reports `isPrivate`, `isClosed`,
+  and `isBroadcast` flag presence in addition to `isOpen` / `isPublic`
 - fix(nip23): replaced private `_getTagValue` helpers with shared `findTagValue`
 - fix: copy-paste doc errors in `Eose` and `Nip20`
+
+**Constants**
+
+- `Repost.kindRepost` (= 6) and `Repost.kindGenericRepost` (= 16)
+  added so callers can avoid magic numbers when parsing NIP-18 events.
+
+**Dependencies**
+
+- `pointycastle` constraint loosened to `>=3.7.3 <5.0.0` — picks up
+  v4.0.0 (now resolved) which drops the discontinued `js` transitive
+  package.
+
+**Spec tightening**
+
+- **NIP-51** (`UserList.parse`) now rejects events whose `kind` is
+  outside the list ranges (`10000-10999` or `30000-39999`) with
+  `InvalidKindException`. Previously it accepted any kind silently
+  and would happily mangle a NIP-23 article into a list.
 
 ### Architecture
 

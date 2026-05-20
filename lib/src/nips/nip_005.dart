@@ -12,20 +12,41 @@ class DnsIdentifier {
   static Future<DnsData?> parse(Event event) async {
     if (event.kind == Note.kindMetadata) {
       try {
-        final Map map = json.decode(event.content);
-        final String? nip05 = map['nip05'];
-        if (nip05 == null || nip05.isEmpty) return null;
-        final List<dynamic> parts = nip05.split('@');
-        final String name = parts[0];
-        final String domain = parts[1];
-        final List<dynamic> relays = map['relays'] ?? [];
+        final Object? decoded = json.decode(event.content);
+        if (decoded is! Map<String, dynamic>) {
+          throw const DeserializationException(
+            'kind-0 content is not a JSON object',
+          );
+        }
+        final nip05 = decoded['nip05'];
+        if (nip05 is! String || nip05.isEmpty) return null;
+        final parts = nip05.split('@');
+        if (parts.length != 2) {
+          throw const DeserializationException(
+            'nip05 identifier must be "name@domain"',
+          );
+        }
+        final relaysRaw = decoded['relays'];
+        final relays = <String>[];
+        if (relaysRaw is List) {
+          for (final r in relaysRaw) {
+            relays.add(r.toString());
+          }
+        }
         return DnsData(
-            name: name,
-            domain: domain,
-            pubkey: event.pubkey,
-            relays: relays.map((e) => e.toString()).toList());
-      } catch (e) {
-        throw DeserializationException(e.toString());
+          name: parts[0],
+          domain: parts[1],
+          pubkey: event.pubkey,
+          relays: relays,
+        );
+      } on NostrException {
+        rethrow;
+      } on FormatException {
+        // Don't echo the underlying message — `FormatException.toString()`
+        // embeds a snippet of the offending input, which would be the
+        // user's metadata content. Keep the error generic.
+        throw const DeserializationException(
+            'kind-0 content is not valid JSON');
       }
     }
     throw InvalidKindException(event.kind, [Note.kindMetadata]);
@@ -47,7 +68,11 @@ class DnsIdentifier {
   }) {
     if (isValidName(name) && isValidDomain(domain)) {
       final String content = generateContent(name, domain, relays);
-      return Event.from(kind: Note.kindMetadata, tags: [], content: content, secretKey: secretKey);
+      return Event.from(
+          kind: Note.kindMetadata,
+          tags: [],
+          content: content,
+          secretKey: secretKey);
     } else {
       throw InvalidIdentifierException(
         '$name@$domain',
@@ -127,7 +152,8 @@ class DnsIdentifier {
     required String pubkey,
   }) async {
     final result = await fetch(identifier);
-    return result != null && result.pubkey.toLowerCase() == pubkey.toLowerCase();
+    return result != null &&
+        result.pubkey.toLowerCase() == pubkey.toLowerCase();
   }
 
   /// Returns a NIP-05 verification URL for the given identifier.

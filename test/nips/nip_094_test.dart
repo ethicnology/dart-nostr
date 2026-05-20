@@ -72,8 +72,8 @@ void main() {
       expect(findTagValue(event.tags, 'dim'), dimensions);
       expect(findTagValue(event.tags, 'magnet'), 'magnet:?xt=urn:btih:abc123');
       expect(findTagValue(event.tags, 'i'), 'abc123def456');
-      expect(findTagValue(event.tags, 'blurhash'),
-          'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+      expect(
+          findTagValue(event.tags, 'blurhash'), 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
       expect(findTagValue(event.tags, 'summary'), 'Sunset over the ocean');
       expect(findTagValue(event.tags, 'alt'),
           'Photo of a sunset with orange and purple sky');
@@ -90,8 +90,7 @@ void main() {
       expect(imageTag.length, 2);
 
       // fallback URLs
-      final fallbackTags =
-          event.tags.where((t) => t[0] == 'fallback').toList();
+      final fallbackTags = event.tags.where((t) => t[0] == 'fallback').toList();
       expect(fallbackTags, hasLength(2));
       expect(fallbackTags[0][1], 'https://fallback1.example.com/file.jpg');
       expect(fallbackTags[1][1], 'https://fallback2.example.com/file.jpg');
@@ -100,8 +99,7 @@ void main() {
     test('parses tags in arbitrary order (rust-nostr vector)', () {
       // Mirrors rust-nostr test: parses_valid_tag_vector
       // Tags are intentionally NOT in canonical order
-      final parseVector =
-          nip94['parse_from_tags'] as Map<String, dynamic>;
+      final parseVector = nip94['parse_from_tags'] as Map<String, dynamic>;
       final tags = (parseVector['tags'] as List)
           .map((t) => (t as List).cast<String>().toList())
           .toList();
@@ -161,8 +159,7 @@ void main() {
         torrentInfoHash: 'xyz789',
         blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.',
         thumb: (url: 'https://example.com/thumb.png', sha256: imageHash),
-        image:
-            (url: 'https://example.com/preview.png', sha256: originalSha256),
+        image: (url: 'https://example.com/preview.png', sha256: originalSha256),
         summary: 'A research paper on distributed systems',
         alt: 'PDF document about distributed systems',
         fallback: ['https://mirror.example.com/paper.pdf'],

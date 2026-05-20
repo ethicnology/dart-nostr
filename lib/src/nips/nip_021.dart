@@ -10,7 +10,13 @@ class NostrUri {
   /// Identifiers allowed after `nostr:`. Spec: "the identifier MUST be
   /// the same as a NIP-19 identifier (except `nsec`, which MUST NOT be
   /// used)."
-  static const _allowedPrefixes = ['npub', 'note', 'nprofile', 'nevent', 'naddr'];
+  static const _allowedPrefixes = [
+    'npub',
+    'note',
+    'nprofile',
+    'nevent',
+    'naddr'
+  ];
 
   /// Parses a `nostr:` URI and extracts the identifier.
   ///

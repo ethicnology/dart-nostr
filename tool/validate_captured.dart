@@ -34,14 +34,13 @@ const _throwawaySecretKey =
 void main() async {
   final file = File(_fixturePath);
   if (!file.existsSync()) {
-    stderr.writeln('No fixture at $_fixturePath. Run tool/capture_events.dart first.');
+    stderr.writeln(
+        'No fixture at $_fixturePath. Run tool/capture_events.dart first.');
     exit(1);
   }
 
-  final lines = file
-      .readAsLinesSync()
-      .where((l) => l.trim().isNotEmpty)
-      .toList();
+  final lines =
+      file.readAsLinesSync().where((l) => l.trim().isNotEmpty).toList();
 
   var pass = 0;
   var sigFail = 0;
@@ -114,7 +113,8 @@ void main() async {
   final total = lines.length;
   print('Validated $total captured events from $_fixturePath\n');
   print('  PASS         : $pass');
-  print('  SPEC_REJECT  : $specReject  (parser correctly refused malformed input)');
+  print(
+      '  SPEC_REJECT  : $specReject  (parser correctly refused malformed input)');
   print('  SIG_FAIL     : $sigFail  (relay sent broken event)');
   print('  BUG          : $bug  (our code threw an unexpected exception)');
   print('');

@@ -13,7 +13,8 @@ void main() async {
   assert(event.kind == 0);
 
   final url = Nip5.verificationUrl('alice@example.com');
-  assert(url.toString() == 'https://example.com/.well-known/nostr.json?name=alice');
+  assert(url.toString() ==
+      'https://example.com/.well-known/nostr.json?name=alice');
   print('Verification URL: $url');
 
   // Fetch NIP-05 data from DNS (live lookup)

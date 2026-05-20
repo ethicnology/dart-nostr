@@ -29,7 +29,9 @@ void main() {
       const String key = "21df6d143fb96c2ec9d63726bf9edc71";
       const String relay = "";
       const String petname = "erin";
-      final List<Profile> profiles = [const Profile(pubkey: key, petname: petname)];
+      final List<Profile> profiles = [
+        const Profile(pubkey: key, petname: petname)
+      ];
       final List<List<String>> tags = Nip2.toTags(profiles);
       expect(tags[0][0], "p");
       expect(tags[0][1], key);
