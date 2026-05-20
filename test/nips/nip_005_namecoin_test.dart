@@ -238,6 +238,40 @@ void main() {
       expect(parseNameScript([]), isNull);
     });
 
+    test('parseNameScript decodes a real on-chain NAME_FIRSTUPDATE', () {
+      // Real Namecoin output for `d/mstrofnone` (txid
+      // fa98bb5c9008774135ae3ea23af7cfbc41ff7a7cb6dbb98499f718885dd6f4a9,
+      // vout 1), captured live from a public ElectrumX server.
+      // Layout:
+      //   OP_NAME_FIRSTUPDATE (0x52)
+      //   push(name="d/mstrofnone")  -- 12 bytes
+      //   push(rand)                  -- 20 bytes
+      //   OP_PUSHDATA1 push(value)    -- 150 bytes, JSON
+      //   OP_2DROP OP_2DROP <p2pkh address-script>
+      // Names that have never been re-updated (i.e. no later
+      // NAME_UPDATE) are only readable via this opcode.
+      const hex = '520c642f6d7374726f666e6f6e6514752e8f76fdcca1e06e5c'
+          'cd7818ee1b29995bc7434c967b226e6f737472223a7b227075626b6579223'
+          'a2234333138356564656362363735383932383234623161333761353766'
+          '336534303766626465326564613732303161333832396238636634626137'
+          '633562346630222c2272656c617973223a5b227773733a2f2f72656c6179'
+          '2e746573746c732e6269742f222c227773733a2f2f72656c61792e6e6f73'
+          '74722e77696e652f225d7d7d6d6d76a914d7b10f6d14b0b1948e0f630843'
+          'c2edfe9abf876488ac';
+      final bytes = <int>[
+        for (var i = 0; i < hex.length; i += 2)
+          int.parse(hex.substring(i, i + 2), radix: 16),
+      ];
+      final parsed = parseNameScript(bytes)!;
+      expect(parsed.name, 'd/mstrofnone');
+      expect(
+        parsed.value,
+        '{"nostr":{"pubkey":"43185edecb675892824b1a37a57f3e407fbde2eda'
+        '7201a3829b8cf4ba7c5b4f0","relays":["wss://relay.testls.bit/",'
+        '"wss://relay.nostr.wine/"]}}',
+      );
+    });
+
     test('OP_PUSHDATA1 round-trip for 200-byte ASCII value', () {
       // Force OP_PUSHDATA1 path (length 0x4c-0xff). Use printable
       // ASCII so the UTF-8 round-trip is exact (real-world Namecoin
