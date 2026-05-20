@@ -39,11 +39,23 @@ class CommandResult {
   ///
   /// Throws [DeserializationException] if the payload is not a valid OK message.
   factory CommandResult.deserialize(String payload) {
-    final data = json.decode(payload);
-    if (data.length != 4) {
-      throw const DeserializationException('Invalid OK message length');
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('OK payload is not valid JSON: $e');
     }
-    return CommandResult(data[1], data[2], data[3]);
+    if (data is! List ||
+        data.length != 4 ||
+        data[0] != 'OK' ||
+        data[1] is! String ||
+        data[2] is! bool ||
+        data[3] is! String) {
+      throw const DeserializationException(
+        'OK must be ["OK", event_id, bool, message]',
+      );
+    }
+    return CommandResult(data[1] as String, data[2] as bool, data[3] as String);
   }
 }
 

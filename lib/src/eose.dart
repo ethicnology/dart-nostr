@@ -28,13 +28,20 @@ class Eose {
   /// Throws a [DeserializationException] if the payload is not a list
   /// or does not contain exactly two elements.
   factory Eose.deserialize(String payload) {
-    final data = json.decode(payload);
-    if (data is! List<dynamic>) {
-      throw const DeserializationException('Invalid type for EOSE message');
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('EOSE payload is not valid JSON: $e');
     }
-    if (data.length != 2) {
-      throw const DeserializationException('Invalid length for EOSE message');
+    if (data is! List ||
+        data.length != 2 ||
+        data[0] != 'EOSE' ||
+        data[1] is! String) {
+      throw const DeserializationException(
+        'EOSE must be ["EOSE", subscription_id]',
+      );
     }
-    return Eose(data[1]);
+    return Eose(data[1] as String);
   }
 }

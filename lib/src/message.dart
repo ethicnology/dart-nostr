@@ -26,12 +26,23 @@ class Message {
   /// Throws a [DeserializationException] if the message type is not
   /// recognized.
   factory Message.deserialize(String payload) {
-    final dynamic data = json.decode(payload);
-    if (!MessageType.values.map((e) => e.label).contains(data[0])) {
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('Message payload is not valid JSON: $e');
+    }
+    if (data is! List || data.isEmpty) {
+      throw const DeserializationException(
+        'Message must be a non-empty JSON array',
+      );
+    }
+    final tag = data[0];
+    if (!MessageType.values.map((e) => e.label).contains(tag)) {
       throw const DeserializationException('Unsupported payload (or NIP)');
     }
 
-    final messageType = MessageType.from(data[0]);
+    final messageType = MessageType.from(tag as String);
     dynamic message;
     switch (messageType) {
       case MessageType.event:
@@ -43,7 +54,11 @@ class Message {
       case MessageType.close:
         message = Close.deserialize(payload);
       case MessageType.closed:
-        // ["CLOSED", <subscription_id>, <message>]
+        if (data.length != 3) {
+          throw const DeserializationException(
+            'CLOSED must be ["CLOSED", subscription_id, message]',
+          );
+        }
         message = {'subscriptionId': data[1], 'message': data[2]};
       case MessageType.eose:
         message = Eose.deserialize(payload);

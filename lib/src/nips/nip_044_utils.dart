@@ -205,7 +205,18 @@ Map<String, dynamic> parsePayload(String payload) {
     );
   }
 
-  final data = base64.decode(payload);
+  final List<int> data;
+  try {
+    data = base64.decode(payload);
+  } on FormatException {
+    // Length passed the gate but content isn't base64 — treat as a
+    // malformed payload so callers see a CryptoException, not a raw
+    // FormatException. Don't echo the payload (might be sensitive).
+    throw const CryptoException(
+      'Invalid base64 payload',
+      CryptoErrorCode.invalidPayloadSize,
+    );
+  }
 
   if (data[0] != 0x02) {
     throw const CryptoException(

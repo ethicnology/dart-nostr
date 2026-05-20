@@ -575,11 +575,15 @@ void main() {
   });
 
   test('TestDecryptFail003', () async {
+    // Vector embeds a Cyrillic 'ф' in position 3 — not a valid base64
+    // character. parsePayload wraps the underlying FormatException as a
+    // CryptoException so callers don't have to catch both. Match the
+    // wrapped message; the raw `package:convert` text is no longer leaked.
     await assertDecryptFail(
       'ca2527a037347b91bea0c8a30fc8d9600ffd81ec00038671e3a0f0cb0fc9f642',
       'n o s t r',
       'Atфupco0WyaOW2IGDKcshwxI9xO8HgD/P8Ddt46CbxDbrhdG8VmJZE0UICD06CUvEvdnr1cp1fiMtlM/GrE92xAc1EwsVCQEgWEu2gsHUVf4JAa3TpgkmFc3TWsax0v6n/Wq',
-      'Invalid character (at character 3)',
+      'Invalid base64 payload',
     );
   });
 

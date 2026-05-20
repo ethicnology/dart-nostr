@@ -182,15 +182,47 @@ class GiftWrap {
       recipientSecretKey: recipientSecretKey,
     );
 
-    final rumorMap = json.decode(rumorJsonStr) as Map<String, dynamic>;
+    final Object? decoded;
+    try {
+      decoded = json.decode(rumorJsonStr);
+    } on FormatException {
+      // Don't echo the underlying message — `rumorJsonStr` is the
+      // *decrypted* plaintext of the gift-wrapped DM and may be
+      // sensitive. `FormatException.toString()` includes a snippet of
+      // the offending input.
+      throw const DeserializationException('rumor JSON is invalid');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const DeserializationException(
+        'rumor must decode to a JSON object',
+      );
+    }
+    final rumorMap = decoded;
     final pubkey = getRequiredField<String>(rumorMap, 'pubkey');
     final createdAt = getRequiredField<int>(rumorMap, 'created_at');
     final kind = getRequiredField<int>(rumorMap, 'kind');
     final content = getRequiredField<String>(rumorMap, 'content');
     final rawTags = getRequiredField<List>(rumorMap, 'tags');
-    final tags = rawTags
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
+    final tags = <List<String>>[];
+    for (var i = 0; i < rawTags.length; i++) {
+      final entry = rawTags[i];
+      if (entry is! List) {
+        throw DeserializationException(
+          "rumor tag at index $i is not a list",
+        );
+      }
+      final tag = <String>[];
+      for (var j = 0; j < entry.length; j++) {
+        final value = entry[j];
+        if (value is! String) {
+          throw DeserializationException(
+            "rumor tag[$i][$j] is not a string",
+          );
+        }
+        tag.add(value);
+      }
+      tags.add(tag);
+    }
 
     final rumor = Event.partial(
       pubkey: pubkey,

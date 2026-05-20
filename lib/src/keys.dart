@@ -42,9 +42,15 @@ class Keys {
       }
       secret = nsec.data;
       public = Schnorr.derivePublicKey(secret);
-    } catch (e) {
-      if (e is InvalidKeyException) rethrow;
-      throw InvalidKeyException('Expects HEX or valid Bech32 "nsec".: $e');
+    } on InvalidKeyException {
+      rethrow;
+    } on Object {
+      // Deliberately do not surface the underlying error message — bech32
+      // failure modes (MixedCase, InvalidChecksum, …) sometimes echo the
+      // raw input back, which would leak the candidate secret into logs.
+      throw const InvalidKeyException(
+        'Expects HEX or valid Bech32 "nsec"',
+      );
     }
   }
 

@@ -22,7 +22,12 @@ class ProofOfWork {
   static int countLeadingZeroes(String hex) {
     int count = 0;
     for (int i = 0; i < hex.length; i++) {
-      final int nibble = int.parse(hex[i], radix: 16);
+      final int? nibble = int.tryParse(hex[i], radix: 16);
+      if (nibble == null) {
+        throw DeserializationException(
+          'countLeadingZeroes: "${hex[i]}" at index $i is not a hex digit',
+        );
+      }
       if (nibble == 0) {
         count += 4;
       } else {
@@ -92,21 +97,36 @@ class ProofOfWork {
       throw InvalidArgumentException('difficulty', 'must be non-negative');
     }
     var ts = createdAt ?? currentUnixTimestampSeconds();
+    final pubkey = Schnorr.derivePublicKey(secretKey).toLowerCase();
 
+    // Mining is hash-bound, not signature-bound. We compute the candidate
+    // event id (sha256 of the canonical serialization) on every iteration
+    // and only invoke `Schnorr.sign` after a nonce wins. Signing per
+    // iteration is ~1000× slower and effectively makes high-difficulty
+    // PoW unreachable.
     for (int nonce = 0; nonce < maxIterations; nonce++) {
       final candidateTags = <List<String>>[
         ...tags,
         nonceTag(nonce, difficulty),
       ];
-      final event = Event.from(
+      final probe = Event.partial(
+        pubkey: pubkey,
+        createdAt: ts,
         kind: kind,
         tags: candidateTags,
         content: content,
-        secretKey: secretKey,
-        createdAt: ts,
       );
-      if (countLeadingZeroes(event.id) >= difficulty) {
-        return event;
+      final candidateId = probe.getEventId();
+      if (countLeadingZeroes(candidateId) >= difficulty) {
+        // Promote the winning probe into a signed event in one shot.
+        return Event.from(
+          kind: kind,
+          tags: candidateTags,
+          content: content,
+          secretKey: secretKey,
+          createdAt: ts,
+          pubkey: pubkey,
+        );
       }
       // Bump created_at occasionally to broaden the search space cheaply.
       if (nonce > 0 && nonce % 100000 == 0) ts++;

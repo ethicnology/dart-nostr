@@ -396,7 +396,8 @@ class BadgeAwardData {
   });
 }
 
-/// Parsed profile badges (kind 30008).
+/// Parsed profile badges. Returned by [Badge.parseProfileBadges] for both
+/// the current kind 10008 events and the legacy kind 30008 form.
 class ProfileBadgesData {
   /// Ordered list of badge coordinate + award event ID pairs.
   final List<({String coordinate, String awardEventId})> badges;

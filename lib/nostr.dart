@@ -34,10 +34,12 @@ export 'src/nips/nip_038.dart';
 export 'src/nips/nip_040.dart';
 export 'src/nips/nip_042.dart';
 export 'src/nips/nip_044.dart';
-// nip_044_utils.dart intentionally not exported. The low-level primitives
-// (pad, unpad, chacha20, hkdf, calculateMac, etc.) are easy to misuse and
-// should not be part of the public surface. Use `Encryption.encrypt` /
-// `Encryption.decrypt` from `nip_044.dart` instead. Tests that need the
+// nip_019_utils.dart and nip_044_utils.dart are intentionally not exported.
+// The low-level primitives they expose (`bech32Encode` / `bech32Decode`
+// for NIP-19; `pad`, `unpad`, `chacha20`, `hkdf`, `calculateMac`, etc.
+// for NIP-44) are easy to misuse and should not be part of the public
+// surface. Use the high-level wrappers in `nip_019.dart` (`Bech32Entity`)
+// and `nip_044.dart` (`Encryption`) instead. Tests that need the
 // primitives import the file path directly.
 export 'src/nips/nip_046.dart';
 export 'src/nips/nip_047.dart';

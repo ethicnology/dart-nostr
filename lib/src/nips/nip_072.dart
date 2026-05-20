@@ -270,8 +270,10 @@ class ModeratedCommunity {
     Event? approvedEvent;
     if (event.content.isNotEmpty) {
       try {
-        final map = json.decode(event.content) as Map<String, dynamic>;
-        approvedEvent = Event.fromMap(map, verify: false);
+        final decoded = json.decode(event.content);
+        if (decoded is Map<String, dynamic>) {
+          approvedEvent = Event.fromMap(decoded, verify: false);
+        }
       } on Exception catch (_) {
         // Leave approvedEvent null when content isn't a parseable event.
       }

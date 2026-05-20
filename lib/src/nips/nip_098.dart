@@ -83,28 +83,28 @@ class HttpAuth {
       throw MalformedAuthHeaderException(AuthHeaderError.badBase64, e);
     }
 
-    final Map<String, dynamic> map;
+    final Object? decodedJson;
     try {
-      map = jsonDecode(decoded) as Map<String, dynamic>;
+      decodedJson = jsonDecode(decoded);
     } on FormatException catch (e) {
       throw MalformedAuthHeaderException(AuthHeaderError.invalidJson, e);
     }
+    if (decodedJson is! Map<String, dynamic>) {
+      throw MalformedAuthHeaderException(
+        AuthHeaderError.invalidJson,
+        FormatException(
+          'auth header must decode to a JSON object, got '
+          '${decodedJson.runtimeType}',
+        ),
+      );
+    }
 
-    // The Event constructor verifies id + sig and throws
-    // EventValidationException (which extends NostrException). We let
-    // it propagate so the caller learns the specific
-    // EventValidationReason; no need to wrap.
-    return Event(
-      map['id'] as String,
-      map['pubkey'] as String,
-      map['created_at'] as int,
-      map['kind'] as int,
-      (map['tags'] as List)
-          .map((t) => (t as List).map((e) => e.toString()).toList())
-          .toList(),
-      map['content'] as String,
-      map['sig'] as String,
-    );
+    // Route through Event.fromMap so that missing/wrong-typed fields are
+    // surfaced as DeserializationException (NostrException) instead of
+    // raw _TypeError. Event.fromMap also verifies id + sig and throws
+    // EventValidationException, which carries the specific
+    // EventValidationReason — let it propagate.
+    return Event.fromMap(decodedJson);
   }
 
   /// Parses a kind-27235 event into an [HttpAuthData].

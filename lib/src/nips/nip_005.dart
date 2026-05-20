@@ -104,7 +104,10 @@ class DnsIdentifier {
         pubkey: pubkey,
         relays: relays,
       );
-    } on Exception {
+    } on Object {
+      // Includes _TypeError from the implicit casts above (e.g. when a
+      // misbehaving .well-known endpoint returns the wrong JSON shape).
+      // Spec says "return null on any resolution failure".
       return null;
     } finally {
       client.close();

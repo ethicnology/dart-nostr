@@ -204,17 +204,21 @@ class InvalidNostrUriException extends NostrException {
   final String input;
 
   InvalidNostrUriException(this.reason, this.input)
-      : super(_describe(reason, input));
+      : super(_describe(reason));
 
-  static String _describe(NostrUriRejection r, String input) {
+  // The raw input is deliberately NOT embedded in the message — if a
+  // caller accidentally passes an nsec (or any other secret) here, the
+  // message would otherwise leak it through logs. The raw value is still
+  // available on the `.input` field for consumers that need it.
+  static String _describe(NostrUriRejection r) {
     switch (r) {
       case NostrUriRejection.missingScheme:
-        return 'Invalid Nostr URI: must start with "nostr:" (got "$input")';
+        return 'Invalid Nostr URI: must start with "nostr:"';
       case NostrUriRejection.forbiddenPrefix:
         return 'nsec must not be used in nostr: URIs';
       case NostrUriRejection.unknownPrefix:
         return 'Identifier must be one of npub, note, nprofile, nevent, '
-            'naddr (got "$input")';
+            'naddr';
     }
   }
 }

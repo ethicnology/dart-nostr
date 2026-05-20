@@ -26,10 +26,20 @@ class Close {
   ///
   /// Throws a [DeserializationException] if the payload length is not 2.
   factory Close.deserialize(String payload) {
-    final data = json.decode(payload);
-    if (data.length != 2) {
-      throw const DeserializationException('Invalid length for CLOSE message');
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('CLOSE payload is not valid JSON: $e');
     }
-    return Close(data[1]);
+    if (data is! List ||
+        data.length != 2 ||
+        data[0] != 'CLOSE' ||
+        data[1] is! String) {
+      throw const DeserializationException(
+        'CLOSE must be ["CLOSE", subscription_id]',
+      );
+    }
+    return Close(data[1] as String);
   }
 }

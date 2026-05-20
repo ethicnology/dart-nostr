@@ -45,27 +45,45 @@ class Request {
   /// Throws a [DeserializationException] if the payload is too short
   /// or does not start with `"REQ"`.
   factory Request.deserialize(String payload) {
-    final data = json.decode(payload);
-
-    // Ensure we have at least ["REQ", <someId>]
-    if (data.length < 2) {
-      throw const DeserializationException('Message too short to be a REQ message');
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('REQ payload is not valid JSON: $e');
     }
 
+    if (data is! List) {
+      throw const DeserializationException(
+        'REQ must be a JSON array',
+      );
+    }
+    if (data.length < 2) {
+      throw const DeserializationException(
+        'Message too short to be a REQ message',
+      );
+    }
     if (data[0] != "REQ") {
       throw const DeserializationException(
         'Not a REQ message (first element must be "REQ")',
+      );
+    }
+    if (data[1] is! String) {
+      throw const DeserializationException(
+        'REQ subscription id must be a string',
       );
     }
 
     final subscriptionId = data[1] as String;
     final filters = <Filter>[];
 
-    // Remaining items (from index 2 onward) are filters
-    if (data.length > 2) {
-      for (var i = 2; i < data.length; i++) {
-        filters.add(Filter.fromJson(data[i]));
+    for (var i = 2; i < data.length; i++) {
+      final entry = data[i];
+      if (entry is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'REQ filter at index $i must be a JSON object',
+        );
       }
+      filters.add(Filter.fromJson(entry));
     }
 
     return Request(subscriptionId: subscriptionId, filters: filters);

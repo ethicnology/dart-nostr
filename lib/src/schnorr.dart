@@ -9,16 +9,31 @@ import 'package:nostr/src/utils.dart';
 /// as a direct dependency, and so internal callers (Event, Keys) get the
 /// consistent length validation below.
 class Schnorr {
+  /// Decodes [value] as hex and asserts a [expectedBytes] length. Throws
+  /// [InvalidKeyException] for both non-hex inputs and wrong lengths so
+  /// callers only have to catch one type.
+  static void _assertHexBytes(String value, int expectedBytes, String label) {
+    try {
+      if (hex.decode(value).length != expectedBytes) {
+        throw InvalidKeyException(
+          '$label must be $expectedBytes-bytes hex encoded',
+        );
+      }
+    } on InvalidKeyException {
+      rethrow;
+    } on FormatException {
+      throw InvalidKeyException(
+        '$label must be $expectedBytes-bytes hex encoded',
+      );
+    }
+  }
+
   /// Derives the BIP-340 x-only public key (32-byte hex) from a 32-byte
   /// hex-encoded [secretKey].
   ///
   /// Throws [InvalidKeyException] if [secretKey] is not 32-byte hex.
   static String derivePublicKey(String secretKey) {
-    if (hex.decode(secretKey).length != 32) {
-      throw const InvalidKeyException(
-        'secretKey must be 32-bytes hex encoded',
-      );
-    }
+    _assertHexBytes(secretKey, 32, 'secretKey');
     return bip340.getPublicKey(secretKey);
   }
 
@@ -35,19 +50,9 @@ class Schnorr {
     String? aux,
   }) {
     aux ??= generateRandomHex();
-
-    if (hex.decode(secretKey).length != 32) {
-      throw const InvalidKeyException("secretKey must be 32-bytes hex encoded");
-    }
-    if (hex.decode(message).length != 32) {
-      throw const InvalidKeyException(
-        "message must be 32-bytes hex encoded (a hash of the actual message)",
-      );
-    }
-    if (hex.decode(aux).length != 32) {
-      throw const InvalidKeyException("aux must be 32-bytes hex encoded");
-    }
-
+    _assertHexBytes(secretKey, 32, 'secretKey');
+    _assertHexBytes(message, 32, 'message');
+    _assertHexBytes(aux, 32, 'aux');
     return bip340.sign(secretKey, message, aux);
   }
 
@@ -57,23 +62,15 @@ class Schnorr {
   /// Returns `true` if the signature is valid, `false` otherwise.
   ///
   /// Throws an [InvalidKeyException] if any of the inputs have an
-  /// incorrect byte length.
+  /// incorrect byte length or are not valid hex.
   static bool verify({
     required String publicKey,
     required String message,
     required String signature,
   }) {
-    if (hex.decode(publicKey).length != 32) {
-      throw const InvalidKeyException("publicKey must be 32-bytes hex encoded");
-    }
-    if (hex.decode(message).length != 32) {
-      throw const InvalidKeyException(
-        "message must be 32-bytes hex encoded (a hash of the actual message)",
-      );
-    }
-    if (hex.decode(signature).length != 64) {
-      throw const InvalidKeyException("signature must be 64-bytes hex encoded");
-    }
+    _assertHexBytes(publicKey, 32, 'publicKey');
+    _assertHexBytes(message, 32, 'message');
+    _assertHexBytes(signature, 64, 'signature');
     return bip340.verify(publicKey, message, signature);
   }
 }

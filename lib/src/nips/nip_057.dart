@@ -255,10 +255,12 @@ class Zap {
     ZapRequestData? embeddedRequest;
     if (description != null) {
       try {
-        final map = json.decode(description) as Map<String, dynamic>;
-        final zapRequestEvent = Event.fromMap(map, verify: false);
-        embeddedRequest =
-            _parseZapRequestData(zapRequestEvent, permissive: true);
+        final decoded = json.decode(description);
+        if (decoded is Map<String, dynamic>) {
+          final zapRequestEvent = Event.fromMap(decoded, verify: false);
+          embeddedRequest =
+              _parseZapRequestData(zapRequestEvent, permissive: true);
+        }
       } on Exception catch (_) {
         // If parsing fails, leave embeddedRequest as null
       }

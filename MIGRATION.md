@@ -443,7 +443,7 @@ try {
 } on MissingTagException catch (e) {
   print('event missing tag: ${e.tag}');
 } on InvalidKindException catch (e) {
-  print('wrong kind: ${e.actual}, expected one of ${e.allowed}');
+  print('wrong kind: ${e.kind}, expected one of ${e.expected}');
 } on NostrException catch (e) {
   print('other nostr error: $e');
 }

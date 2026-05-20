@@ -259,8 +259,23 @@ class Event {
   /// Deserializes an event from a JSON string.
   ///
   /// If [verify] is `true` (the default), the signature is validated.
-  factory Event.fromJson(String payload, {bool verify = true}) =>
-      Event.fromMap(json.decode(payload), verify: verify);
+  ///
+  /// Throws a [DeserializationException] if the payload is not valid JSON
+  /// or does not decode to a JSON object.
+  factory Event.fromJson(String payload, {bool verify = true}) {
+    final Object? decoded;
+    try {
+      decoded = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('event payload is not valid JSON: $e');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw DeserializationException(
+        'event payload must decode to a JSON object, got ${decoded.runtimeType}',
+      );
+    }
+    return Event.fromMap(decoded, verify: verify);
+  }
 
   /// Serializes this event to a [Map].
   Map<String, dynamic> toMap() => {
@@ -314,33 +329,31 @@ class Event {
   /// ]);
   /// ```
   factory Event.deserialize(String input, {bool verify = true}) {
-    final data = json.decode(input);
+    final Object? data;
+    try {
+      data = json.decode(input);
+    } on FormatException catch (e) {
+      throw DeserializationException('event frame is not valid JSON: $e');
+    }
+    if (data is! List || data.isEmpty || data[0] != 'EVENT') {
+      throw const DeserializationException(
+        'event frame must be ["EVENT", …]',
+      );
+    }
     Map<String, dynamic> event;
     String? subscriptionId;
-    if (data.length == 2) {
+    if (data.length == 2 && data[1] is Map<String, dynamic>) {
       event = data[1] as Map<String, dynamic>;
-    } else if (data.length == 3) {
+    } else if (data.length == 3 &&
+        data[1] is String &&
+        data[2] is Map<String, dynamic>) {
       event = data[2] as Map<String, dynamic>;
       subscriptionId = data[1] as String;
     } else {
-      throw const DeserializationException('invalid payload');
+      throw const DeserializationException('invalid event frame shape');
     }
 
-    final List<List<String>> tags = (event['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
-
-    return Event(
-      event['id'],
-      event['pubkey'],
-      event['created_at'],
-      event['kind'],
-      tags,
-      event['content'],
-      event['sig'],
-      subscriptionId: subscriptionId,
-      verify: verify,
-    );
+    return Event.fromMap(event, verify: verify)..subscriptionId = subscriptionId;
   }
 
   /// Computes and returns the event id by SHA-256 hashing the serialized

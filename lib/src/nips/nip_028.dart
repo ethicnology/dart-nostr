@@ -83,8 +83,20 @@ class PublicChat {
   /// we extract it as a typed `List<String>` rather than crashing on the
   /// non-string value the way `Map<String, String>.from` would.
   static _ChannelContent _parseChannelContent(String raw) {
-    final Map<String, dynamic> content =
-        json.decode(raw) as Map<String, dynamic>;
+    final Object? decoded;
+    try {
+      decoded = json.decode(raw);
+    } on FormatException catch (e) {
+      throw DeserializationException(
+        'channel content is not valid JSON: $e',
+      );
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const DeserializationException(
+        'channel content must decode to a JSON object',
+      );
+    }
+    final Map<String, dynamic> content = decoded;
 
     final String name = content['name'] is String ? content['name'] : '';
     final String about = content['about'] is String ? content['about'] : '';

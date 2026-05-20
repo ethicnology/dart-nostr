@@ -24,6 +24,11 @@ First major rewrite since v1.5.0. The library is now pure-protocol (no transport
 | `MessageType.name` | `MessageType.label` |
 | `generate64RandomHexChars()` | `generateRandomHex()` |
 
+> The names `Event.fromJson` and `Event.toJson` still exist but are now
+> strictly String-based: `fromJson(String)` returns an `Event` and
+> `toJson()` returns a JSON string. The Map variants live on the new
+> `fromMap` / `toMap` names. See `MIGRATION.md` §2 for the full picture.
+
 **NIP classes renamed — domain name is now the primary class, `Nip*` is the alias:**
 
 | Before | After | Alias |
@@ -196,8 +201,9 @@ class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
 - **NIP-29** write helpers (`message`, `threadRoot`, `threadReply`,
   `joinRequest`, `leaveRequest`) and parsers for `parseAdmins`
   (kind 39001) / `parseMembers` (kind 39002).
-- **`MissingTagException` permissive mode** — every `parse(...)`
-  method now accepts `{bool permissive = false}`; in permissive mode
+- **`MissingTagException` permissive mode** — every parser whose NIP
+  defines spec-required tags (NIPs 22, 23, 29, 38, 53, 57, 58, 72, 89,
+  94, 98) now accepts `{bool permissive = false}`; in permissive mode
   the missing-tag set is recorded on `<Data>.missingTags` and
   `<Data>.isComplete` instead of throwing, so consumers can still
   display whatever is salvageable on the ~31 % of real-world events
@@ -242,6 +248,62 @@ class** (e.g. `Zap.kindZapRequest`, `WalletConnect.kindWalletInfo`,
 - **NIP-19**: `encodeShareableIdentifiers` requires `author` and `kind`
   for `naddr`. 5000-char soft cap on encode and decode. Added
   `decodeAny()` dispatcher.
+
+**Exception contract — all errors are now `NostrException`**
+
+Every public deserialization / decode entrypoint that previously could
+leak a raw `FormatException`, `_TypeError`, or `package:bech32`
+exception now wraps it as a `NostrException` subclass, matching the
+documented contract in `error.dart`. Callers only need `on NostrException`.
+
+- **`Bech32Entity.decode` / `decodeAny` / `encode`** — wrap
+  `package:bech32` errors (`InvalidChecksum`, `MixedCase`,
+  `TooShortChecksum`, `TooLong`, `InvalidSeparator`) and non-hex input
+  as `DeserializationException`. The underlying message is suppressed
+  in the wrapped error to avoid echoing candidate secrets to logs.
+- **`Schnorr.derivePublicKey` / `sign` / `verify`** — non-hex inputs
+  now throw `InvalidKeyException` instead of leaking `FormatException`
+  from `hex.decode`.
+- **`Event.fromJson`** — bad JSON or non-object payloads throw
+  `DeserializationException`.
+- **`Event.deserialize`** — validates the wire frame starts with
+  `"EVENT"` and has the right shape; previously accepted any tag
+  silently and threw `_TypeError` on shape mismatches.
+- **`Close` / `Eose` / `Request` / `Message` / `CommandResult` .deserialize**
+  — wrap `json.decode` failures and validate the frame tag + shape
+  before any cast.
+- **`Filter.fromJson`** — typed validation on every field; passing
+  e.g. `kinds: "not a list"` now throws `DeserializationException`
+  instead of `_TypeError`.
+- **`PublicChat.parseChannel` / `parseMetadata`** — non-JSON or
+  non-object content throws `DeserializationException`.
+- **`ProofOfWork.countLeadingZeroes`** — non-hex input throws
+  `DeserializationException` instead of `FormatException` from
+  `int.parse`.
+- **`GiftWrap.unwrap`** — wraps `json.decode` failure on the inner
+  rumor payload as `DeserializationException`.
+- **`ModeratedCommunity.parseApproval` / `AppHandler.parseHandlerInfo`
+  / `Zap.parseReceipt`** — a JSON array (or any non-object) in a
+  content / description slot no longer raises `_TypeError`; the
+  optional embedded field is left null, matching the existing fail-soft
+  contract.
+
+**Error messages no longer echo candidate secrets**
+
+- **`Keys(...)`** rejection no longer includes the input string —
+  `package:bech32`'s `MixedCase` error message would otherwise leak
+  the candidate (e.g. a confused caller passing their nsec) into logs.
+- **`InvalidNostrUriException`** message no longer embeds the input
+  (the raw value remains on the typed `.input` field for consumers
+  that genuinely need it).
+
+**Performance**
+
+- **NIP-13** `mine` no longer Schnorr-signs every nonce iteration.
+  Mining is hash-bound; computing the candidate event id from the
+  canonical serialization is ~1000× faster than signing. The winning
+  nonce is signed once at the end. Previously high-difficulty PoW was
+  effectively unreachable.
 
 **Real bugs**
 

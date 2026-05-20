@@ -1,3 +1,5 @@
+import 'package:nostr/src/error.dart';
+
 /// A filter determines what events will be sent in a Nostr subscription.
 ///
 /// Filters are JSON objects sent as part of a REQ message. The relay
@@ -71,6 +73,9 @@ class Filter {
   /// Any `#X` key with a single-letter `X` is collected into
   /// [tagFilters]. The well-known `#e`/`#a`/`#p` keys are also
   /// surfaced via [eTags]/[aTags]/[pTags] for backward compatibility.
+  ///
+  /// Throws [DeserializationException] if any field has the wrong type
+  /// (e.g. `kinds` is a string instead of a list of ints).
   factory Filter.fromJson(Map<String, dynamic> json) {
     final tagFilters = <String, List<String>>{};
     for (final entry in json.entries) {
@@ -78,25 +83,78 @@ class Filter {
       if (key.length == 2 && key.startsWith('#')) {
         final letter = key[1];
         if (_isLetter(letter) && entry.value is List) {
-          tagFilters[letter] = List<String>.from(entry.value);
+          tagFilters[letter] = _asStringList(entry.value, '"$key"');
         }
       }
     }
 
     return Filter(
-      ids: json['ids'] == null ? null : List<String>.from(json['ids']),
-      authors:
-          json['authors'] == null ? null : List<String>.from(json['authors']),
-      kinds: json['kinds'] == null ? null : List<int>.from(json['kinds']),
+      ids: _optionalStringList(json['ids'], '"ids"'),
+      authors: _optionalStringList(json['authors'], '"authors"'),
+      kinds: _optionalIntList(json['kinds'], '"kinds"'),
       eTags: tagFilters['e'],
       aTags: tagFilters['a'],
       pTags: tagFilters['p'],
       tagFilters: tagFilters.isEmpty ? null : tagFilters,
-      since: json['since'],
-      until: json['until'],
-      limit: json['limit'],
-      search: json['search'],
+      since: _optionalInt(json['since'], '"since"'),
+      until: _optionalInt(json['until'], '"until"'),
+      limit: _optionalInt(json['limit'], '"limit"'),
+      search: _optionalString(json['search'], '"search"'),
     );
+  }
+
+  static List<String>? _optionalStringList(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw DeserializationException('$label must be a JSON array of strings');
+    }
+    return _asStringList(value, label);
+  }
+
+  static List<String> _asStringList(List value, String label) {
+    final result = <String>[];
+    for (final v in value) {
+      if (v is! String) {
+        throw DeserializationException(
+          '$label must be a JSON array of strings',
+        );
+      }
+      result.add(v);
+    }
+    return result;
+  }
+
+  static List<int>? _optionalIntList(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw DeserializationException('$label must be a JSON array of ints');
+    }
+    final result = <int>[];
+    for (final v in value) {
+      if (v is! int) {
+        throw DeserializationException(
+          '$label must be a JSON array of ints',
+        );
+      }
+      result.add(v);
+    }
+    return result;
+  }
+
+  static int? _optionalInt(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! int) {
+      throw DeserializationException('$label must be an int');
+    }
+    return value;
+  }
+
+  static String? _optionalString(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! String) {
+      throw DeserializationException('$label must be a string');
+    }
+    return value;
   }
 
   /// Serializes this filter to a JSON-compatible map.

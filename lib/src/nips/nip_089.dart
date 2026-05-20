@@ -130,7 +130,10 @@ class AppHandler {
     Map<String, dynamic>? metadata;
     if (event.content.isNotEmpty) {
       try {
-        metadata = json.decode(event.content) as Map<String, dynamic>;
+        final decoded = json.decode(event.content);
+        if (decoded is Map<String, dynamic>) {
+          metadata = decoded;
+        }
       } on FormatException catch (_) {
         // If parsing fails, leave metadata as null
       }
