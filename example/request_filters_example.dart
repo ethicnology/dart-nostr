@@ -3,8 +3,9 @@ import 'package:nostr/nostr.dart';
 
 void main() async {
 // Create a subscription message request with one or many filters
-  Request requestWithFilter = Request(generate64RandomHexChars(), [
-    Filter(
+  final requestWithFilter =
+      Request(subscriptionId: generateRandomHex(), filters: [
+    const Filter(
       kinds: [0, 1, 2, 7],
       since: 1674063680,
       limit: 450,
@@ -12,18 +13,15 @@ void main() async {
   ]);
 
   // Connecting to a nostr relay using websocket
-  WebSocket webSocket = await WebSocket.connect(
-    'wss://relay.nostr.info', // or any nostr relay
+  final webSocket = await WebSocket.connect(
+    'wss://nos.lol', // or any nostr relay
   );
-  // if the current socket fail try another one
-  // wss://nostr.sandwich.farm
-  // wss://relay.damus.io
 
   // Send a request message to the WebSocket server
   webSocket.add(requestWithFilter.serialize());
 
   // Listen for events from the WebSocket server
-  await Future.delayed(Duration(seconds: 1));
+  await Future.delayed(const Duration(seconds: 1));
   webSocket.listen((event) {
     print('Received event: $event');
   });

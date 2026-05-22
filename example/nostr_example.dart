@@ -2,58 +2,64 @@ import 'dart:io';
 import 'package:nostr/nostr.dart';
 
 void main() async {
-  // Use the Keychain class to manipulate private/public keys and use handy methods encapsulated from dart-bip340
-  var keys = Keychain(
+  // Use the Keys class to manipulate secret/public keys and use handy methods encapsulated from dart-bip340
+  final keys = Keys(
     "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   );
   assert(keys.public ==
       "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b");
 
   // or generate random keys
-  var randomKeys = Keychain.generate();
-  print(randomKeys.private);
+  final randomKeys = Keys.generate();
+  print(randomKeys.secret);
 
-  // Instantiate an event with all the field
-  String id =
-      "4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49";
-  String pubkey = keys.public;
-  int createdAt = 1672175320;
-  int kind = 1;
-  List<List<String>> tags = [];
-  String content = "Ceci est une analyse du websocket";
-  String sig =
-      "797c47bef50eff748b8af0f38edcb390facf664b2367d72eb71c50b5f37bc83c4ae9cc9007e8489f5f63c66a66e101fd1515d0a846385953f5f837efb9afe885";
-
-  Event oneEvent = Event(
-    id,
-    pubkey,
-    createdAt,
-    kind,
-    tags,
-    content,
-    sig,
+  // Instantiate an event from raw fields. By default the constructor
+  // validates id + signature and throws EventValidationException if
+  // either is wrong. Use verify: false when reconstructing untrusted
+  // third-party event copies.
+  //
+  // Here we sign a fresh event with the secret key so the test data is
+  // genuinely valid rather than hardcoded.
+  final signed = Event.from(
+    kind: 1,
+    tags: [],
+    content: 'Ceci est une analyse du websocket',
+    secretKey: keys.secret,
   );
-  assert(oneEvent.id ==
-      "4b697394206581b03ca5222b37449a9cdca1741b122d78defc177444e2536f49");
-
-  // Create a partial event from nothing and fill it with data until it is valid
-  var partialEvent = Event.partial();
-  assert(partialEvent.isValid() == false);
-  partialEvent.createdAt = currentUnixTimestampSeconds();
-  partialEvent.pubkey =
-      "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
-  partialEvent.id = partialEvent.getEventId();
-  partialEvent.sig = partialEvent.getSignature(
-    "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+  final oneEvent = Event(
+    signed.id,
+    signed.pubkey,
+    signed.createdAt,
+    signed.kind,
+    signed.tags,
+    signed.content,
+    signed.sig,
   );
-  assert(partialEvent.isValid() == true);
+  assert(oneEvent.id == signed.id);
 
-  // Instantiate an event with a partial data and let the library sign the event with your private key
-  Event anotherEvent = Event.from(
+  // Compose a valid event step-by-step. `Event.unsigned(...)` builds the
+  // canonical id from the payload; signing then promotes it to a full
+  // event via `copyWith`.
+  final unsigned = Event.unsigned(
+    pubkey: "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b",
+    kind: 1,
+    content: "",
+    createdAt: currentUnixTimestampSeconds(),
+  );
+  final signed2 = unsigned.copyWith(
+    sig: unsigned.getSignature(
+      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
+    ),
+    verify: true,
+  );
+  assert(signed2.isValid() == true);
+
+  // Instantiate an event with a partial data and let the library sign the event with your secret key
+  final Event anotherEvent = Event.from(
     kind: 1,
     tags: [],
     content: "vi veri universum vivus vici",
-    privkey:
+    secretKey:
         "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12", // DO NOT REUSE THIS PRIVATE KEY
   );
 
@@ -61,18 +67,15 @@ void main() async {
       "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b");
 
   // Connecting to a nostr relay using websocket
-  WebSocket webSocket = await WebSocket.connect(
-    'wss://relay.nostr.info', // or any nostr relay
+  final WebSocket webSocket = await WebSocket.connect(
+    'wss://nos.lol', // or any nostr relay
   );
-  // if the current socket fail try another one
-  // wss://nostr.sandwich.farm
-  // wss://relay.damus.io
 
   // Send an event to the WebSocket server
   webSocket.add(anotherEvent.serialize());
 
   // Listen for events from the WebSocket server
-  await Future.delayed(Duration(seconds: 1));
+  await Future.delayed(const Duration(seconds: 1));
   webSocket.listen((event) {
     print('Received event: $event');
   });

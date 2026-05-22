@@ -1,0 +1,120 @@
+{
+  "nip19": {
+    "nsec": {
+      "hex": "9571a568a42b9e05646a349c783159b906b498119390df9a5a02667155128028",
+      "bech32": "nsec1j4c6269y9w0q2er2xjw8sv2ehyrtfxq3jwgdlxj6qfn8z4gjsq5qfvfk99"
+    },
+    "npub": {
+      "hex": "aa4fc8665f5696e33db7e1a572e3b0f5b3d615837b0f362dcb1c8068b098c7b4",
+      "bech32": "npub14f8usejl26twx0dhuxjh9cas7keav9vr0v8nvtwtrjqx3vycc76qqh9nsy"
+    },
+    "note": {
+      "hex": "d94a3f4dd87b9a3b0bed183b32e916fa29c8020107845d1752d72697fe5309a5",
+      "bech32": "note1m99r7nwc0wdrkzldrqan96gklg5usqspq7z9696j6unf0ljnpxjspqfw99"
+    },
+    "nprofile": {
+      "bech32": "nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gppemhxue69uhhytnc9e3k7mf0qyt8wumn8ghj7er2vfshxtnnv9jxkc3wvdhk6tclr7lsh",
+      "pubkey": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d",
+      "relays": ["wss://r.x.com/", "wss://djbas.sadkb.com/"]
+    }
+  },
+  "nip13": {
+    "leading_zeros": [
+      {"hex": "0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 4},
+      {"hex": "1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 3},
+      {"hex": "2fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 2},
+      {"hex": "3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 2},
+      {"hex": "4fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 1},
+      {"hex": "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 1},
+      {"hex": "8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "bits": 0},
+      {"hex": "00000000000000000000000000000000000000000000000000000000000000ff", "bits": 248},
+      {"hex": "000000000000000000000000000000000000000000000000000000000000000f", "bits": 252},
+      {"hex": "0000000000000000000000000000000000000000000000000000000000000001", "bits": 255}
+    ]
+  },
+  "nip21": {
+    "valid": [
+      {
+        "uri": "nostr:npub14f8usejl26twx0dhuxjh9cas7keav9vr0v8nvtwtrjqx3vycc76qqh9nsy",
+        "decoded": "npub14f8usejl26twx0dhuxjh9cas7keav9vr0v8nvtwtrjqx3vycc76qqh9nsy"
+      },
+      {
+        "uri": "nostr:nprofile1qqsr9cvzwc652r4m83d86ykplrnm9dg5gwdvzzn8ameanlvut35wy3gpz4mhxue69uhhyetvv9ujuerpd46hxtnfduhsz4nxck",
+        "decoded": "nprofile1qqsr9cvzwc652r4m83d86ykplrnm9dg5gwdvzzn8ameanlvut35wy3gpz4mhxue69uhhyetvv9ujuerpd46hxtnfduhsz4nxck"
+      }
+    ],
+    "invalid_nsec": "nostr:nsec1j4c6269y9w0q2er2xjw8sv2ehyrtfxq3jwgdlxj6qfn8z4gjsq5qfvfk99"
+  },
+  "nip59": {
+    "sender_secret": "6b911fd37cdf5c81d4c0adb1ab7fa822ed253ab0ad9aa18d77257c88b29b718e",
+    "receiver_secret": "7b911fd37cdf5c81d4c0adb1ab7fa822ed253ab0ad9aa18d77257c88b29b718e"
+  },
+  "nip05": {
+    "identifier": "_@yukikishimoto.com",
+    "expected_url": "https://yukikishimoto.com/.well-known/nostr.json?name=_",
+    "pubkey": "68d81165918100b7da43fc28f7d1fc12554466e1115886b9e7bb326f65ec4272",
+    "names_json": {
+      "names": {
+        "yuki": "68d81165918100b7da43fc28f7d1fc12554466e1115886b9e7bb326f65ec4272",
+        "_": "68d81165918100b7da43fc28f7d1fc12554466e1115886b9e7bb326f65ec4272"
+      }
+    }
+  },
+  "nip09": {
+    "event_id": "7469af3be8c8e06e1b50ef1caceba30392ddc0b6614507398b7d7daa4c218e96",
+    "coordinate": "30023:aa4fc8665f5696e33db7e1a572e3b0f5b3d615837b0f362dcb1c8068b098c7b4:ipsum",
+    "reason": "these posts were published by accident"
+  },
+  "nip98": {
+    "valid_event": {
+      "id": "fe964e758903360f28d8424d092da8494ed207cba823110be3a57dfe4b578734",
+      "pubkey": "63fe6318dc58583cfe16810f86dd09e18bfd76aabc24a0081ce2856f330504ed",
+      "created_at": 1682327852,
+      "kind": 27235,
+      "tags": [["u", "https://api.snort.social/api/v1/n5sp/list"], ["method", "GET"]],
+      "content": "",
+      "sig": "5ed9d8ec958bc854f997bdc24ac337d005af372324747efe4a00e24f4c30437ff4dd8308684bed467d9d6be3e5a517bb43b1732cc7d33949a3aaf86705c22184"
+    },
+    "valid_auth_header": "Nostr eyJpZCI6ImZlOTY0ZTc1ODkwMzM2MGYyOGQ4NDI0ZDA5MmRhODQ5NGVkMjA3Y2JhODIzMTEwYmUzYTU3ZGZlNGI1Nzg3MzQiLCJwdWJrZXkiOiI2M2ZlNjMxOGRjNTg1ODNjZmUxNjgxMGY4NmRkMDllMThiZmQ3NmFhYmMyNGEwMDgxY2UyODU2ZjMzMDUwNGVkIiwiY29udGVudCI6IiIsImtpbmQiOjI3MjM1LCJjcmVhdGVkX2F0IjoxNjgyMzI3ODUyLCJ0YWdzIjpbWyJ1IiwiaHR0cHM6Ly9hcGkuc25vcnQuc29jaWFsL2FwaS92MS9uNXNwL2xpc3QiXSxbIm1ldGhvZCIsIkdFVCJdXSwic2lnIjoiNWVkOWQ4ZWM5NThiYzg1NGY5OTdiZGMyNGFjMzM3ZDAwNWFmMzcyMzI0NzQ3ZWZlNGEwMGUyNGY0YzMwNDM3ZmY0ZGQ4MzA4Njg0YmVkNDY3ZDlkNmJlM2U1YTUxN2JiNDNiMTczMmNjN2QzMzk0OWEzYWFmODY3MDVjMjIxODQifQ==",
+    "wrong_kind_auth_header": "Nostr eyJpZCI6ImZlOTY0ZTc1ODkwMzM2MGYyOGQ4NDI0ZDA5MmRhODQ5NGVkMjA3Y2JhODIzMTEwYmUzYTU3ZGZlNGI1Nzg3MzQiLCJwdWJrZXkiOiI2M2ZlNjMxOGRjNTg1ODNjZmUxNjgxMGY4NmRkMDllMThiZmQ3NmFhYmMyNGEwMDgxY2UyODU2ZjMzMDUwNGVkIiwiY29udGVudCI6IiIsImtpbmQiOjEsImNyZWF0ZWRfYXQiOjE2ODIzMjc4NTIsInRhZ3MiOltbInUiLCJodHRwczovL2FwaS5zbm9ydC5zb2NpYWwvYXBpL3YxL241c3AvbGlzdCJdLFsibWV0aG9kIiwiR0VUIl1dLCJzaWciOiI1ZWQ5ZDhlYzk1OGJjODU0Zjk5N2JkYzI0YWMzMzdkMDA1YWYzNzIzMjQ3NDdlZmU0YTAwZTI0ZjRjMzA0MzdmZjRkZDgzMDg2ODRiZWQ0NjdkOWQ2YmUzZTVhNTE3YmI0M2IxNzMyY2M3ZDMzOTQ5YTNhYWY4NjcwNWMyMjE4NCJ9",
+    "lowercase_prefix_header": "nostr eyJpZCI6ImZlOTY0ZTc1ODkwMzM2MGYyOGQ4NDI0ZDA5MmRhODQ5NGVkMjA3Y2JhODIzMTEwYmUzYTU3ZGZlNGI1Nzg3MzQiLCJwdWJrZXkiOiI2M2ZlNjMxOGRjNTg1ODNjZmUxNjgxMGY4NmRkMDllMThiZmQ3NmFhYmMyNGEwMDgxY2UyODU2ZjMzMDUwNGVkIiwiY29udGVudCI6IiIsImtpbmQiOjI3MjM1LCJjcmVhdGVkX2F0IjoxNjgyMzI3ODUyLCJ0YWdzIjpbWyJ1IiwiaHR0cHM6Ly9hcGkuc25vcnQuc29jaWFsL2FwaS92MS9uNXNwL2xpc3QiXSxbIm1ldGhvZCIsIkdFVCJdXSwic2lnIjoiNWVkOWQ4ZWM5NThiYzg1NGY5OTdiZGMyNGFjMzM3ZDAwNWFmMzcyMzI0NzQ3ZWZlNGEwMGUyNGY0YzMwNDM3ZmY0ZGQ4MzA4Njg0YmVkNDY3ZDlkNmJlM2U1YTUxN2JiNDNiMTczMmNjN2QzMzk0OWEzYWFmODY3MDVjMjIxODQifQ==",
+    "valid_auth_header_2": {
+      "header": "Nostr eyJpZCI6IjEyYjQ2YmUwMDg5MjI3OWU3YmJhYThlYTg5ODA5ZWNiMWYyYzk5MmY1ZDk0ZWRmMmNkYmQ2Y2JhNmVlMzBjMDMiLCJwdWJrZXkiOiJhYTRmYzg2NjVmNTY5NmUzM2RiN2UxYTU3MmUzYjBmNWIzZDYxNTgzN2IwZjM2MmRjYjFjODA2OGIwOThjN2I0IiwiY3JlYXRlZF9hdCI6MTc0MjQ2MjYwNSwia2luZCI6MjcyMzUsInRhZ3MiOltbInUiLCJodHRwczovL2V4YW1wbGUuY29tLyJdLFsibWV0aG9kIiwiR0VUIl1dLCJjb250ZW50IjoiIiwic2lnIjoiZWEzNGU3NDA3ZGQ2OTFjNDJhYzY3ZjQ3YTMwYjBmMDEwZTFiYWYwMjM3MjhiNzI4OGFlYzA0Zjg3MzMyYmZlYTRhZjJkNDdiNTJiMjhkNGMxMGMwOWY3NmNiZGFhNWZjMTE0OTNiOTlkZTU2NDhmMzlhM2JkYzMwYjQxMTNjNjMifQ==",
+      "url": "https://example.com/",
+      "method": "GET",
+      "created_at": 1742462605,
+      "pubkey": "aa4fc8665f5696e33db7e1a572e3b0f5b3d615837b0f362dcb1c8068b098c7b4",
+      "event_id": "12b46be00892279e7bbaa8ea89809ecb1f2c992f5d94edf2cdbd6cba6ee30c03"
+    }
+  },
+  "nip94": {
+    "image_url": "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg",
+    "image_hash": "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02",
+    "mime_type": "image/jpeg",
+    "dimensions": "640x640",
+    "parse_from_tags": {
+      "description": "Tags in arbitrary order (matching rust-nostr test: parses_valid_tag_vector)",
+      "tags": [
+        ["dim", "640x640"],
+        ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+        ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"],
+        ["m", "image/jpeg"]
+      ]
+    },
+    "missing_url_tags": [
+      ["dim", "640x640"],
+      ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+      ["m", "image/jpeg"]
+    ],
+    "missing_mime_tags": [
+      ["dim", "640x640"],
+      ["x", "1aea8e98e0e5d969b7124f553b88dfae47d1f00472ea8c0dbf4ac4577d39ef02"],
+      ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"]
+    ],
+    "missing_sha_tags": [
+      ["dim", "640x640"],
+      ["url", "https://image.nostr.build/99a95fcb4b7a2591ad32467032c52a62d90a204d3b176bc2459ad7427a3f2b89.jpg"],
+      ["m", "image/jpeg"]
+    ]
+  }
+}

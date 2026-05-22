@@ -1,173 +1,364 @@
 import 'dart:convert';
-import 'package:bip340/bip340.dart' as bip340;
 import 'package:nostr/nostr.dart';
-import '../crypto/nip_004.dart';
 
-/// Lists
-class Nip51 {
-  static List<List<String>> peoplesToTags(List<People> items) {
-    List<List<String>> result = [];
-    for (People item in items) {
+/// Lists — [NIP-51](https://github.com/nostr-protocol/nips/blob/master/51.md)
+///
+/// Mute, pin, categorized people, and categorized bookmarks, using NIP-44
+/// encryption for private content.
+class UserList {
+  /// Event kind for the mute list.
+  static const int kindMuteList = 10000;
+
+  /// Event kind for the pin list.
+  static const int kindPinList = 10001;
+
+  /// Event kind for categorized people lists.
+  static const int kindCategorizedPeople = 30000;
+
+  /// Event kind for categorized bookmark lists.
+  static const int kindCategorizedBookmarks = 30001;
+
+  /// Converts a list of [Contact]s to `["p", pubkey, relay, petname]` tags.
+  static List<List<String>> contactsToTags(List<Contact> items) {
+    final List<List<String>> result = [];
+    for (final Contact item in items) {
       result.add([
         "p",
         item.pubkey,
         item.mainRelay ?? "",
         item.petName ?? "",
-        item.aliasPubKey ?? "",
       ]);
     }
     return result;
   }
 
+  /// Converts a list of event IDs to `["e", id]` tags.
   static List<List<String>> bookmarksToTags(List<String> items) {
-    List<List<String>> result = [];
-    for (String item in items) {
+    final List<List<String>> result = [];
+    for (final String item in items) {
       result.add(["e", item]);
     }
     return result;
   }
 
-  static String peoplesToContent(
-      List<People> items, String privkey, String pubkey) {
-    var list = [];
-    for (People item in items) {
+  /// Encrypts a list of [Contact]s into NIP-44 ciphertext for event content.
+  static Future<String> contactsToContent(
+    List<Contact> items,
+    String secretKey,
+    String pubkey,
+  ) async {
+    final list = [];
+    for (final item in items) {
       list.add([
         'p',
         item.pubkey,
         item.mainRelay ?? "",
         item.petName ?? "",
-        item.aliasPubKey ?? "",
       ]);
     }
-    String content = jsonEncode(list);
-    return nip4cipher(privkey, '02$pubkey', content, true);
+    final String content = json.encode(list);
+    return Nip44.encrypt(
+      plaintext: content,
+      senderSecretKey: secretKey,
+      recipientPubkey: pubkey,
+    );
   }
 
-  static String bookmarksToContent(
-      List<String> items, String privkey, String pubkey) {
-    var list = [];
-    for (String item in items) {
+  /// Encrypts a list of bookmark event IDs into NIP-44 ciphertext for event content.
+  static Future<String> bookmarksToContent(
+    List<String> items,
+    String secretKey,
+    String pubkey,
+  ) async {
+    final list = [];
+    for (final item in items) {
       list.add(['e', item]);
     }
-    String content = jsonEncode(list);
-    return nip4cipher(privkey, '02$pubkey', content, true);
+    final String content = json.encode(list);
+    return Nip44.encrypt(
+      plaintext: content,
+      senderSecretKey: secretKey,
+      recipientPubkey: pubkey,
+    );
   }
 
-  static Map<String, List> fromContent(
-      String content, String privkey, String pubkey) {
-    List<People> people = [];
-    List<String> bookmarks = [];
-    int ivIndex = content.indexOf("?iv=");
-    if (ivIndex <= 0) {
-      throw Exception("Invalid content, could not get ivIndex: $content");
-    }
-    String iv = content.substring(ivIndex + "?iv=".length, content.length);
-    String encString = content.substring(0, ivIndex);
-    String deContent =
-        nip4cipher(privkey, "02$pubkey", encString, false, nonce: iv);
-    for (List tag in jsonDecode(deContent)) {
+  /// Decrypts encrypted NIP-51 list content into contacts and bookmarks.
+  ///
+  /// [content] is the NIP-44-encrypted event content.
+  /// [secretKey] is the hex-encoded secret key for decryption.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  ///
+  /// Returns a record with `contacts` and `bookmarks`.
+  static Future<({List<Contact> contacts, List<String> bookmarks})> fromContent(
+    String content,
+    String secretKey,
+    String pubkey,
+  ) async {
+    final List<Contact> contacts = [];
+    final List<String> bookmarks = [];
+    final String decrypted = await Nip44.decrypt(
+      payload: content,
+      recipientSecretKey: secretKey,
+      senderPubkey: pubkey,
+    );
+    for (final List tag in json.decode(decrypted)) {
+      if (tag.length < 2) continue;
       if (tag[0] == "p") {
-        people.add(People(tag[1], tag.length > 2 ? tag[2] : "",
-            tag.length > 3 ? tag[3] : "", tag.length > 4 ? tag[4] : ""));
+        contacts.add(Contact(
+          tag[1],
+          tag.length > 2 ? tag[2] : "",
+          tag.length > 3 ? tag[3] : "",
+        ));
       } else if (tag[0] == "e") {
-        // bookmark
         bookmarks.add(tag[1]);
       }
     }
-    return {"people": people, "bookmarks": bookmarks};
+    return (contacts: contacts, bookmarks: bookmarks);
   }
 
-  static Event createMutePeople(List<People> items, List<People> encryptedItems,
-      String privkey, String pubkey) {
+  /// Creates a kind-10000 mute list event.
+  ///
+  /// [items] are the public contacts in the mute list (stored in tags).
+  /// [encryptedItems] are the private contacts (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  static Future<Event> mutePeople(
+    List<Contact> items,
+    List<Contact> encryptedItems,
+    String secretKey,
+    String pubkey,
+  ) async {
     return Event.from(
-        kind: 10000,
-        tags: peoplesToTags(items),
-        content: peoplesToContent(encryptedItems, privkey, pubkey),
-        privkey: privkey);
+      kind: kindMuteList,
+      tags: contactsToTags(items),
+      content: await contactsToContent(encryptedItems, secretKey, pubkey),
+      secretKey: secretKey,
+    );
   }
 
-  static createPinEvent(List<String> items, List<String> encryptedItems,
-      String privkey, String pubkey) {
+  /// Creates a kind-10001 pin list event.
+  ///
+  /// [items] are the public bookmarks (stored in tags).
+  /// [encryptedItems] are the private bookmarks (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  static Future<Event> pinEvent(
+    List<String> items,
+    List<String> encryptedItems,
+    String secretKey,
+    String pubkey,
+  ) async {
     return Event.from(
-        kind: 10001,
-        tags: bookmarksToTags(items),
-        content: bookmarksToContent(encryptedItems, privkey, pubkey),
-        privkey: privkey);
+      kind: kindPinList,
+      tags: bookmarksToTags(items),
+      content: await bookmarksToContent(encryptedItems, secretKey, pubkey),
+      secretKey: secretKey,
+    );
   }
 
-  static Event createCategorizedPeople(String identifier, List<People> items,
-      List<People> encryptedItems, String privkey, String pubkey) {
-    List<List<String>> tags = peoplesToTags(items);
+  /// Creates a kind-30000 categorized people list event.
+  ///
+  /// [identifier] is the `d` tag value naming the category.
+  /// [items] are the public contacts (stored in tags).
+  /// [encryptedItems] are the private contacts (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  static Future<Event> categorizedPeople(
+    String identifier,
+    List<Contact> items,
+    List<Contact> encryptedItems,
+    String secretKey,
+    String pubkey,
+  ) async {
+    final List<List<String>> tags = contactsToTags(items);
     tags.add(["d", identifier]);
     return Event.from(
-        kind: 30000,
-        tags: tags,
-        content: peoplesToContent(encryptedItems, privkey, pubkey),
-        privkey: privkey);
+      kind: kindCategorizedPeople,
+      tags: tags,
+      content: await contactsToContent(encryptedItems, secretKey, pubkey),
+      secretKey: secretKey,
+    );
   }
 
-  static createCategorizedBookmarks(String identifier, List<String> items,
-      List<String> encryptedItems, String privkey, String pubkey) {
-    List<List<String>> tags = bookmarksToTags(items);
+  /// Creates a kind-30001 categorized bookmarks list event.
+  ///
+  /// [identifier] is the `d` tag value naming the category.
+  /// [items] are the public bookmarks (stored in tags).
+  /// [encryptedItems] are the private bookmarks (encrypted in content).
+  /// [secretKey] is the hex-encoded secret key used to sign the event.
+  /// [pubkey] is the hex-encoded public key of the list owner.
+  static Future<Event> categorizedBookmarks(
+    String identifier,
+    List<String> items,
+    List<String> encryptedItems,
+    String secretKey,
+    String pubkey,
+  ) async {
+    final List<List<String>> tags = bookmarksToTags(items);
     tags.add(["d", identifier]);
     return Event.from(
-        kind: 30001,
-        tags: tags,
-        content: bookmarksToContent(encryptedItems, privkey, pubkey),
-        privkey: privkey);
+      kind: kindCategorizedBookmarks,
+      tags: tags,
+      content: await bookmarksToContent(encryptedItems, secretKey, pubkey),
+      secretKey: secretKey,
+    );
   }
 
-  static Lists getLists(Event event, String privkey) {
-    if (event.kind != 10000 &&
-        event.kind != 10001 &&
-        event.kind != 30000 &&
-        event.kind != 30001) {
-      throw Exception("${event.kind} is not nip51 compatible");
+  /// Parses a NIP-51 list event into a [UserListData].
+  ///
+  /// Accepts only kinds in the NIP-51 list ranges: `10000-10999` (replaceable
+  /// lists, including mute / pin / bookmarks / search relays / interests /
+  /// emojis) and `30000-39999` (addressable lists, including categorized
+  /// people / bookmarks / relay sets / interest sets). Throws
+  /// [InvalidKindException] otherwise — pass a NIP-23 article or NIP-58
+  /// badge here and the parser would happily return malformed data.
+  static Future<UserListData> parse(
+    Event event, {
+    required String secretKey,
+  }) async {
+    final isReplaceableList = event.kind >= 10000 && event.kind < 11000;
+    final isAddressableList = event.kind >= 30000 && event.kind < 40000;
+    if (!isReplaceableList && !isAddressableList) {
+      throw InvalidKindException(event.kind, const [10000, 30000]);
     }
     String identifier = "";
-    List<People> people = [];
-    List<String> bookmarks = [];
-    for (List tag in event.tags) {
+    final List<Contact> contacts = [];
+    final List<String> bookmarks = [];
+    for (final List tag in event.tags) {
+      if (tag.length < 2) continue;
       if (tag[0] == "p") {
-        people.add(People(tag[1], tag.length > 2 ? tag[2] : "",
-            tag.length > 3 ? tag[3] : "", tag.length > 4 ? tag[4] : ""));
+        contacts.add(Contact(
+          tag[1],
+          tag.length > 2 ? tag[2] : "",
+          tag.length > 3 ? tag[3] : "",
+        ));
       }
       if (tag[0] == "e") {
         bookmarks.add(tag[1]);
       }
       if (tag[0] == "d") identifier = tag[1];
     }
-    String pubkey = bip340.getPublicKey(privkey);
-    Map content = Nip51.fromContent(event.content, privkey, pubkey);
-    people.addAll(content["people"]);
-    bookmarks.addAll(content["bookmarks"]);
-    if (event.kind == 10000) identifier = "Mute";
-    if (event.kind == 10001) identifier = "Pin";
+    // Extract additional tag types per spec
+    final List<String> hashtags = findAllTagValues(event.tags, 't');
+    final List<String> words = findAllTagValues(event.tags, 'word');
+    final List<String> coordinates = findAllTagValues(event.tags, 'a');
 
-    return Lists(event.pubkey, identifier, people, bookmarks);
+    final pubkey = Keys(secretKey).public;
+    if (event.content.isNotEmpty) {
+      // Try plaintext JSON first, then NIP-44 decryption.
+      final plaintext = _tryParsePlaintext(event.content);
+      if (plaintext != null) {
+        _extractFromTags(plaintext, contacts, bookmarks);
+      } else {
+        try {
+          final content =
+              await UserList.fromContent(event.content, secretKey, pubkey);
+          contacts.addAll(content.contacts);
+          bookmarks.addAll(content.bookmarks);
+        } on Exception {
+          // Content is neither valid JSON nor valid NIP-44 ciphertext.
+        }
+      }
+    }
+    if (event.kind == kindMuteList) identifier = "Mute";
+    if (event.kind == kindPinList) identifier = "Pin";
+
+    return UserListData(
+      owner: event.pubkey,
+      identifier: identifier,
+      contacts: contacts,
+      bookmarks: bookmarks,
+      hashtags: hashtags,
+      words: words,
+      coordinates: coordinates,
+    );
+  }
+
+  /// Tries to parse [content] as a plaintext JSON array of tags.
+  /// Returns the parsed list on success, or null if it's not valid JSON.
+  static List<List>? _tryParsePlaintext(String content) {
+    try {
+      final decoded = json.decode(content);
+      if (decoded is List) {
+        return decoded.cast<List>();
+      }
+    } on FormatException {
+      // Not valid JSON — likely NIP-44 ciphertext.
+    }
+    return null;
+  }
+
+  /// Extracts contacts and bookmarks from a list of decoded tags.
+  static void _extractFromTags(
+    List<List> tags,
+    List<Contact> contacts,
+    List<String> bookmarks,
+  ) {
+    for (final tag in tags) {
+      if (tag.length < 2) continue;
+      if (tag[0] == 'p') {
+        contacts.add(Contact(
+          tag[1],
+          tag.length > 2 ? tag[2] : '',
+          tag.length > 3 ? tag[3] : '',
+        ));
+      } else if (tag[0] == 'e') {
+        bookmarks.add(tag[1]);
+      }
+    }
   }
 }
 
+/// A contact entry in a NIP-51 list.
 ///
-class People {
-  String pubkey;
-  String? mainRelay;
-  String? petName;
-  String? aliasPubKey;
+/// Tag format: ["p", pubkey, relay?, petname?]
+class Contact {
+  /// The hex-encoded public key of the contact.
+  final String pubkey;
 
-  /// Default constructor
-  People(this.pubkey, this.mainRelay, this.petName, this.aliasPubKey);
+  /// The preferred relay URL for this contact (optional).
+  final String? mainRelay;
+
+  /// A local petname for this contact (optional).
+  final String? petName;
+
+  /// Creates a [Contact] with the given [pubkey], [mainRelay], and [petName].
+  const Contact(this.pubkey, this.mainRelay, this.petName);
 }
 
-class Lists {
-  String owner;
+/// The parsed contents of a NIP-51 list event.
+class UserListData {
+  /// The public key of the list owner.
+  final String owner;
 
-  String identifier;
+  /// The list identifier (category name, or "Mute"/"Pin" for non-categorized).
+  final String identifier;
 
-  List<People> people;
+  /// The contacts in this list (from `p` tags).
+  final List<Contact> contacts;
 
-  List<String> bookmarks;
+  /// The bookmarked event IDs (from `e` tags).
+  final List<String> bookmarks;
 
-  /// Default constructor
-  Lists(this.owner, this.identifier, this.people, this.bookmarks);
+  /// Hashtags in the list (from `t` tags, used in mute lists).
+  final List<String> hashtags;
+
+  /// Muted words (from `word` tags, used in mute lists).
+  final List<String> words;
+
+  /// Addressable event coordinates (from `a` tags, used in bookmark lists).
+  final List<String> coordinates;
+
+  /// Creates a [UserListData] with the given fields.
+  const UserListData({
+    required this.owner,
+    required this.identifier,
+    this.contacts = const [],
+    this.bookmarks = const [],
+    this.hashtags = const [],
+    this.words = const [],
+    this.coordinates = const [],
+  });
 }
+
+typedef Nip51 = UserList;

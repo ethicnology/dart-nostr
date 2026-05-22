@@ -1,18 +1,26 @@
 name: nostr
-description: A library for nostr protocol implemented in dart for flutter
-version: 1.5.0
+description: Pure-Dart Nostr protocol library. Events, signing, NIP-44 encryption, gift wrap, and 35+ NIPs. Transport-agnostic, Flutter Web compatible.
+version: 2.0.0
 homepage: https://github.com/ethicnology/dart-nostr
+repository: https://github.com/ethicnology/dart-nostr
+issue_tracker: https://github.com/ethicnology/dart-nostr/issues
+topics:
+  - nostr
+  - protocol
+  - bitcoin
+  - lightning
+  - cryptography
 
 environment:
-  sdk: '>=2.18.5 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dev_dependencies:
-  lints: ^2.0.0
+  lints: ^6.1.0
   test: ^1.16.0
 dependencies:
-  bip340: ^0.2.0
-  convert: ^3.1.1
-  pointycastle: ^3.7.3
   bech32: ^0.2.2
-
-  
+  bip340: ^0.3.1
+  convert: ^3.1.2
+  elliptic: ^0.3.12
+  http: ^1.6.0
+  pointycastle: '>=3.7.3 <5.0.0'

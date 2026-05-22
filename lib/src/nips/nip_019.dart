@@ -1,91 +1,331 @@
-import 'package:bech32/bech32.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:convert/convert.dart';
+import 'package:nostr/src/error.dart';
+import 'package:nostr/src/nips/nip_019_utils.dart';
 
-/// bech32-encoded entities
-class Nip19 {
-  static encodePubkey(String pubkey) {
-    return bech32Encode("npub", pubkey);
+/// Bech32-encoded entities — [NIP-19](https://github.com/nostr-protocol/nips/blob/master/19.md)
+///
+/// This NIP standardizes bech32-formatted strings that can be used to display keys,
+/// ids and other information in clients. These formats are not meant to be used anywhere
+/// in the core protocol, they are only meant for displaying to users, copy-pasting,
+/// sharing, rendering QR codes and inputting data.
+class Bech32Entity {
+  static const _shareableIdentifiersPrefixes = [
+    Nip19Prefix.nprofile,
+    Nip19Prefix.nevent,
+    Nip19Prefix.naddr
+  ];
+
+  /// Maximum bech32 string length. NIP-19 says strings SHOULD be limited
+  /// to 5000 chars; this library enforces it as a hard cap on encode and
+  /// decode to avoid pathological inputs.
+  static const int _maxBech32Length = 5000;
+
+  /// Decodes a bech32-encoded NIP-19 string into its prefix and hex data.
+  ///
+  /// The bech32 npub `npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6`
+  /// translates to the hex public key `3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d`
+  ///
+  /// Throws [NostrException] if the payload is a shareable identifier
+  /// (nprofile, nevent, naddr) — use [decodeShareableIdentifiers] instead.
+  /// Throws [DeserializationException] if the payload exceeds the 5000-char
+  /// length cap.
+  static ({Nip19Prefix prefix, String data}) decode({required String payload}) {
+    _assertLength(payload);
+    final decoded = bech32Decode(payload);
+    if (_shareableIdentifiersPrefixes.contains(decoded.prefix)) {
+      throw WrongDecodeMethodException(
+          'Bech32Entity.decodeShareableIdentifiers');
+    }
+    return decoded;
   }
 
-  static encodePrivkey(String privkey) {
-    return bech32Encode("nsec", privkey);
+  /// Auto-dispatching decode that works for any NIP-19 prefix.
+  ///
+  /// Returns a [ShareableIdentifierData] for nprofile/nevent/naddr and for
+  /// the simple types (nsec/npub/note) returns a [ShareableIdentifierData]
+  /// with an empty `relays` list, `null` `author`, and `null` `kind`.
+  ///
+  /// Useful when consumers receive an unknown-shape `nostr:` URI and want
+  /// a uniform result type without branching on prefix.
+  ///
+  /// Throws [DeserializationException] if the payload cannot be decoded.
+  static ShareableIdentifierData decodeAny({required String payload}) {
+    _assertLength(payload);
+    // Probe with the actual payload length — bech32's default cap is 90,
+    // which rejects any real nprofile/nevent/naddr that carries a relay URL.
+    final probe = bech32Decode(payload, length: payload.length);
+    if (_shareableIdentifiersPrefixes.contains(probe.prefix)) {
+      return decodeShareableIdentifiers(payload: payload);
+    }
+    return ShareableIdentifierData(prefix: probe.prefix, data: probe.data);
   }
 
-  static encodeNote(String noteid) {
-    return bech32Encode("note", noteid);
-  }
-
-  static String decodePubkey(String data) {
-    Map map = bech32Decode(data);
-    if (map["prefix"] == "npub") {
-      return map["data"];
-    } else {
-      return "";
+  static void _assertLength(String payload) {
+    if (payload.length > _maxBech32Length) {
+      throw const DeserializationException(
+        'bech32 payload exceeds NIP-19 5000-char cap',
+      );
     }
   }
 
-  static String decodePrivkey(String data) {
-    Map map = bech32Decode(data);
-    if (map["prefix"] == "nsec") {
-      return map["data"];
-    } else {
-      return "";
+  /// Encodes hex data into a bech32-encoded NIP-19 string.
+  ///
+  /// The hex public key `3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d`
+  /// translates to `npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6`
+  ///
+  /// Throws [NostrException] if the prefix is a shareable identifier
+  /// (nprofile, nevent, naddr) — use [encodeShareableIdentifiers] instead.
+  static String encode({
+    required Nip19Prefix prefix,
+    required String data,
+  }) {
+    if (_shareableIdentifiersPrefixes.contains(prefix)) {
+      throw WrongDecodeMethodException(
+          'Bech32Entity.encodeShareableIdentifiers');
     }
+    final encoded = bech32Encode(prefix, data);
+    _assertLength(encoded);
+    return encoded;
   }
 
-  static String decodeNote(String data) {
-    Map map = bech32Decode(data);
-    if (map["prefix"] == "note") {
-      return map["data"];
-    } else {
-      return "";
+  /// Encode shareable identifiers (nprofile, nevent, naddr) as TLV data.
+  ///
+  /// [prefix] must be one of [Nip19Prefix.nprofile], [Nip19Prefix.nevent],
+  /// or [Nip19Prefix.naddr].
+  /// [data] is the primary identifier (pubkey, event id, or d-tag value).
+  /// [relays] is an optional list of relay URLs.
+  /// [author] is an optional pubkey of the event author.
+  /// [kind] is an optional event kind number.
+  static String encodeShareableIdentifiers({
+    required Nip19Prefix prefix,
+    required String data,
+    List<String>? relays,
+    String? author,
+    int? kind,
+  }) {
+    if (!_shareableIdentifiersPrefixes.contains(prefix)) {
+      throw WrongPrefixException(
+        prefix.name,
+        _shareableIdentifiersPrefixes.map((p) => p.name).toList(),
+      );
+    }
+
+    // naddr addresses an addressable event and is meaningless without both
+    // the author's pubkey (type 2) and the event kind (type 3). nostr-tools
+    // and rust-nostr enforce this; matching them prevents producing naddrs
+    // that decode to incomplete data.
+    if (prefix == Nip19Prefix.naddr) {
+      if (author == null) {
+        throw MissingTlvException(2, 'author pubkey');
+      }
+      if (kind == null) {
+        throw MissingTlvException(3, 'event kind');
+      }
+    }
+
+    // Build the TLV with a StringBuffer to avoid O(n²) repeated string
+    // concat — naïve `result = '$result...'` blows up with many relays.
+    final buf = StringBuffer();
+
+    // 0: data
+    //
+    // For naddr the value is the `d`-tag string. NIP-19 leaves the byte
+    // encoding unspecified, but rust-nostr and nostr-tools both use UTF-8,
+    // so we follow suit for cross-impl interop.
+    if (prefix == Nip19Prefix.naddr) {
+      data = hex.encode(utf8.encode(data));
+    }
+    buf.write('00');
+    buf.write((data.length ~/ 2).toRadixString(16).padLeft(2, '0'));
+    buf.write(data);
+
+    // 1: relay
+    //
+    // NIP-19 says relays are "encoded as ascii". ASCII is a subset of UTF-8,
+    // so UTF-8 encoding is spec-compatible for any valid relay URL and also
+    // matches what rust-nostr / nostr-tools do.
+    if (relays != null) {
+      for (final relay in relays) {
+        final bytes = utf8.encode(relay);
+        buf.write('01');
+        buf.write(bytes.length.toRadixString(16).padLeft(2, '0'));
+        buf.write(hex.encode(bytes));
+      }
+    }
+
+    // 2: author
+    if (author != null) {
+      buf.write('02');
+      buf.write((author.length ~/ 2).toRadixString(16).padLeft(2, '0'));
+      buf.write(author);
+    }
+
+    // 3: kind
+    //
+    // NIP-19 encodes `kind` as 4 bytes (uint32). `setUint32` silently masks
+    // anything past 32 bits to zero, so reject out-of-range values up-front
+    // — otherwise `kind = 2^32` would round-trip to `0`.
+    if (kind != null) {
+      if (kind < 0 || kind > 0xFFFFFFFF) {
+        throw InvalidArgumentException(
+            'kind', 'must fit in uint32 (0..2^32-1)');
+      }
+      final byteData = ByteData(4)..setUint32(0, kind);
+      buf.write('03');
+      buf.write('04');
+      for (var i = 0; i < 4; i++) {
+        buf.write(byteData.getUint8(i).toRadixString(16).padLeft(2, '0'));
+      }
+    }
+
+    final result = buf.toString();
+    final encoded = bech32Encode(prefix, result, length: result.length + 90);
+    _assertLength(encoded);
+    return encoded;
+  }
+
+  /// Decodes a shareable identifier (nprofile, nevent, naddr) from a
+  /// bech32-encoded TLV payload.
+  ///
+  /// For these events, the contents are a binary-encoded list of TLV (type-length-value),
+  /// with T and L being 1 byte each (uint8, i.e. a number in the range of 0-255),
+  ///  and V being a sequence of bytes of the size indicated by L.
+  ///
+  /// 0: data depends on the bech32 prefix:
+  /// - for nprofile it will be the 32 bytes of the profile public key
+  /// - for nevent it will be the 32 bytes of the event id
+  /// - for naddr, it is the identifier (the "d" tag) of the event being referenced. For normal replaceable events use an empty string.
+  ///
+  /// 1: relay for nprofile, nevent and naddr, optionally, a relay in which the entity
+  /// (profile or event) is more likely to be found, encoded as ascii this may be included multiple times
+  ///
+  /// 2: author
+  /// - for naddr, the 32 bytes of the pubkey of the event
+  /// - for nevent, optionally, the 32 bytes of the pubkey of the event
+  ///
+  /// 3: kind
+  /// - for naddr, the 32-bit unsigned integer of the kind, big-endian
+  /// - for nevent, optionally, the 32-bit unsigned integer of the kind, big-endian
+  ///
+  /// Throws [DeserializationException] if the payload cannot be decoded.
+  static ShareableIdentifierData decodeShareableIdentifiers({
+    required String payload,
+  }) {
+    _assertLength(payload);
+    try {
+      String data = '';
+      final List<String> relays = [];
+      String? author;
+      int? kind;
+      final decoded = bech32Decode(payload, length: payload.length);
+      final tlvBytes = hex.decode(decoded.data);
+
+      var index = 0;
+      while (index < tlvBytes.length) {
+        final type = tlvBytes[index++];
+        final length = tlvBytes[index++];
+
+        final value =
+            Uint8List.fromList(tlvBytes.sublist(index, index + length));
+        index += length;
+
+        if (type == 0) {
+          // naddr type-0 carries the `d`-tag string; nprofile/nevent
+          // type-0 carries 32 raw bytes (hex-encode for the caller).
+          data = (decoded.prefix == Nip19Prefix.naddr)
+              ? utf8.decode(value)
+              : hex.encode(value);
+        } else if (type == 1) {
+          // Relays are ASCII per spec; UTF-8 decode is a strict superset
+          // that round-trips with the encode path.
+          relays.add(utf8.decode(value));
+        } else if (type == 2) {
+          author = hex.encode(value);
+        } else if (type == 3) {
+          final byteData = ByteData.sublistView(value);
+          kind = byteData.getUint32(0);
+        }
+      }
+
+      return ShareableIdentifierData(
+        prefix: decoded.prefix,
+        data: data,
+        relays: relays,
+        author: author,
+        kind: kind,
+      );
+    } on NostrException {
+      rethrow;
+    } on Object catch (e) {
+      // Don't echo `$e` — TLV inputs include hex from bech32 payloads, and
+      // `package:hex` / `ByteData` exception messages can embed a snippet.
+      throw DeserializationException(
+        'failed to decode shareable entity: ${e.runtimeType}',
+      );
     }
   }
 }
 
-/// help functions
+/// Represents all the prefixes available for NIP-19 encoding.
+///
+/// `nrelay` is deprecated and not included.
+enum Nip19Prefix {
+  /// Secret key prefix.
+  nsec,
 
-String bech32Encode(String prefix, String hexData) {
-  final data = hex.decode(hexData);
-  final convertedData = convertBits(data, 8, 5, true);
-  final bech32Data = Bech32(prefix, convertedData);
-  return bech32.encode(bech32Data);
+  /// Public key prefix.
+  npub,
+
+  /// Note (event) ID prefix.
+  note,
+
+  /// Profile with relay metadata prefix.
+  nprofile,
+
+  /// Event with relay metadata prefix.
+  nevent,
+
+  /// Addressable event (replaceable) prefix.
+  naddr;
+
+  /// Resolves a [Nip19Prefix] from its string [name].
+  static Nip19Prefix from(String name) =>
+      Nip19Prefix.values.byName(name.toLowerCase());
 }
 
-Map<String, String> bech32Decode(String bech32Data) {
-  final decodedData = bech32.decode(bech32Data);
-  final convertedData = convertBits(decodedData.data, 5, 8, false);
-  final hexData = hex.encode(convertedData);
+/// Shareable identifiers with extra metadata.
+///
+/// When sharing a profile or an event, an app may decide to include relay information
+/// and other metadata such that other apps can locate and display these entities
+/// more easily.
+class ShareableIdentifierData {
+  /// The NIP-19 prefix indicating the entity type.
+  final Nip19Prefix prefix;
 
-  return {'prefix': decodedData.hrp, 'data': hexData};
+  /// The primary identifier (pubkey, event id, or d-tag value).
+  final String data;
+
+  /// Relay URLs where the entity is likely to be found.
+  final List<String> relays;
+
+  /// The pubkey of the event author (for nevent and naddr).
+  final String? author;
+
+  /// The event kind (for nevent and naddr).
+  final int? kind;
+
+  /// Creates a [ShareableIdentifierData] with the given fields.
+  const ShareableIdentifierData({
+    required this.prefix,
+    required this.data,
+    this.relays = const [],
+    this.author,
+    this.kind,
+  });
 }
 
-List<int> convertBits(List<int> data, int fromBits, int toBits, bool pad) {
-  var acc = 0;
-  var bits = 0;
-  final maxv = (1 << toBits) - 1;
-  final result = <int>[];
-
-  for (final value in data) {
-    if (value < 0 || value >> fromBits != 0) {
-      throw Exception('Invalid value: $value');
-    }
-    acc = (acc << fromBits) | value;
-    bits += fromBits;
-
-    while (bits >= toBits) {
-      bits -= toBits;
-      result.add((acc >> bits) & maxv);
-    }
-  }
-
-  if (pad) {
-    if (bits > 0) {
-      result.add((acc << (toBits - bits)) & maxv);
-    }
-  } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv) != 0) {
-    throw Exception('Invalid data');
-  }
-
-  return result;
-}
+typedef Nip19 = Bech32Entity;
+typedef ShareableIdentifiers = ShareableIdentifierData;

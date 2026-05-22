@@ -1,39 +1,62 @@
 import 'dart:convert';
 
-/// When submitting events to relays, clients currently have no way to know if an event was successfully committed to the database.
-/// This NIP introduces the concept of command results which are like NOTICE's except provide more information about if an event was accepted or rejected.
-///
-/// Event successfully written to the database:
-///
-/// ["OK", "b1a649ebe8b435ec71d3784793f3bbf4b93e64e17568a741aecd4c7ddeafce30", true, ""]
-///
-/// Event successfully written to the database because of a reason:
-///
-/// ["OK", "b1a649ebe8b435ec71d3784793f3bbf4b93e64e17568a741aecd4c7ddeafce30", true, "pow: difficulty 25>=24"]
-///
-/// Event blocked due to ip filter:
-///
-/// ["OK", "b1a649ebe8...", false, "blocked: tor exit nodes not allowed"]
-///
-/// …
-class Nip20 {
-  late String eventId;
-  late bool status;
-  late String message;
+import 'package:nostr/src/error.dart';
 
-  /// Default constructor
-  Nip20(this.eventId, this.status, this.message);
+/// Command results (OK messages) — [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)
+///
+/// Relays send OK messages to indicate whether an event was accepted or rejected.
+///
+/// Format: `["OK", <event_id>, <true|false>, <message>]`
+///
+/// The message field is always present but may be empty on acceptance.
+/// On rejection, the message follows the format `prefix: human-readable explanation`
+/// with standardized prefixes: `duplicate`, `pow`, `blocked`, `rate-limited`,
+/// `invalid`, `restricted`, `mute`, `error`.
+class CommandResult {
+  /// The event ID this result refers to.
+  final String eventId;
 
-  /// Serialize to nostr close message
-  /// - ["OK", "event_id", true|false, "message"]
-  String serialize() => jsonEncode(["OK", eventId, status, message]);
+  /// Whether the event was accepted (`true`) or rejected (`false`).
+  final bool status;
 
-  /// Deserialize a nostr close message
-  /// - ["OK", "event_id", true|false, "message"]
-  Nip20.deserialize(input) {
-    assert(input.length == 4);
-    eventId = input[1];
-    status = input[2];
-    message = input[3];
+  /// A human-readable message providing additional context.
+  ///
+  /// May be empty when [status] is `true`.
+  /// When [status] is `false`, follows the format `prefix: explanation`.
+  final String message;
+
+  /// Creates a [CommandResult] with the given [eventId], [status], and [message].
+  const CommandResult(this.eventId, this.status, this.message);
+
+  /// Serialize to nostr OK message.
+  ///
+  /// Format: `["OK", "event_id", true|false, "message"]`
+  String serialize() => json.encode(["OK", eventId, status, message]);
+
+  /// Deserialize a nostr OK message.
+  ///
+  /// Format: `["OK", "event_id", true|false, "message"]`
+  ///
+  /// Throws [DeserializationException] if the payload is not a valid OK message.
+  factory CommandResult.deserialize(String payload) {
+    final Object? data;
+    try {
+      data = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('OK payload is not valid JSON: $e');
+    }
+    if (data is! List ||
+        data.length != 4 ||
+        data[0] != 'OK' ||
+        data[1] is! String ||
+        data[2] is! bool ||
+        data[3] is! String) {
+      throw const DeserializationException(
+        'OK must be ["OK", event_id, bool, message]',
+      );
+    }
+    return CommandResult(data[1] as String, data[2] as bool, data[3] as String);
   }
 }
+
+typedef Nip20 = CommandResult;

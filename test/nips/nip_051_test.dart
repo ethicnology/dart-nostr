@@ -1,85 +1,101 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('nip051', () {
-    test('createCategorizedPeople', () {
-      Keychain user = Keychain.generate();
-      People publicFriend = People(
-          "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
-          'wss://example.com',
-          'alias',
-          "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181");
-      People privateFriend = People(
-          "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
-          'wss://example2.com',
-          'bob',
-          "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1");
-      Event event = Nip51.createCategorizedPeople("friends", [publicFriend],
-          [privateFriend], user.private, user.public);
+    test('categorizedPeople', () async {
+      final Keys user = Keys.generate();
+      const Contact publicFriend = Contact(
+        "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
+        'wss://example.com',
+        'alias',
+      );
+      const Contact privateFriend = Contact(
+        "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
+        'wss://example2.com',
+        'bob',
+      );
+      final Event event = await UserList.categorizedPeople(
+          "friends", [publicFriend], [privateFriend], user.secret, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
-      expect(lists.people[0].pubkey,
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
+      expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
-      expect(lists.people[0].petName, 'alias');
-      expect(lists.people[1].pubkey,
+      expect(list.contacts[0].petName, 'alias');
+      expect(list.contacts[1].pubkey,
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
-      expect(lists.people[1].petName, 'bob');
+      expect(list.contacts[1].petName, 'bob');
     });
 
-    test('createCategorizedBookmarks', () {
-      Keychain user = Keychain.generate();
-      String bookmark =
+    test('categorizedBookmarks', () async {
+      final Keys user = Keys.generate();
+      const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
-      String encryptedBookmark =
+      const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      Event event = Nip51.createCategorizedBookmarks("bookmarks", [bookmark],
-          [encryptedBookmark], user.private, user.public);
+      final Event event = await UserList.categorizedBookmarks("bookmarks",
+          [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
-      expect(lists.bookmarks[0],
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
+      expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
-      expect(lists.bookmarks[1],
+      expect(list.bookmarks[1],
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
     });
 
-    test('createMutePeople', () {
-      Keychain user = Keychain.generate();
-      People publicFriend = People(
-          "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
-          'wss://example.com',
-          'alias',
-          "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181");
-      People privateFriend = People(
-          "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
-          'wss://example2.com',
-          'bob',
-          "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1");
-      Event event = Nip51.createMutePeople(
-          [publicFriend], [privateFriend], user.private, user.public);
-      Lists lists = Nip51.getLists(event, user.private);
-      expect(lists.people[0].pubkey,
+    test('mutePeople', () async {
+      final Keys user = Keys.generate();
+      const Contact publicFriend = Contact(
+        "2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1",
+        'wss://example.com',
+        'alias',
+      );
+      const Contact privateFriend = Contact(
+        "0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181",
+        'wss://example2.com',
+        'bob',
+      );
+      final Event event = await UserList.mutePeople(
+          [publicFriend], [privateFriend], user.secret, user.public);
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
+      expect(list.contacts[0].pubkey,
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
-      expect(lists.people[0].petName, 'alias');
-      expect(lists.people[1].pubkey,
+      expect(list.contacts[0].petName, 'alias');
+      expect(list.contacts[1].pubkey,
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
-      expect(lists.people[1].petName, 'bob');
+      expect(list.contacts[1].petName, 'bob');
     });
 
-    test('createPinEvent', () {
-      Keychain user = Keychain.generate();
-      String bookmark =
+    test('pinEvent', () async {
+      final Keys user = Keys.generate();
+      const String bookmark =
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1';
-      String encryptedBookmark =
+      const String encryptedBookmark =
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181';
-      Event event = Nip51.createPinEvent(
-          [bookmark], [encryptedBookmark], user.private, user.public);
+      final Event event = await UserList.pinEvent(
+          [bookmark], [encryptedBookmark], user.secret, user.public);
 
-      Lists lists = Nip51.getLists(event, user.private);
-      expect(lists.bookmarks[0],
+      final UserListData list =
+          await UserList.parse(event, secretKey: user.secret);
+      expect(list.bookmarks[0],
           '2d38a56c4303bc722370c50c86fc8dd3327f06a8fe59b3ff3d670738d71dd1e1');
-      expect(lists.bookmarks[1],
+      expect(list.bookmarks[1],
           '0f76c800a7ea76b83a3ae87de94c6046b98311bda8885cedd8420885b50de181');
+    });
+
+    test('real-world kind 10002 relay list parses as Event', () {
+      final fixtures = json.decode(
+          File('test/fixtures/samples_by_kind.json').readAsStringSync());
+      final eventMap = fixtures['10002'] as Map<String, dynamic>;
+      final event = Event.fromMap(eventMap);
+      expect(event.kind, 10002);
+      expect(event.pubkey, isNotEmpty);
     });
   });
 }

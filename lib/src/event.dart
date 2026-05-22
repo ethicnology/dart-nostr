@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
 import 'package:convert/convert.dart';
-import 'package:pointycastle/export.dart';
-import 'package:bip340/bip340.dart' as bip340;
+import 'package:nostr/src/error.dart';
+import 'package:nostr/src/schnorr.dart';
 import 'package:nostr/src/utils.dart';
 
 /// The only object type that exists is the event, which has the following format on the wire:
@@ -18,37 +18,43 @@ import 'package:nostr/src/utils.dart';
 /// - "content": "arbitrary string",
 /// - "sig": "64-bytes signature of the sha256 hash of the serialized event data, which is the same as the 'id' field"
 class Event {
-  /// 32-bytes hex-encoded sha256 of the the serialized event data (hex)
-  late String id;
+  /// 32-bytes hex-encoded sha256 of the the serialized event data (hex).
+  final String id;
 
-  /// 32-bytes hex-encoded public key of the event creator (hex)
-  late String pubkey;
+  /// 32-bytes hex-encoded public key of the event creator (hex).
+  final String pubkey;
 
-  /// unix timestamp in seconds
-  late int createdAt;
+  /// Unix timestamp in seconds indicating when the event was created.
+  final int createdAt;
 
-  /// -  0: set_metadata: the content is set to a stringified JSON object {name: <username>, about: <string>, picture: <url, string>} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
+  /// The event kind, which determines how the event content and tags
+  /// should be interpreted.
+  ///
+  /// -  0: set_metadata: the content is set to a stringified JSON object {name: username, about: string, picture: url} describing the user who created the event. A relay may delete past set_metadata events once it gets a new one for the same pubkey.
   /// -  1: text_note: the content is set to the text content of a note (anything the user wants to say). Non-plaintext notes should instead use kind 1000-10000 as described in NIP-16.
   /// -  2: recommend_server: the content is set to the URL (e.g., wss://somerelay.com) of a relay the event creator wants to recommend to its followers.
-  late int kind;
+  final int kind;
 
   /// The tags array can store a tag identifier as the first element of each subarray, plus arbitrary information afterward (always as strings).
   ///
-  /// This NIP defines "p" — meaning "pubkey", which points to a pubkey of someone that is referred to in the event —, and "e" — meaning "event", which points to the id of an event this event is quoting, replying to or referring to somehow.
-  late List<List<String>> tags;
+  /// This NIP defines "p" -- meaning "pubkey", which points to a pubkey of someone that is referred to in the event --, and "e" -- meaning "event", which points to the id of an event this event is quoting, replying to or referring to somehow.
+  final List<List<String>> tags;
 
-  /// arbitrary string
-  String content = "";
+  /// Arbitrary string content of the event.
+  final String content;
 
-  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
-  late String sig;
+  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field.
+  final String sig;
 
-  /// subscription_id is a random string that should be used to represent a subscription.
-  String? subscriptionId;
+  /// Optional subscription identifier, present when the event was received
+  /// as part of a subscription response.
+  final String? subscriptionId;
 
-  /// Default constructor
+  /// Default constructor.
   ///
-  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  /// If [verify] is `true` (the default), the event is validated after
+  /// construction and an [EventValidationException] is thrown when it is
+  /// invalid.
   ///
   ///```dart
   /// String id =
@@ -76,7 +82,7 @@ class Event {
   ///```
   Event(
     this.id,
-    this.pubkey,
+    String pubkey,
     this.createdAt,
     this.kind,
     this.tags,
@@ -84,36 +90,98 @@ class Event {
     this.sig, {
     this.subscriptionId,
     bool verify = true,
-  }) {
-    pubkey = pubkey.toLowerCase();
-    if (verify && isValid() == false) throw 'Invalid event';
+  }) : pubkey = pubkey.toLowerCase() {
+    if (verify) _assertValid();
   }
 
-  /// Partial constructor, you have to fill the fields yourself
+  /// Returns a copy of this event with the given fields replaced.
   ///
-  /// verify: ensure your event isValid() –> id, signature, timestamp…
+  /// Use this when you need to attach a `subscriptionId` after constructing
+  /// (e.g., when reading from a relay frame) or to selectively update
+  /// fields without re-deriving everything. Pass `verify: true` to
+  /// re-validate the resulting event.
+  Event copyWith({
+    String? id,
+    String? pubkey,
+    int? createdAt,
+    int? kind,
+    List<List<String>>? tags,
+    String? content,
+    String? sig,
+    String? subscriptionId,
+    bool verify = false,
+  }) {
+    return Event(
+      id ?? this.id,
+      pubkey ?? this.pubkey,
+      createdAt ?? this.createdAt,
+      kind ?? this.kind,
+      tags ?? this.tags,
+      content ?? this.content,
+      sig ?? this.sig,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      verify: verify,
+    );
+  }
+
+  /// Runs the same checks as [isValid] but throws a typed
+  /// [EventValidationException] (with a specific [EventValidationReason])
+  /// the first time one fails. Used by the validating constructor;
+  /// public so consumers can get the reason without parsing strings.
+  void _assertValid() {
+    if (createdAt <= 0 || createdAt >= 253402300800 /* year 9999 */) {
+      throw EventValidationException(
+        'created_at $createdAt is not a valid Unix timestamp (seconds)',
+        EventValidationReason.invalidTimestamp,
+      );
+    }
+    final String verifyId = getEventId();
+    if (id != verifyId) {
+      throw EventValidationException(
+        'event id mismatch (claimed=$id, canonical=$verifyId)',
+        EventValidationReason.idMismatch,
+      );
+    }
+    try {
+      if (!Schnorr.verify(publicKey: pubkey, message: id, signature: sig)) {
+        throw EventValidationException(
+          'Schnorr signature invalid for pubkey=$pubkey',
+          EventValidationReason.invalidSignature,
+        );
+      }
+    } on InvalidKeyException catch (e) {
+      throw EventValidationException(
+        'malformed pubkey or signature: ${e.message}',
+        EventValidationReason.malformedSignature,
+      );
+    } on FormatException catch (e) {
+      // hex.decode throws FormatException on non-hex characters in
+      // pubkey/sig — promote it to the same malformed-signature reason
+      // so isValid() can return false instead of leaking the raw error.
+      throw EventValidationException(
+        'malformed pubkey or signature: ${e.message}',
+        EventValidationReason.malformedSignature,
+      );
+    }
+  }
+
+  /// Partial constructor — used internally for unsigned scratch events.
   ///
-  /// ```dart
-  /// var partialEvent = Event.partial();
-  /// assert(partialEvent.isValid() == false);
-  /// partialEvent.createdAt = currentUnixTimestampSeconds();
-  /// partialEvent.pubkey =
-  ///     "981cc2078af05b62ee1f98cff325aac755bf5c5836a265c254447b5933c6223b";
-  /// partialEvent.id = partialEvent.getEventId();
-  /// partialEvent.sig = partialEvent.getSignature(
-  ///   "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
-  /// );
-  /// assert(partialEvent.isValid() == true);
-  /// ```
+  /// By default [verify] is `false`, so no validation is performed.
+  /// Defaults to empty `id` / `pubkey` / `sig` and a `kind` of 1.
+  ///
+  /// Use [Event.unsigned] when you have the author key + payload and want
+  /// an event with a precomputed id but no signature (e.g., NIP-17 rumors,
+  /// NIP-13 mining probes).
   factory Event.partial({
-    id = "",
-    pubkey = "",
-    createdAt = 0,
-    kind = 1,
-    tags = const <List<String>>[],
-    content = "",
-    sig = "",
-    subscriptionId,
+    String id = "",
+    String pubkey = "",
+    int createdAt = 0,
+    int kind = 1,
+    List<List<String>> tags = const <List<String>>[],
+    String content = "",
+    String sig = "",
+    String? subscriptionId,
     bool verify = false,
   }) {
     return Event(
@@ -125,43 +193,39 @@ class Event {
       content,
       sig,
       verify: verify,
+      subscriptionId: subscriptionId,
     );
   }
 
-  /// Instantiate Event object from the minimum needed data
+  /// Instantiate an [Event] from the minimum needed data.
+  ///
+  /// The [id] and [sig] are computed automatically from the provided
+  /// [secretKey].
   ///
   /// ```dart
   ///Event event = Event.from(
   ///  kind: 1,
   ///  content: "",
-  ///  privkey:
+  ///  secretKey:
   ///      "5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12",
   ///);
   ///```
   factory Event.from({
-    int? createdAt,
     required int kind,
-    List<List<String>> tags = const [],
     required String content,
-    required String privkey,
+    required String secretKey,
+    int? createdAt,
+    List<List<String>> tags = const [],
+    String? pubkey,
     String? subscriptionId,
     bool verify = false,
   }) {
     createdAt ??= currentUnixTimestampSeconds();
-    final pubkey = bip340.getPublicKey(privkey).toLowerCase();
+    pubkey ??= Schnorr.derivePublicKey(secretKey).toLowerCase();
 
-    final id = _processEventId(
-      pubkey,
-      createdAt,
-      kind,
-      tags,
-      content,
-    );
+    final id = _processEventId(pubkey, createdAt, kind, tags, content);
 
-    final sig = _processSignature(
-      privkey,
-      id,
-    );
+    final sig = _processSignature(secretKey, id);
 
     return Event(
       id,
@@ -176,31 +240,108 @@ class Event {
     );
   }
 
-  /// Deserialize an event from a JSON
+  /// Constructs an event with a precomputed `id` and an empty `sig`.
   ///
-  /// verify: enable/disable events checks
-  ///
-  /// This option adds event checks such as id, signature, non-futuristic event: default=True
-  ///
-  /// Performances could be a reason to disable event checks
-  factory Event.fromJson(Map<String, dynamic> json, {bool verify = true}) {
-    var tags = (json['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
+  /// Used for NIP-17 rumors (kind 14) and similar unsigned-payload flows
+  /// where the canonical id is required but signing is forbidden by spec.
+  /// The returned event has `verify: false` because it has no signature
+  /// to verify.
+  factory Event.unsigned({
+    required String pubkey,
+    required int kind,
+    required String content,
+    int? createdAt,
+    List<List<String>> tags = const [],
+    String? subscriptionId,
+  }) {
+    createdAt ??= currentUnixTimestampSeconds();
+    final id = _processEventId(pubkey, createdAt, kind, tags, content);
     return Event(
-      json['id'],
-      json['pubkey'],
-      json['created_at'],
-      json['kind'],
+      id,
+      pubkey,
+      createdAt,
+      kind,
       tags,
-      json['content'],
-      json['sig'],
-      verify: verify,
+      content,
+      '',
+      subscriptionId: subscriptionId,
+      verify: false,
     );
   }
 
-  /// Serialize an event in JSON
-  Map<String, dynamic> toJson() => {
+  /// Deserializes an event from a JSON map.
+  ///
+  /// If [verify] is `true` (the default), the signature is validated.
+  /// Setting [verify] to `false` skips validation for faster deserialization.
+  ///
+  /// Throws a [DeserializationException] if any required field is missing
+  /// or has the wrong type.
+  factory Event.fromMap(
+    Map<String, dynamic> map, {
+    bool verify = true,
+    String? subscriptionId,
+  }) {
+    final id = getRequiredField<String>(map, 'id');
+    final sig = getRequiredField<String>(map, 'sig');
+    final pubkey = getRequiredField<String>(map, 'pubkey');
+    final createdAt = getRequiredField<int>(map, 'created_at');
+    final kind = getRequiredField<int>(map, 'kind');
+    final content = getRequiredField<String>(map, 'content');
+    final rawTags = getRequiredField<List>(map, 'tags');
+
+    final tags = <List<String>>[];
+    for (var i = 0; i < rawTags.length; i++) {
+      final row = rawTags[i];
+      if (row is! List) {
+        throw DeserializationException("tag at index $i is not a list");
+      }
+      final inner = <String>[];
+      for (var j = 0; j < row.length; j++) {
+        final value = row[j];
+        if (value is! String) {
+          throw DeserializationException("tag[$i][$j] is not a string");
+        }
+        inner.add(value);
+      }
+      tags.add(inner);
+    }
+
+    return Event(
+      id,
+      pubkey,
+      createdAt,
+      kind,
+      tags,
+      content,
+      sig,
+      verify: verify,
+      subscriptionId: subscriptionId,
+    );
+  }
+
+  /// Deserializes an event from a JSON string.
+  ///
+  /// If [verify] is `true` (the default), the signature is validated.
+  ///
+  /// Throws a [DeserializationException] if the payload is not valid JSON
+  /// or does not decode to a JSON object.
+  factory Event.fromJson(String payload, {bool verify = true}) {
+    final Object? decoded;
+    try {
+      decoded = json.decode(payload);
+    } on FormatException catch (e) {
+      throw DeserializationException('event payload is not valid JSON: $e');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw DeserializationException(
+        'event payload must decode to a JSON object, got ${decoded.runtimeType}',
+      );
+    }
+    return Event.fromMap(decoded, verify: verify);
+  }
+
+  /// Serializes this event to a [Map].
+  Map<String, dynamic> toMap() => {
         'id': id,
         'pubkey': pubkey,
         'created_at': createdAt,
@@ -210,20 +351,29 @@ class Event {
         'sig': sig
       };
 
-  /// Serialize to nostr event message
-  /// - ["EVENT", event JSON as defined above]
-  /// - ["EVENT", subscription_id, event JSON as defined above]
+  /// Serializes this event to a JSON string.
+  String toJson() => json.encode(toMap());
+
+  /// Serializes to a Nostr event message for the wire.
+  ///
+  /// Returns one of:
+  /// - `["EVENT", event JSON]`
+  /// - `["EVENT", subscription_id, event JSON]`
   String serialize() {
-    if (subscriptionId != null) {
-      return jsonEncode(["EVENT", subscriptionId, toJson()]);
-    } else {
-      return jsonEncode(["EVENT", toJson()]);
-    }
+    return json.encode([
+      "EVENT",
+      if (subscriptionId != null) subscriptionId,
+      toMap(),
+    ]);
   }
 
-  /// Deserialize a nostr event message
-  /// - ["EVENT", event JSON as defined above]
-  /// - ["EVENT", subscription_id, event JSON as defined above]
+  /// Deserializes a Nostr event message from a JSON-encoded [input].
+  ///
+  /// Accepts both relay-style `["EVENT", subscription_id, {event}]` and
+  /// client-style `["EVENT", {event}]` formats.
+  ///
+  /// Throws a [DeserializationException] if the payload structure is invalid.
+  ///
   /// ```dart
   /// Event event = Event.deserialize([
   ///   "EVENT",
@@ -241,46 +391,43 @@ class Event {
   ///   }
   /// ]);
   /// ```
-  factory Event.deserialize(input, {bool verify = true}) {
-    Map<String, dynamic> json = {};
+  factory Event.deserialize(String input, {bool verify = true}) {
+    final Object? data;
+    try {
+      data = json.decode(input);
+    } on FormatException catch (e) {
+      throw DeserializationException('event frame is not valid JSON: $e');
+    }
+    if (data is! List || data.isEmpty || data[0] != 'EVENT') {
+      throw const DeserializationException(
+        'event frame must be ["EVENT", …]',
+      );
+    }
+    Map<String, dynamic> event;
     String? subscriptionId;
-    if (input.length == 2) {
-      json = input[1] as Map<String, dynamic>;
-    } else if (input.length == 3) {
-      json = input[2] as Map<String, dynamic>;
-      subscriptionId = input[1] as String;
+    if (data.length == 2 && data[1] is Map<String, dynamic>) {
+      event = data[1] as Map<String, dynamic>;
+    } else if (data.length == 3 &&
+        data[1] is String &&
+        data[2] is Map<String, dynamic>) {
+      event = data[2] as Map<String, dynamic>;
+      subscriptionId = data[1] as String;
     } else {
-      throw Exception('invalid input');
+      throw const DeserializationException('invalid event frame shape');
     }
 
-    List<List<String>> tags = (json['tags'] as List<dynamic>)
-        .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
-        .toList();
-
-    return Event(
-      json['id'],
-      json['pubkey'],
-      json['created_at'],
-      json['kind'],
-      tags,
-      json['content'],
-      json['sig'],
-      subscriptionId: subscriptionId,
-      verify: verify,
-    );
+    return Event.fromMap(event, verify: verify, subscriptionId: subscriptionId);
   }
 
-  /// To obtain the event.id, we sha256 the serialized event.
-  /// The serialization is done over the UTF-8 JSON-serialized string (with no white space or line breaks) of the following structure:
+  /// Computes and returns the event id by SHA-256 hashing the serialized
+  /// event data.
   ///
-  ///[
-  ///  0,
-  ///  <pubkey, as a (lowercase) hex string>,
-  ///  <created_at, as a number>,
-  ///  <kind, as a number>,
-  ///  <tags, as an array of arrays of non-null strings>,
-  ///  <content, as a string>
-  ///]
+  /// The serialization is done over the UTF-8 JSON-serialized string (with
+  /// no white space or line breaks) of the following structure:
+  ///
+  /// ```json
+  /// [0, pubkey, created_at, kind, tags, content]
+  /// ```
   String getEventId() {
     // Included for minimum breaking changes
     return _processEventId(
@@ -300,39 +447,40 @@ class Event {
     List<List<String>> tags,
     String content,
   ) {
-    List data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
-    String serializedEvent = json.encode(data);
-    Uint8List hash = SHA256Digest()
-        .process(Uint8List.fromList(utf8.encode(serializedEvent)));
+    final data = [0, pubkey.toLowerCase(), createdAt, kind, tags, content];
+    final serializedEvent = json.encode(data);
+    final hash = sha256(utf8.encode(serializedEvent));
     return hex.encode(hash);
   }
 
-  /// Each user has a keypair. Signatures, public key, and encodings are done according to the Schnorr signatures standard for the curve secp256k1
-  /// 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
-  String getSignature(String privateKey) {
-    return _processSignature(privateKey, id);
-  }
+  /// Signs [id] with [secretKey] using Schnorr signatures (BIP-340).
+  ///
+  /// Returns a 64-byte hex-encoded signature.
+  String getSignature(String secretKey) => _processSignature(secretKey, id);
 
   // Support for [getSignature]
-  static String _processSignature(
-    String privateKey,
-    String id,
-  ) {
-    /// aux must be 32-bytes random bytes, generated at signature time.
-    /// https://github.com/nbd-wtf/dart-bip340/blob/master/lib/src/bip340.dart#L10
-    String aux = generate64RandomHexChars();
-    return bip340.sign(privateKey, id, aux);
+  static String _processSignature(String secretKey, String id) {
+    // aux is the 32-byte random component required by BIP-340; we let
+    // Schnorr.sign generate it when omitted.
+    return Schnorr.sign(secretKey: secretKey, message: id);
   }
 
-  /// Verify if event checks such as id, signature, non-futuristic are valid
-  /// Performances could be a reason to disable event checks
+  /// Verifies that this event is valid.
+  ///
+  /// Checks that:
+  /// - The [createdAt] is a valid Unix timestamp in seconds.
+  /// - The [id] matches the recomputed event id.
+  /// - The [sig] is a valid Schnorr signature over [id] for [pubkey].
+  ///
+  /// Returns `false` instead of throwing. Use the [Event] constructor
+  /// (with default `verify: true`) when you want a typed
+  /// [EventValidationException] that carries the specific failure
+  /// [EventValidationReason].
   bool isValid() {
-    String verifyId = getEventId();
-    if (createdAt.toString().length == 10 &&
-        id == verifyId &&
-        bip340.verify(pubkey, id, sig)) {
+    try {
+      _assertValid();
       return true;
-    } else {
+    } on EventValidationException {
       return false;
     }
   }

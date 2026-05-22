@@ -1,76 +1,221 @@
-/// filter is a JSON object that determines what events will be sent in that subscription
+import 'dart:convert';
+
+import 'package:nostr/src/error.dart';
+
+/// A filter determines what events will be sent in a Nostr subscription.
+///
+/// Filters are JSON objects sent as part of a REQ message. The relay
+/// returns stored events that match the filter, followed by new events
+/// as they arrive.
 class Filter {
-  /// a list of event ids or prefixes
-  List<String>? ids;
+  /// A list of event ids or prefixes to match.
+  final List<String>? ids;
 
-  /// a list of pubkeys or prefixes, the pubkey of an event must be one of these
-  List<String>? authors;
+  /// A list of pubkeys or prefixes; the pubkey of an event must be one of these.
+  final List<String>? authors;
 
-  /// a list of a kind numbers
-  List<int>? kinds;
+  /// A list of event kind numbers to match.
+  final List<int>? kinds;
 
-  /// a list of event ids that are referenced in an "e" tag
-  List<String>? e;
+  /// A list of event ids that are referenced in an "e" tag.
+  ///
+  /// Convenience for the most common single-letter tag filter. Routed
+  /// through [tagFilters] under the key `'e'` on serialization.
+  final List<String>? eTags;
 
-  /// a list of event ids that are referenced in an "a" tag
-  List<String>? a;
+  /// A list of addressable-event coordinates that are referenced in an
+  /// "a" tag. Routed through [tagFilters] under the key `'a'`.
+  final List<String>? aTags;
 
-  /// a list of pubkeys that are referenced in a "p" tag
-  List<String>? p;
+  /// A list of pubkeys that are referenced in a "p" tag. Routed through
+  /// [tagFilters] under the key `'p'`.
+  final List<String>? pTags;
 
-  /// a timestamp, events must be newer than this to pass
-  int? since;
+  /// Generic single-letter tag filters. Per NIP-01:
+  /// `#<single-letter (a-zA-Z)>` keys map to arrays of values.
+  ///
+  /// Use this for any tag letter the convenience fields above don't cover
+  /// (`#d`, `#t`, `#k`, `#r`, …). Each key is one ASCII letter; values
+  /// can be empty or multiple.
+  ///
+  /// Note: [eTags], [aTags], and [pTags] take precedence over the
+  /// corresponding entries here when both are set — they serialize
+  /// first, and the tagFilter entries for `e`/`a`/`p` are skipped.
+  final Map<String, List<String>>? tagFilters;
 
-  /// a timestamp, events must be older than this to pass
-  int? until;
+  /// A unix timestamp; events must be newer than this to pass.
+  final int? since;
 
-  /// maximum number of events to be returned in the initial query
-  int? limit;
+  /// A unix timestamp; events must be older than this to pass.
+  final int? until;
 
-  /// nip-50 search term
-  String? search;
+  /// Maximum number of events to be returned in the initial query.
+  final int? limit;
 
-  /// Default constructor
-  Filter(
-      {this.ids,
-      this.authors,
-      this.kinds,
-      this.e,
-      this.a,
-      this.p,
-      this.since,
-      this.until,
-      this.limit,
-      this.search});
+  /// NIP-50 full-text search term.
+  final String? search;
 
-  /// Deserialize a filter from a JSON
-  Filter.fromJson(Map<String, dynamic> json) {
-    ids = json['ids'] == null ? null : List<String>.from(json['ids']);
-    authors =
-        json['authors'] == null ? null : List<String>.from(json['authors']);
-    kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
-    e = json['#e'] == null ? null : List<String>.from(json['#e']);
-    a = json['#a'] == null ? null : List<String>.from(json['#a']);
-    p = json['#p'] == null ? null : List<String>.from(json['#p']);
-    since = json['since'];
-    until = json['until'];
-    limit = json['limit'];
-    search = json['search'];
+  /// Creates a [Filter] with the given optional constraints.
+  const Filter({
+    this.ids,
+    this.authors,
+    this.kinds,
+    this.eTags,
+    this.aTags,
+    this.pTags,
+    this.tagFilters,
+    this.since,
+    this.until,
+    this.limit,
+    this.search,
+  });
+
+  /// Deserializes a [Filter] from a JSON map.
+  ///
+  /// Any `#X` key with a single-letter `X` is collected into
+  /// [tagFilters]. The well-known `#e`/`#a`/`#p` keys are also
+  /// surfaced via [eTags]/[aTags]/[pTags] for backward compatibility.
+  ///
+  /// Throws [DeserializationException] if any field has the wrong type
+  /// (e.g. `kinds` is a string instead of a list of ints).
+  factory Filter.fromMap(Map<String, dynamic> json) {
+    final tagFilters = <String, List<String>>{};
+    for (final entry in json.entries) {
+      final key = entry.key;
+      if (key.length == 2 && key.startsWith('#')) {
+        final letter = key[1];
+        if (_isLetter(letter) && entry.value is List) {
+          tagFilters[letter] = _asStringList(entry.value, '"$key"');
+        }
+      }
+    }
+
+    return Filter(
+      ids: _optionalStringList(json['ids'], '"ids"'),
+      authors: _optionalStringList(json['authors'], '"authors"'),
+      kinds: _optionalIntList(json['kinds'], '"kinds"'),
+      eTags: tagFilters['e'],
+      aTags: tagFilters['a'],
+      pTags: tagFilters['p'],
+      tagFilters: tagFilters.isEmpty ? null : tagFilters,
+      since: _optionalInt(json['since'], '"since"'),
+      until: _optionalInt(json['until'], '"until"'),
+      limit: _optionalInt(json['limit'], '"limit"'),
+      search: _optionalString(json['search'], '"search"'),
+    );
   }
 
-  /// Serialize a filter in JSON
-  Map<String, dynamic> toJson() {
+  /// Deserializes a [Filter] from a JSON string.
+  ///
+  /// Wraps `dart:convert`'s `json.decode` so callers can use the same
+  /// `fromJson(String) / toJson(): String` shape as `Event`, `Close`,
+  /// `Request`, etc.
+  factory Filter.fromJson(String source) {
+    final Object? decoded;
+    try {
+      decoded = json.decode(source);
+    } on FormatException {
+      throw const DeserializationException('filter is not valid JSON');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const DeserializationException(
+        'filter must be a JSON object',
+      );
+    }
+    return Filter.fromMap(decoded);
+  }
+
+  static List<String>? _optionalStringList(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw DeserializationException('$label must be a JSON array of strings');
+    }
+    return _asStringList(value, label);
+  }
+
+  static List<String> _asStringList(List value, String label) {
+    final result = <String>[];
+    for (final v in value) {
+      if (v is! String) {
+        throw DeserializationException(
+          '$label must be a JSON array of strings',
+        );
+      }
+      result.add(v);
+    }
+    return result;
+  }
+
+  static List<int>? _optionalIntList(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw DeserializationException('$label must be a JSON array of ints');
+    }
+    final result = <int>[];
+    for (final v in value) {
+      if (v is! int) {
+        throw DeserializationException(
+          '$label must be a JSON array of ints',
+        );
+      }
+      result.add(v);
+    }
+    return result;
+  }
+
+  static int? _optionalInt(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! int) {
+      throw DeserializationException('$label must be an int');
+    }
+    return value;
+  }
+
+  static String? _optionalString(Object? value, String label) {
+    if (value == null) return null;
+    if (value is! String) {
+      throw DeserializationException('$label must be a string');
+    }
+    return value;
+  }
+
+  /// Serializes this filter to a JSON-compatible map.
+  ///
+  /// `#e`/`#a`/`#p` come from [eTags]/[aTags]/[pTags] when set; otherwise
+  /// from [tagFilters]. Any other `#X` keys come from [tagFilters].
+  Map<String, dynamic> toMap() {
     final Map<String, dynamic> data = <String, dynamic>{};
     if (ids != null) data['ids'] = ids;
     if (authors != null) data['authors'] = authors;
     if (kinds != null) data['kinds'] = kinds;
-    if (e != null) data['#e'] = e;
-    if (a != null) data['#a'] = a;
-    if (p != null) data['#p'] = p;
+    if (eTags != null) data['#e'] = eTags;
+    if (aTags != null) data['#a'] = aTags;
+    if (pTags != null) data['#p'] = pTags;
+    if (tagFilters != null) {
+      for (final entry in tagFilters!.entries) {
+        if (entry.key.length != 1 || !_isLetter(entry.key)) continue;
+        final key = '#${entry.key}';
+        // Convenience fields win when both are set.
+        if (data.containsKey(key)) continue;
+        data[key] = entry.value;
+      }
+    }
     if (since != null) data['since'] = since;
     if (until != null) data['until'] = until;
     if (limit != null) data['limit'] = limit;
     if (search != null) data['search'] = search;
     return data;
+  }
+
+  /// Serializes this filter to a JSON string.
+  ///
+  /// Symmetric with [Filter.fromJson] and matches the `Event.toJson` /
+  /// `Close.toJson` / `Request.serialize` convention across the library.
+  String toJson() => json.encode(toMap());
+
+  static bool _isLetter(String c) {
+    if (c.length != 1) return false;
+    final code = c.codeUnitAt(0);
+    return (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A);
   }
 }
