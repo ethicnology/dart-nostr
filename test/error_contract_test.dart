@@ -37,10 +37,28 @@ void main() {
     });
   });
 
-  group('Bech32Entity.encode wraps non-hex input', () {
-    test('non-hex data throws DeserializationException', () {
+  group('Bech32Entity.encode rejects malformed data', () {
+    test('non-hex data throws InvalidArgumentException', () {
       expect(
         () => Bech32Entity.encode(prefix: Nip19Prefix.npub, data: 'not hex!'),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('wrong-length hex data throws InvalidArgumentException', () {
+      // 2 bytes — nsec/npub/note payloads are fixed at 32 bytes (NIP-19,
+      // rust-nostr enforces the same via typed keys).
+      expect(
+        () => Bech32Entity.encode(prefix: Nip19Prefix.npub, data: 'abcd'),
+        throwsA(isA<InvalidArgumentException>()),
+      );
+    });
+
+    test('decoding a short-payload npub throws DeserializationException', () {
+      // Well-formed bech32 carrying a 2-byte payload (produced before the
+      // encode-side guard existed) must be rejected on decode too.
+      expect(
+        () => Bech32Entity.decode(payload: 'npub140xserft56'),
         throwsA(isA<DeserializationException>()),
       );
     });

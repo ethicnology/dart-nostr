@@ -31,13 +31,20 @@ class Bech32Entity {
   /// Throws [NostrException] if the payload is a shareable identifier
   /// (nprofile, nevent, naddr) — use [decodeShareableIdentifiers] instead.
   /// Throws [DeserializationException] if the payload exceeds the 5000-char
-  /// length cap.
+  /// length cap, or if an `nsec`/`npub`/`note` payload does not decode to
+  /// exactly 32 bytes (rust-nostr enforces the same via its typed keys).
   static ({Nip19Prefix prefix, String data}) decode({required String payload}) {
     _assertLength(payload);
     final decoded = bech32Decode(payload);
     if (_shareableIdentifiersPrefixes.contains(decoded.prefix)) {
       throw WrongDecodeMethodException(
           'Bech32Entity.decodeShareableIdentifiers');
+    }
+    if (decoded.data.length != 64) {
+      throw DeserializationException(
+        '${decoded.prefix.name} payload must be 32 bytes, '
+            'got ${decoded.data.length ~/ 2}',
+      );
     }
     return decoded;
   }
@@ -60,6 +67,12 @@ class Bech32Entity {
     if (_shareableIdentifiersPrefixes.contains(probe.prefix)) {
       return decodeShareableIdentifiers(payload: payload);
     }
+    if (probe.data.length != 64) {
+      throw DeserializationException(
+        '${probe.prefix.name} payload must be 32 bytes, '
+            'got ${probe.data.length ~/ 2}',
+      );
+    }
     return ShareableIdentifierData(prefix: probe.prefix, data: probe.data);
   }
 
@@ -78,6 +91,8 @@ class Bech32Entity {
   ///
   /// Throws [NostrException] if the prefix is a shareable identifier
   /// (nprofile, nevent, naddr) — use [encodeShareableIdentifiers] instead.
+  /// Throws [InvalidArgumentException] if [data] is not exactly 32 bytes
+  /// hex — `nsec`/`npub`/`note` are fixed-size identifiers per NIP-19.
   static String encode({
     required Nip19Prefix prefix,
     required String data,
@@ -86,9 +101,34 @@ class Bech32Entity {
       throw WrongDecodeMethodException(
           'Bech32Entity.encodeShareableIdentifiers');
     }
+    _assertSimpleIdentifier(prefix, data);
     final encoded = bech32Encode(prefix, data);
     _assertLength(encoded);
     return encoded;
+  }
+
+  static final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
+
+  /// `nsec`/`npub`/`note` payloads are always 32 bytes (64 hex chars).
+  static void _assertSimpleIdentifier(Nip19Prefix prefix, String data) {
+    if (!_hex64.hasMatch(data)) {
+      throw InvalidArgumentException(
+        'data',
+        '${prefix.name} payload must be 32-bytes hex (64 chars)',
+      );
+    }
+  }
+
+  /// TLV values are length-prefixed with a single byte, so they must fit
+  /// in 255 bytes (NIP-19: "T and L being 1 byte each").
+  static void _assertTlvValueLength(int bytes, String parameter) {
+    if (bytes > 255) {
+      throw InvalidArgumentException(
+        parameter,
+        'TLV value must fit in 255 bytes (1-byte length prefix), '
+            'got $bytes bytes',
+      );
+    }
   }
 
   /// Encode shareable identifiers (nprofile, nevent, naddr) as TLV data.
@@ -124,6 +164,9 @@ class Bech32Entity {
       if (kind == null) {
         throw MissingTlvException(3, 'event kind');
       }
+    } else {
+      // nprofile/nevent type-0 carries a 32-byte pubkey / event id.
+      _assertSimpleIdentifier(prefix, data);
     }
 
     // Build the TLV with a StringBuffer to avoid O(n²) repeated string
@@ -138,6 +181,9 @@ class Bech32Entity {
     if (prefix == Nip19Prefix.naddr) {
       data = hex.encode(utf8.encode(data));
     }
+    // The TLV length field is a single byte — a value above 255 bytes
+    // would overflow into a second byte and silently corrupt the stream.
+    _assertTlvValueLength(data.length ~/ 2, 'data');
     buf.write('00');
     buf.write((data.length ~/ 2).toRadixString(16).padLeft(2, '0'));
     buf.write(data);
@@ -150,6 +196,7 @@ class Bech32Entity {
     if (relays != null) {
       for (final relay in relays) {
         final bytes = utf8.encode(relay);
+        _assertTlvValueLength(bytes.length, 'relays');
         buf.write('01');
         buf.write(bytes.length.toRadixString(16).padLeft(2, '0'));
         buf.write(hex.encode(bytes));
@@ -158,6 +205,7 @@ class Bech32Entity {
 
     // 2: author
     if (author != null) {
+      _assertSimpleIdentifier(Nip19Prefix.npub, author);
       buf.write('02');
       buf.write((author.length ~/ 2).toRadixString(16).padLeft(2, '0'));
       buf.write(author);
@@ -235,6 +283,11 @@ class Bech32Entity {
         if (type == 0) {
           // naddr type-0 carries the `d`-tag string; nprofile/nevent
           // type-0 carries 32 raw bytes (hex-encode for the caller).
+          if (decoded.prefix != Nip19Prefix.naddr && value.length != 32) {
+            throw const DeserializationException(
+              'TLV type 0 (identifier) must be 32 bytes',
+            );
+          }
           data = (decoded.prefix == Nip19Prefix.naddr)
               ? utf8.decode(value)
               : hex.encode(value);
@@ -243,8 +296,18 @@ class Bech32Entity {
           // that round-trips with the encode path.
           relays.add(utf8.decode(value));
         } else if (type == 2) {
+          if (value.length != 32) {
+            throw const DeserializationException(
+              'TLV type 2 (author) must be 32 bytes',
+            );
+          }
           author = hex.encode(value);
         } else if (type == 3) {
+          if (value.length != 4) {
+            throw const DeserializationException(
+              'TLV type 3 (kind) must be 4 bytes',
+            );
+          }
           final byteData = ByteData.sublistView(value);
           kind = byteData.getUint32(0);
         }

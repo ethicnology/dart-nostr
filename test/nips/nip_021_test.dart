@@ -41,6 +41,25 @@ void main() {
         throwsA(isA<Exception>()),
       );
     });
+
+    test('decode rejects malformed bech32 behind an allowed prefix', () {
+      // Regression: a prefix match alone used to be enough — any garbage
+      // starting with "npub" was accepted. rust-nostr validates the full
+      // NIP-19 payload (checksum, charset, length).
+      expect(
+        () => Nip21.decode('nostr:npub1thisisnotvalidbech32'),
+        throwsA(isA<NostrException>()),
+      );
+      expect(
+        () => Nip21.encode('npub1thisisnotvalidbech32'),
+        throwsA(isA<NostrException>()),
+      );
+      // Valid bech32 but wrong payload size (2 bytes instead of 32).
+      expect(
+        () => Nip21.decode('nostr:npub140xserft56'),
+        throwsA(isA<NostrException>()),
+      );
+    });
   });
 
   group('rust-nostr cross-implementation vectors', () {
