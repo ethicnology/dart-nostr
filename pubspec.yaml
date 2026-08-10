@@ -1,6 +1,6 @@
 name: nostr
 description: Pure-Dart Nostr protocol library. Events, signing, NIP-44 encryption, gift wrap, and 35+ NIPs. Transport-agnostic, Flutter Web compatible.
-version: 2.0.0
+version: 2.0.1
 homepage: https://github.com/ethicnology/dart-nostr
 repository: https://github.com/ethicnology/dart-nostr
 issue_tracker: https://github.com/ethicnology/dart-nostr/issues
