@@ -11,9 +11,26 @@ import 'package:nostr/src/nips/nip_044_utils.dart';
 /// then ChaCha20 + HMAC-SHA256 for per-message encryption.
 ///
 /// This format MUST be used in the context of a signed event (NIP-01).
+///
+/// Implementation notes:
+/// - Only the original 2-byte length prefix is supported, so plaintexts
+///   are limited to 1..65535 bytes. NIP-44 now also defines a 6-byte
+///   extended prefix for plaintexts of 65536 bytes and above, together
+///   with test vectors for the boundary; this library does not implement
+///   it, and rejects those payloads at the padding check. rust-nostr
+///   makes the same choice ("This codec currently supports the original
+///   two-byte length prefix only"), and the spec explicitly lets an
+///   implementation enforce its own maximum — but a peer that follows the
+///   current spec can produce payloads this library cannot read.
+/// - The ECDH scalar multiplication (package:elliptic) is not
+///   constant-time, unlike libsecp256k1. This is an inherent pure-Dart
+///   limitation to be aware of for strong threat models.
 class Encryption {
   /// Encrypts [plaintext] from sender to recipient using NIP-44 v2.
   ///
+  /// [plaintext] must be 1..65535 bytes once UTF-8 encoded (the 2-byte
+  /// length prefix range; empty and longer inputs are rejected with
+  /// [CryptoException] `invalidPlaintextLength`).
   /// [senderSecretKey] is the sender's hex-encoded secret key.
   /// [recipientPubkey] is the recipient's hex-encoded public key.
   /// [customNonce] is an optional 32-byte nonce (random if omitted).
@@ -91,23 +108,59 @@ class Encryption {
     final paddedPlaintext = chacha20(chachaKey, chachaNonce, ciphertext, false);
     final plaintextBytes = unpad(paddedPlaintext);
 
-    return utf8.decode(plaintextBytes);
+    try {
+      return utf8.decode(plaintextBytes);
+    } on FormatException {
+      // The spec requires UTF-8 plaintext. Surface a CryptoException
+      // instead of a raw FormatException so the NostrException contract
+      // holds. The offending bytes are not echoed (potentially sensitive).
+      throw const CryptoException(
+        'Decrypted plaintext is not valid UTF-8',
+        CryptoErrorCode.invalidUtf8,
+      );
+    }
   }
 
   /// Computes the ECDH shared secret between a secret key and a public key.
   ///
-  /// [secretKeyHex] is the hex-encoded secret key.
-  /// [publicKeyHex] is the hex-encoded public key.
+  /// [secretKeyHex] is the hex-encoded secret key. Per NIP-44 (which defers
+  /// to BIP-340) it MUST be a scalar in `[1, secp256k1.n - 1]` — out-of-range
+  /// scalars (0, n, > n) are rejected with [InvalidKeyException] instead of
+  /// silently producing a garbage shared point.
+  /// [publicKeyHex] is the hex-encoded public key (x-only 32-byte, compressed
+  /// 33-byte, or uncompressed 65-byte form). It MUST decode to a valid
+  /// on-curve secp256k1 point.
   ///
-  /// Returns the shared secret as a list of bytes.
+  /// Returns the unhashed 32-byte x coordinate of the shared point.
+  ///
+  /// Throws [InvalidKeyException] for an out-of-range secret key and
+  /// [CryptoException] for a malformed or off-curve public key. Errors from
+  /// the underlying EC backend are normalized so callers only ever see
+  /// [NostrException] subclasses — never a raw `EllipticException`, a
+  /// thrown `String`, or a `FormatException`.
   static List<int> computeSharedSecret({
     required String secretKeyHex,
     required String publicKeyHex,
   }) {
+    Schnorr.assertValidSecretKey(secretKeyHex);
     final ec = getS256();
-    final secretKey = PrivateKey.fromHex(ec, secretKeyHex);
-    final publicKey = PublicKey.fromHex(ec, checkPublicKey(publicKeyHex));
-    return computeSecret(secretKey, publicKey);
+    try {
+      final secretKey = PrivateKey.fromHex(ec, secretKeyHex);
+      final publicKey = PublicKey.fromHex(ec, checkPublicKey(publicKeyHex));
+      return computeSecret(secretKey, publicKey);
+    } on NostrException {
+      rethrow;
+    } on Object {
+      // package:elliptic reports failures by throwing an EllipticException,
+      // a plain String, or a FormatException (BigInt.parse) depending on
+      // the code path. Normalize them all into the library's error
+      // contract. The underlying messages are deliberately not echoed:
+      // they can embed the offending key material.
+      throw const CryptoException(
+        'Invalid Public Key',
+        CryptoErrorCode.invalidPublicKey,
+      );
+    }
   }
 
   /// Derives the NIP-44 v2 conversation key from a shared secret.

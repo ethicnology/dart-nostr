@@ -156,13 +156,7 @@ class PublicChat {
       throw InvalidKindException(event.kind, [kindHideMessage]);
     }
     final messageId = findTagValue(event.tags, 'e') ?? '';
-    String reason = '';
-    try {
-      final Map content = json.decode(event.content);
-      reason = content['reason'] ?? '';
-    } on FormatException {
-      // Content may not be JSON (e.g. encrypted)
-    }
+    final reason = _parseReason(event.content);
     return ChannelMessageHiddenData(
       pubkey: event.pubkey,
       messageId: messageId,
@@ -183,19 +177,31 @@ class PublicChat {
     if (userPubkey == null) {
       throw MissingTagException('p');
     }
-    String reason = '';
-    try {
-      final Map content = json.decode(event.content);
-      reason = content['reason'] ?? '';
-    } on FormatException {
-      // Content may not be JSON (e.g. encrypted)
-    }
+    final reason = _parseReason(event.content);
     return ChannelUserMutedData(
       pubkey: event.pubkey,
       userPubkey: userPubkey,
       reason: reason,
       createdAt: event.createdAt,
     );
+  }
+
+  /// Extracts the `reason` field from a kind-43/44 JSON content payload.
+  ///
+  /// Returns an empty string when the content is not valid JSON, not a
+  /// JSON object, or has no string `reason` — the content may be empty
+  /// or encrypted, and a malformed payload must never crash the parser
+  /// with a raw `_TypeError`.
+  static String _parseReason(String raw) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map && decoded['reason'] is String) {
+        return decoded['reason'] as String;
+      }
+    } on FormatException {
+      // Content may not be JSON (e.g. encrypted)
+    }
+    return '';
   }
 
   /// Creates a kind-40 channel creation event.

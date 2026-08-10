@@ -98,6 +98,78 @@ void main() {
       );
     });
 
+    test('validate returns false for an expired timestamp', () {
+      // 20 minutes old — outside the ~10 minute window (spec check 3).
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final event = Event.from(
+        kind: 22242,
+        tags: [
+          ['relay', 'wss://relay.example.com'],
+          ['challenge', 'ch-123'],
+        ],
+        content: '',
+        secretKey: secretKey,
+        createdAt: now - 20 * 60,
+      );
+      expect(
+        RelayAuth.validate(
+          event: event,
+          relayUrl: 'wss://relay.example.com',
+          challenge: 'ch-123',
+        ),
+        isFalse,
+      );
+    });
+
+    test('validate returns false for a far-future timestamp', () {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final event = Event.from(
+        kind: 22242,
+        tags: [
+          ['relay', 'wss://relay.example.com'],
+          ['challenge', 'ch-123'],
+        ],
+        content: '',
+        secretKey: secretKey,
+        createdAt: now + 20 * 60,
+      );
+      expect(
+        RelayAuth.validate(
+          event: event,
+          relayUrl: 'wss://relay.example.com',
+          challenge: 'ch-123',
+        ),
+        isFalse,
+      );
+    });
+
+    test('validate returns false for a forged signature', () {
+      // Event claiming someone else's pubkey — isValid() must catch it
+      // before any tag comparison (defense in depth, see NIP-98 pattern).
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final attacker = Keys.generate();
+      final victim = Keys.generate();
+      final forged = Event.from(
+        kind: 22242,
+        tags: [
+          ['relay', 'wss://relay.example.com'],
+          ['challenge', 'ch-123'],
+        ],
+        content: '',
+        secretKey: attacker.secret,
+        pubkey: victim.public,
+        createdAt: now,
+      );
+      expect(
+        RelayAuth.validate(
+          event: forged,
+          relayUrl: 'wss://relay.example.com',
+          challenge: 'ch-123',
+        ),
+        isFalse,
+      );
+    });
+
     test('typedef Nip42 works', () {
       final event = Nip42.create(
         challenge: 'test',

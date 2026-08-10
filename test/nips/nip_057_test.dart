@@ -286,5 +286,53 @@ void main() {
       );
       expect(event.kind, 9734);
     });
+
+    test('decryptPrivateRequest rejects a forged inner event', () async {
+      // Security regression: the inner zap request used to be parsed with
+      // verify: false, so an attacker could encrypt an inner event that
+      // *claims* a victim's pubkey but is signed by the attacker's key —
+      // impersonating the victim as zapper. The inner signature MUST be
+      // verified now.
+      final attacker = Keys.generate();
+      final victim = Keys.generate();
+      const recipientSecret =
+          'e108399bd8424357a710b606ae0c13166d853d327e47a6e5e038197346bdbf45';
+      final recipientPub = Keys(recipientSecret).public;
+
+      // Inner event: claimed author = victim, actual signature = attacker.
+      final forgedInner = Event.from(
+        kind: Zap.kindZapRequest,
+        tags: [
+          ['relays', 'wss://relay.example'],
+          ['p', recipientPub],
+        ],
+        content: 'forged zap',
+        secretKey: attacker.secret,
+        pubkey: victim.public,
+      );
+
+      final encrypted = await Nip44.encrypt(
+        plaintext: forgedInner.toJson(),
+        senderSecretKey: attacker.secret,
+        recipientPubkey: recipientPub,
+      );
+      final outer = Event.from(
+        kind: Zap.kindZapRequest,
+        tags: [
+          ['p', recipientPub],
+          ['anon', encrypted],
+        ],
+        content: '',
+        secretKey: attacker.secret,
+      );
+
+      await expectLater(
+        Zap.decryptPrivateRequest(
+          privateZapEvent: outer,
+          recipientSecretKey: recipientSecret,
+        ),
+        throwsA(isA<EventValidationException>()),
+      );
+    });
   });
 }

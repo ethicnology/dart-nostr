@@ -125,9 +125,19 @@ enum CryptoErrorCode {
   /// be unsigned per spec — a signed rumor risks leaking the author.
   rumorMustBeUnsigned,
 
+  /// NIP-59: the rumor's `id` does not match the SHA-256 of its canonical
+  /// serialization. A rumor is unsigned, so the id is the only structural
+  /// binding between its fields and the identifier clients key off.
+  rumorIdMismatch,
+
   /// NIP-59: the seal (kind 13) carries tags. Per spec, seal events MUST
   /// have an empty tags array.
   sealMustHaveEmptyTags,
+
+  /// NIP-44: the decrypted plaintext is not valid UTF-8. The spec
+  /// requires plaintext to be UTF-8 encoded; a non-UTF-8 result means
+  /// the payload was crafted by a non-compliant sender.
+  invalidUtf8,
 }
 
 /// Thrown when an encryption or decryption operation fails.

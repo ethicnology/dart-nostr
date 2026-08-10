@@ -1,3 +1,153 @@
+## 2.0.1
+
+Security and spec-compliance patch release, produced by a full audit of the
+library against the upstream `nostr-protocol/nips` specifications and the
+`rust-nostr` reference implementation. **All users should upgrade.**
+
+No public API was removed or renamed; every change tightens validation,
+fixes a parser, or hardens a cryptographic path. The behavior changes listed
+below only reject inputs that were invalid per spec — but if your application
+was (unknowingly) producing or accepting them, read the notes carefully.
+
+### Why this release exists
+
+The audit found three classes of problems:
+
+1. **Missing key validation.** Secret keys used for signing (BIP-340) and
+   NIP-44 encryption (ECDH) were never checked against the secp256k1 scalar
+   range `[1, n - 1]` required by both specs. A zero key crashed with a raw
+   `_TypeError`; a key `≥ n` silently produced a non-canonical public key or
+   a garbage ECDH shared point. The official NIP-44 test vectors pair
+   invalid secret keys with an *also-invalid* public key, which masked the
+   gap in the test suite.
+2. **Missing authentication checks.** The NIP-57 "private zap" inner event
+   was parsed *without verifying its signature*, so anyone could forge a
+   private zap attributing a payment intent to any pubkey. The NIP-59
+   "rumor must be unsigned" check existed but was unreachable (the wire
+   field was never read), so a signed rumor was silently accepted.
+3. **Spec drift.** The NIP-59 rumor was serialized without its `id` and
+   with a `sig` field (the spec example, NIP-17, rust-nostr and nostr-tools
+   all carry the computed `id` and omit `sig`), and several parsers
+   accepted malformed inputs that rust-nostr rejects.
+
+### Security fixes
+
+- **NIP-44** (`computeSharedSecret`): the secret key is now validated as a
+  secp256k1 scalar in `[1, n - 1]` (spec: *"private key must be a scalar in
+  range [1, secp256k1_order - 1]"*). Out-of-range keys throw
+  `InvalidKeyException` instead of silently producing an invalid shared
+  secret. Errors from the EC backend are normalized to `CryptoException`.
+- **NIP-57** (`decryptPrivateRequest`): the inner zap request's signature
+  is now verified. Previously a forged inner event could impersonate any
+  pubkey as the zapper (the outer event is signed by a throwaway ephemeral
+  key and proves nothing about the claimed sender).
+- **`Keys` / `Schnorr.derivePublicKey` / `Schnorr.sign`**: secret keys
+  outside `[1, n - 1]` are rejected with `InvalidKeyException`
+  (`sk = 0` previously crashed with a raw `_TypeError`, `sk ≥ n` was
+  silently accepted). `Keys.generate()` re-samples until the scalar is in
+  range. New public helper: `Schnorr.assertValidSecretKey`.
+- **NIP-59** (`unwrap`): a rumor carrying a `sig` is now actually rejected
+  (`CryptoErrorCode.rumorMustBeUnsigned`) — the check previously never
+  fired because the field was dropped before being tested.
+- **NIP-59** (`unwrap`): the rumor `id` is recomputed from the decrypted
+  payload instead of being taken from the wire. A rumor is unsigned, so
+  nothing else binds the id to the fields it identifies; a sender could
+  otherwise make one payload appear under an id of their choosing, which
+  clients use to deduplicate, thread and reference messages. A supplied
+  id that does not match now throws `CryptoErrorCode.rumorIdMismatch`.
+
+### Spec compliance
+
+- **NIP-59** (`wrap`): the sealed rumor now carries its canonical `id` and
+  is serialized **without** a `sig` field — the exact shape of the NIP-59
+  example, NIP-17 (*"Fields id and created_at are required"*), rust-nostr's
+  `UnsignedEvent::ensure_id`, and nostr-tools. Gift wraps produced by
+  2.0.0 can still be unwrapped: an absent or empty `id` means "not
+  supplied" and is recomputed rather than rejected.
+- **NIP-44** (`parsePayload`): the decoded payload must be within
+  `[99, 65603]` bytes (spec minimum, rust-nostr `MAX_PAYLOAD_SIZE`).
+- **NIP-44** (`checkPublicKey`): the uncompressed `04` public key form must
+  be exactly 65 bytes; longer inputs previously crashed inside the EC
+  backend with a thrown `String`.
+- **NIP-44** (`decrypt`): a non-UTF-8 plaintext (after a valid MAC) throws
+  `CryptoException` with the new `CryptoErrorCode.invalidUtf8` instead of a
+  raw `FormatException`.
+- **NIP-19**: `nsec`/`npub`/`note` payloads must be exactly 32 bytes on
+  both encode and decode (rust-nostr enforces the same via typed keys).
+  `encodeShareableIdentifiers` rejects TLV values above 255 bytes (1-byte
+  length prefix) instead of silently corrupting the stream, and
+  `decodeShareableIdentifiers` now validates the TLV field widths
+  (identifier and author = 32 bytes, kind = 4 bytes) instead of accepting
+  truncated values.
+- **NIP-19** (`decodeShareableIdentifiers`): TLV validation is now scoped
+  to the prefix. The mandatory type-0 identifier is required for every
+  shareable identifier, and `naddr` additionally requires the author
+  (type 2) and kind (type 3) — an `nprofile` carrying no public key used
+  to decode to an empty `data`, and `nostr:` URIs built from one were
+  accepted. Conversely, types the spec does not define for a prefix (2
+  and 3 on `nprofile`) and unknown types are now ignored rather than
+  rejected, per NIP-19 (*"TLVs that are not recognized or supported
+  should be ignored"*) and matching rust-nostr, which also tolerates a
+  malformed optional author on `nevent`. Truncated TLV headers and
+  values running past the end of the payload are reported as
+  `DeserializationException` instead of surfacing as a `RangeError`.
+- **NIP-21** (`decode` / `encode`): the identifier is validated as a
+  well-formed NIP-19 bech32 string — a prefix match alone used to accept
+  `nostr:npub1garbage`.
+- **NIP-10** (`parseTags`): 2-element `p` tags (`["p", <pubkey>]`, the
+  common case — the relay hint is optional) are no longer silently dropped.
+
+### Robustness (error contract)
+
+Every public entrypoint keeps the documented guarantee that all errors
+extend `NostrException`:
+
+- **NIP-28** (`parseHidden` / `parseMuted`): a non-object JSON content no
+  longer raises `_TypeError`; `reason` defaults to empty.
+- **NIP-51** (`UserList.parse` / `fromContent`): malformed list content
+  (non-array JSON, non-list tags, non-string values) no longer raises
+  `_TypeError`; a non-array decrypted payload throws
+  `DeserializationException`.
+
+### Denial-of-service hardening
+
+- **NIP-05** (`fetch`) / **NIP-11** (`fetch`): both endpoints are
+  attacker-controlled, so fetches are now bounded — `timeout` is a single
+  deadline over the whole exchange (default 8 s) and `maxBytes` caps the
+  response body (64 KiB / 256 KiB defaults). Previously a malicious
+  domain could stall the caller forever or exhaust memory with an
+  unbounded body. Applying the timeout per phase would have let a server
+  stall just under the limit on both connection and body, so the two are
+  covered by one deadline. New shared helper: `readStreamWithLimit`,
+  which refuses an oversized chunk before buffering it.
+
+### Known limitations (documented, deliberate)
+
+- **NIP-44 extended length prefix**: NIP-44 now defines a 6-byte length
+  prefix for plaintexts of 65536 bytes and above, with test vectors for
+  the 65535/65536/65537 boundary. This library implements the 2-byte
+  prefix only (plaintexts of 1..65535 bytes) and rejects larger ones
+  cleanly at the padding check, as rust-nostr does (*"This codec
+  currently supports the original two-byte length prefix only"*). The
+  spec allows an implementation-defined maximum, so this is a supported
+  limitation rather than a violation — but a peer that implements the
+  extended prefix can send payloads this release cannot decrypt.
+  Supporting them is tracked for a future minor release.
+- **Constant-time guarantees**: the pure-Dart EC backends (`elliptic` for
+  NIP-44 ECDH, `pointycastle` via `bip340` for signatures) are not
+  constant-time, unlike libsecp256k1 (rust-nostr). Timing side-channels on
+  secret-key operations are a residual risk inherent to pure-Dart crypto;
+  applications with a strong threat model should isolate key operations.
+
+### Tests
+
+40+ new regression and adversarial tests: official NIP-44 invalid vectors
+exercised with a *valid* pub2 (so the secret-key check cannot be masked),
+forged private zap, signed/impersonated/tampered gift wraps, hand-crafted
+malformed NIP-19 TLV payloads, plaintext size boundaries (65535/65536),
+expired NIP-42/NIP-98 timestamps, and a hostile local HTTP server for the
+fetch guards.
+
 ## 2.0.0
 
 First major rewrite since v1.5.0. The library is now pure-protocol (no transport / WebSocket dependency), Flutter Web compatible, and spec-aligned against the upstream `nostr-protocol/nips` master. NIP-04 plaintext DMs are gone, every NIP has typed parse output, and all crypto runs through `Schnorr` / `Encryption` (no direct `bip340`).

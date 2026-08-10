@@ -89,6 +89,9 @@ class UserList {
   /// [pubkey] is the hex-encoded public key of the list owner.
   ///
   /// Returns a record with `contacts` and `bookmarks`.
+  ///
+  /// Throws [DeserializationException] if the decrypted payload is not a
+  /// JSON array of tags. Malformed individual tags are skipped.
   static Future<({List<Contact> contacts, List<String> bookmarks})> fromContent(
     String content,
     String secretKey,
@@ -101,18 +104,22 @@ class UserList {
       recipientSecretKey: secretKey,
       senderPubkey: pubkey,
     );
-    for (final List tag in json.decode(decrypted)) {
-      if (tag.length < 2) continue;
-      if (tag[0] == "p") {
-        contacts.add(Contact(
-          tag[1],
-          tag.length > 2 ? tag[2] : "",
-          tag.length > 3 ? tag[3] : "",
-        ));
-      } else if (tag[0] == "e") {
-        bookmarks.add(tag[1]);
-      }
+    final Object? decoded;
+    try {
+      decoded = json.decode(decrypted);
+    } on FormatException {
+      // Don't echo the underlying message — the decrypted content is
+      // private list data and FormatException embeds an input snippet.
+      throw const DeserializationException(
+        'decrypted list content is not valid JSON',
+      );
     }
+    if (decoded is! List) {
+      throw const DeserializationException(
+        'decrypted list content must be a JSON array of tags',
+      );
+    }
+    _extractFromTags(decoded, contacts, bookmarks);
     return (contacts: contacts, bookmarks: bookmarks);
   }
 
@@ -275,11 +282,13 @@ class UserList {
   }
 
   /// Tries to parse [content] as a plaintext JSON array of tags.
-  /// Returns the parsed list on success, or null if it's not valid JSON.
+  /// Returns the parsed list on success, or null if it's not valid JSON
+  /// or not an array of arrays (a `[1,2,3]` payload must fall through to
+  /// the NIP-44 decryption path instead of crashing on a lazy cast).
   static List<List>? _tryParsePlaintext(String content) {
     try {
       final decoded = json.decode(content);
-      if (decoded is List) {
+      if (decoded is List && decoded.every((e) => e is List)) {
         return decoded.cast<List>();
       }
     } on FormatException {
@@ -289,21 +298,25 @@ class UserList {
   }
 
   /// Extracts contacts and bookmarks from a list of decoded tags.
+  ///
+  /// Malformed entries (non-list tags, non-string values) are skipped —
+  /// list content is untrusted input, whether it came from a public tag
+  /// or a decrypted payload.
   static void _extractFromTags(
-    List<List> tags,
+    List<dynamic> tags,
     List<Contact> contacts,
     List<String> bookmarks,
   ) {
     for (final tag in tags) {
-      if (tag.length < 2) continue;
+      if (tag is! List || tag.length < 2 || tag[0] is! String || tag[1] is! String) {
+        continue;
+      }
+      final relay = tag.length > 2 && tag[2] is String ? tag[2] as String : '';
+      final petname = tag.length > 3 && tag[3] is String ? tag[3] as String : '';
       if (tag[0] == 'p') {
-        contacts.add(Contact(
-          tag[1],
-          tag.length > 2 ? tag[2] : '',
-          tag.length > 3 ? tag[3] : '',
-        ));
+        contacts.add(Contact(tag[1] as String, relay, petname));
       } else if (tag[0] == 'e') {
-        bookmarks.add(tag[1]);
+        bookmarks.add(tag[1] as String);
       }
     }
   }

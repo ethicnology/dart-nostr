@@ -1,5 +1,8 @@
 // NIP-11 (Relay Information Document) parser tests.
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -93,6 +96,112 @@ void main() {
       expect(data.supportedNips, isEmpty);
       expect(data.limitation, isNull);
       expect(data.relayCountries, isEmpty);
+    });
+  });
+
+  group('NIP-11 RelayInfo.fetch guards (loopback HTTP)', () {
+    // ws://host → http://host, so a plain loopback HTTP server exercises
+    // the real fetch path including its timeout and body-size guards.
+    HttpServer? server;
+
+    tearDown(() async {
+      await server?.close(force: true);
+      server = null;
+    });
+
+    Future<String> serve(Future<void> Function(HttpRequest) handler) async {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server!.listen(handler);
+      return 'ws://localhost:${server!.port}';
+    }
+
+    test('fetches a valid document over loopback', () async {
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'loopback relay', 'supported_nips': [11]}));
+        await request.response.close();
+      });
+
+      final info = await RelayInfo.fetch(url);
+      expect(info, isNotNull);
+      expect(info!.name, 'loopback relay');
+      expect(info.supportedNips, [11]);
+    });
+
+    test('oversized body returns null instead of exhausting memory', () async {
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'x' * 4096}));
+        await request.response.close();
+      });
+
+      // Cap below the document size → resolution fails.
+      expect(await RelayInfo.fetch(url, maxBytes: 128), isNull);
+      // Default (generous) cap → the same document resolves.
+      expect(await RelayInfo.fetch(url), isNotNull);
+    });
+
+    test('stalled server returns null after timeout', () async {
+      final url = await serve((request) async {
+        // Never respond within the test's timeout window.
+        await Future<void>.delayed(const Duration(seconds: 30));
+      });
+
+      final info = await RelayInfo.fetch(
+        url,
+        timeout: const Duration(milliseconds: 500),
+      );
+      expect(info, isNull);
+    });
+
+    test('timeout is one deadline over headers and body, not one each',
+        () async {
+      // A server that stalls just under the limit before the headers and
+      // again before the end of the body used to pass: the timeout was
+      // applied to each phase separately, so the caller could be held for
+      // a multiple of the documented budget.
+      final url = await serve((request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        request.response.write('{"name":');
+        await request.response.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        request.response.write('"slow relay"}');
+        await request.response.close();
+      });
+
+      final stopwatch = Stopwatch()..start();
+      final info = await RelayInfo.fetch(
+        url,
+        timeout: const Duration(milliseconds: 400),
+      );
+      stopwatch.stop();
+
+      expect(info, isNull);
+      expect(
+        stopwatch.elapsed,
+        lessThan(const Duration(milliseconds: 900)),
+        reason: 'the deadline must cover the whole exchange',
+      );
+    });
+
+    test('an oversized body arriving as a single chunk is refused', () async {
+      // The guard must reject before buffering: some clients (notably
+      // BrowserClient) surface the whole body in one event, so checking
+      // after the append would allocate exactly what the cap exists to
+      // prevent.
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'x' * 200000}));
+        await request.response.close();
+      });
+
+      expect(await RelayInfo.fetch(url, maxBytes: 1024), isNull);
     });
   });
 }

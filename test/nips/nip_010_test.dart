@@ -59,5 +59,21 @@ void main() {
       expect(thread.root.eventId, 'abc123');
       expect(thread.ptags, isEmpty);
     });
+
+    test('parseTags keeps 2-element p tags (relay hint is optional)', () {
+      // Regression: ["p", <pubkey>] — the most common p tag shape in the
+      // wild — used to be silently dropped because the parser required
+      // 3 elements.
+      final List<List<String>> tags = [
+        ["p", 'a' * 64],
+        ["p", 'b' * 64, 'wss://relay.example.com'],
+      ];
+      final Thread thread = Nip10.parseTags(tags);
+      expect(thread.ptags.length, 2);
+      expect(thread.ptags[0].pubkey, 'a' * 64);
+      expect(thread.ptags[0].relayURL, '');
+      expect(thread.ptags[1].pubkey, 'b' * 64);
+      expect(thread.ptags[1].relayURL, 'wss://relay.example.com');
+    });
   });
 }
