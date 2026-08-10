@@ -21,8 +21,13 @@ class Threading {
     final List<PTag> ptags = [];
     for (final tag in tags) {
       if (tag.isEmpty) continue;
-      if (tag[0] == "p" && tag.length >= 3) {
-        ptags.add(PTag(pubkey: tag[1], relayURL: tag[2]));
+      // A p tag is ["p", <pubkey>, <relay-url>?] — the relay hint is
+      // optional, so 2-element tags (the common case) must not be dropped.
+      if (tag[0] == "p" && tag.length >= 2) {
+        ptags.add(PTag(
+          pubkey: tag[1],
+          relayURL: tag.length > 2 ? tag[2] : '',
+        ));
       }
       if (tag[0] == "e") {
         final eventId = tag.length > 1 ? tag[1] : '';
