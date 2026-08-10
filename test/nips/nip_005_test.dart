@@ -120,5 +120,45 @@ void main() {
       );
       expect(result, isFalse);
     });
+
+    group('readStreamWithLimit (the fetch body-size guard)', () {
+      // NIP-05 fetch is hardcoded to https://, so a loopback integration
+      // test is not practical (no trusted TLS cert for a local domain).
+      // The size guard itself is exercised here directly; the NIP-11 test
+      // suite covers the same guard end-to-end over loopback HTTP.
+      test('returns the body when it fits', () async {
+        final body = await readStreamWithLimit(
+          Stream.fromIterable([
+            [1, 2, 3],
+            [4, 5]
+          ]),
+          8,
+        );
+        expect(body, [1, 2, 3, 4, 5]);
+      });
+
+      test('returns null as soon as the cap is exceeded', () async {
+        final body = await readStreamWithLimit(
+          Stream.fromIterable([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+          ]),
+          8,
+        );
+        expect(body, isNull);
+      });
+
+      test('a body of exactly maxBytes is accepted (boundary)', () async {
+        final body = await readStreamWithLimit(
+          Stream.fromIterable([
+            List<int>.filled(64, 0x61),
+          ]),
+          64,
+        );
+        expect(body, isNotNull);
+        expect(body!.length, 64);
+      });
+    });
   });
 }

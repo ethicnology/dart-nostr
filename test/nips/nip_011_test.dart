@@ -1,5 +1,8 @@
 // NIP-11 (Relay Information Document) parser tests.
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:nostr/nostr.dart';
 import 'package:test/test.dart';
 
@@ -93,6 +96,66 @@ void main() {
       expect(data.supportedNips, isEmpty);
       expect(data.limitation, isNull);
       expect(data.relayCountries, isEmpty);
+    });
+  });
+
+  group('NIP-11 RelayInfo.fetch guards (loopback HTTP)', () {
+    // ws://host → http://host, so a plain loopback HTTP server exercises
+    // the real fetch path including its timeout and body-size guards.
+    HttpServer? server;
+
+    tearDown(() async {
+      await server?.close(force: true);
+      server = null;
+    });
+
+    Future<String> serve(Future<void> Function(HttpRequest) handler) async {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server!.listen(handler);
+      return 'ws://localhost:${server!.port}';
+    }
+
+    test('fetches a valid document over loopback', () async {
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'loopback relay', 'supported_nips': [11]}));
+        await request.response.close();
+      });
+
+      final info = await RelayInfo.fetch(url);
+      expect(info, isNotNull);
+      expect(info!.name, 'loopback relay');
+      expect(info.supportedNips, [11]);
+    });
+
+    test('oversized body returns null instead of exhausting memory', () async {
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'x' * 4096}));
+        await request.response.close();
+      });
+
+      // Cap below the document size → resolution fails.
+      expect(await RelayInfo.fetch(url, maxBytes: 128), isNull);
+      // Default (generous) cap → the same document resolves.
+      expect(await RelayInfo.fetch(url), isNotNull);
+    });
+
+    test('stalled server returns null after timeout', () async {
+      final url = await serve((request) async {
+        // Never respond within the test's timeout window.
+        await Future<void>.delayed(const Duration(seconds: 30));
+      });
+
+      final info = await RelayInfo.fetch(
+        url,
+        timeout: const Duration(milliseconds: 500),
+      );
+      expect(info, isNull);
     });
   });
 }

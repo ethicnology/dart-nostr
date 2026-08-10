@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:nostr/src/utils.dart';
 
 /// Relay Information Document — [NIP-11](https://github.com/nostr-protocol/nips/blob/master/11.md)
 ///
@@ -27,22 +28,30 @@ class RelayInfo {
   /// every NIP-11 field. The function never throws on network or parse
   /// errors — wrap in a try/catch only if you want to surface them.
   ///
-  /// [timeout] defaults to 8 seconds.
+  /// [timeout] defaults to 8 seconds and bounds the whole exchange.
+  /// [maxBytes] caps the response body (default 256 KiB) so a hostile
+  /// endpoint cannot exhaust memory with an unbounded document.
   static Future<RelayInfoData?> fetch(
     String relayUrl, {
     Duration timeout = const Duration(seconds: 8),
+    int maxBytes = 256 * 1024,
   }) async {
     final url = _toHttpUrl(relayUrl);
     if (url == null) return null;
 
     final client = http.Client();
     try {
-      final response = await client.get(url,
-          headers: const {'Accept': 'application/nostr+json'}).timeout(timeout);
+      final request = http.Request('GET', url)
+        ..headers['Accept'] = 'application/nostr+json';
+      final response = await client.send(request).timeout(timeout);
 
       if (response.statusCode != 200) return null;
 
-      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      final body = await readStreamWithLimit(response.stream, maxBytes)
+          .timeout(timeout);
+      if (body == null) return null;
+
+      final decoded = json.decode(utf8.decode(body));
       if (decoded is! Map<String, dynamic>) return null;
       return RelayInfoData.fromMap(decoded, url: relayUrl);
     } on Exception {

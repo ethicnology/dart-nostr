@@ -88,8 +88,19 @@ class DnsIdentifier {
   ///
   /// Per the spec, HTTP redirects are NOT followed.
   ///
+  /// [timeout] bounds the whole exchange (connection + body), default 8s.
+  /// [maxBytes] caps the response body, default 64 KiB — a `nostr.json`
+  /// document is a few hundred bytes in practice, so a larger response is
+  /// treated as a resolution failure. Both guards exist because the
+  /// endpoint is attacker-controlled: without them a malicious domain
+  /// could stall the caller or exhaust memory with an unbounded body.
+  ///
   /// Returns `null` if the identifier cannot be resolved.
-  static Future<DnsData?> fetch(String identifier) async {
+  static Future<DnsData?> fetch(
+    String identifier, {
+    Duration timeout = const Duration(seconds: 8),
+    int maxBytes = 64 * 1024,
+  }) async {
     final parts = identifier.split('@');
     if (parts.length != 2) return null;
     final name = parts[0];
@@ -103,14 +114,17 @@ class DnsIdentifier {
     try {
       // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
       final request = http.Request('GET', url)..followRedirects = false;
-      final response = await client.send(request);
+      final response = await client.send(request).timeout(timeout);
 
       if (response.statusCode != 200) return null;
 
-      // Read body BEFORE closing the client (stream depends on connection)
-      final body = await response.stream.bytesToString();
+      // Read body BEFORE closing the client (stream depends on
+      // connection), giving up when the body exceeds maxBytes.
+      final body = await readStreamWithLimit(response.stream, maxBytes)
+          .timeout(timeout);
+      if (body == null) return null;
 
-      final Map<String, dynamic> data = json.decode(body);
+      final Map<String, dynamic> data = json.decode(utf8.decode(body));
       final Map<String, dynamic>? names = data['names'];
       if (names == null) return null;
 

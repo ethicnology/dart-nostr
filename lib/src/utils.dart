@@ -63,3 +63,20 @@ List<String> findAllTagValues(List<List<String>> tags, String name) {
       .map((t) => t[1])
       .toList();
 }
+
+/// Reads an HTTP response [stream] to completion, returning `null` as soon
+/// as the accumulated body exceeds [maxBytes].
+///
+/// Used by the HTTP-fetching NIPs (NIP-05, NIP-11) so a malicious or
+/// broken endpoint cannot exhaust memory with an unbounded response body.
+Future<List<int>?> readStreamWithLimit(
+  Stream<List<int>> stream,
+  int maxBytes,
+) async {
+  final bytes = <int>[];
+  await for (final chunk in stream) {
+    bytes.addAll(chunk);
+    if (bytes.length > maxBytes) return null;
+  }
+  return bytes;
+}
