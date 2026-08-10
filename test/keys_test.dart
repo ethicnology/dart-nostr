@@ -1,4 +1,7 @@
 import 'package:nostr/nostr.dart';
+// Internal import to hand-craft a well-formed bech32 nsec carrying a
+// truncated payload (the public encoder refuses to build one).
+import 'package:nostr/src/nips/nip_019_utils.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -39,10 +42,55 @@ void main() {
       );
     });
 
+    test('Keys with a well-formed nsec carrying a truncated payload', () {
+      // Valid bech32 checksum, but the payload is 31 bytes instead of 32 —
+      // must be rejected as InvalidKeyException, not crash downstream.
+      final truncatedNsec = bech32Encode(Nip19Prefix.nsec, 'ab' * 31);
+      expect(() => Keys(truncatedNsec), throwsA(isA<InvalidKeyException>()));
+    });
+
     test('Keys.generate', () {
       final keys = Keys.generate();
       expect(keys.public.length, 64);
       expect(keys.secret.length, 64);
+    });
+
+    group('secret key range validation (BIP-340: scalar in [1, n - 1])', () {
+      // Previously Keys('00…00') crashed with a raw _TypeError from the
+      // bip340 backend, and Keys('ff…ff') (> n) silently derived a
+      // non-canonical public key. Both must be InvalidKeyException.
+      for (final (label, key) in [
+        ('secret is 0',
+            '0000000000000000000000000000000000000000000000000000000000000000'),
+        ('secret == secp256k1.n',
+            'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
+        ('secret > secp256k1.n',
+            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
+      ]) {
+        test('Keys($label) throws InvalidKeyException', () {
+          expect(() => Keys(key), throwsA(isA<InvalidKeyException>()));
+        });
+
+        test('Schnorr.derivePublicKey($label) throws InvalidKeyException', () {
+          expect(() => Schnorr.derivePublicKey(key),
+              throwsA(isA<InvalidKeyException>()));
+        });
+
+        test('Schnorr.sign($label) throws InvalidKeyException', () {
+          expect(() => Schnorr.sign(secretKey: key, message: '0' * 64),
+              throwsA(isA<InvalidKeyException>()));
+        });
+      }
+
+      test('Keys(n - 1) is accepted (boundary)', () {
+        final keys = Keys(
+            'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140');
+        // x(G·(n-1)) == x(G) since (n-1)·G = -G
+        expect(
+          keys.public,
+          '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+        );
+      });
     });
 
     test('Keys.nsec getter', () {

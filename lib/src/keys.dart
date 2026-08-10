@@ -57,9 +57,20 @@ class Keys {
   }
 
   /// Generates a new random key pair.
+  ///
+  /// Re-samples in the (astronomically unlikely) case the random scalar
+  /// falls outside `[1, secp256k1.n - 1]`, so the generated key is always
+  /// a valid BIP-340 secret key.
   Keys.generate() {
-    secret = generateRandomHex();
-    public = Schnorr.derivePublicKey(secret);
+    while (true) {
+      secret = generateRandomHex();
+      try {
+        public = Schnorr.derivePublicKey(secret);
+        return;
+      } on InvalidKeyException {
+        // Out-of-range scalar (0 or >= n) — sample again.
+      }
+    }
   }
 
   /// Signs a 32-byte hex-encoded [message] using Schnorr (BIP-340).
