@@ -148,6 +148,52 @@ void main() {
       );
     });
 
+    test('validate rejects an event older than the past window', () {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final event = Event.from(
+        kind: 27235,
+        tags: [
+          ['u', 'https://example.com/api'],
+          ['method', 'GET'],
+        ],
+        content: '',
+        secretKey: secretKey,
+        createdAt: now - 120, // 2 minutes old, past the 60s default window
+      );
+
+      expect(
+        () => HttpAuth.validate(
+          event: event,
+          url: 'https://example.com/api',
+          method: 'GET',
+        ),
+        throwsA(isA<TimestampOutOfWindowException>()),
+      );
+    });
+
+    test('validate rejects an event too far in the future', () {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final event = Event.from(
+        kind: 27235,
+        tags: [
+          ['u', 'https://example.com/api'],
+          ['method', 'GET'],
+        ],
+        content: '',
+        secretKey: secretKey,
+        createdAt: now + 120, // beyond the 30s default future window
+      );
+
+      expect(
+        () => HttpAuth.validate(
+          event: event,
+          url: 'https://example.com/api',
+          method: 'GET',
+        ),
+        throwsA(isA<TimestampOutOfWindowException>()),
+      );
+    });
+
     test('validate fails on URL mismatch with typed exception', () {
       final event = HttpAuth.create(
         url: 'https://example.com/api',
