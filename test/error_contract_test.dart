@@ -326,6 +326,51 @@ void main() {
       ]);
       expect(() => Zap.parseReceipt(ev), returnsNormally);
     });
+
+    test('PublicChat.parseHidden with JSON array content does not leak', () {
+      // Regression: `final Map content = json.decode(...)` used to throw a
+      // raw _TypeError when the content decoded to a JSON array.
+      final ev = makeEvent(43, '[1,2,3]', [
+        ['e', 'a' * 64]
+      ]);
+      expect(() => PublicChat.parseHidden(ev), returnsNormally);
+    });
+
+    test('PublicChat.parseMuted with JSON array content does not leak', () {
+      final ev = makeEvent(44, '"just a string"', [
+        ['p', 'a' * 64]
+      ]);
+      expect(() => PublicChat.parseMuted(ev), returnsNormally);
+    });
+
+    test('UserList.parse with non-tag-array plaintext content does not leak',
+        () async {
+      // Regression: a plaintext JSON array with non-list elements used to
+      // crash on a lazy cast<List>() with a raw _TypeError.
+      final keys = Keys('a' * 64);
+      final ev = Event.from(
+        kind: 10000,
+        content: '[1,2,3]',
+        secretKey: keys.secret,
+      );
+      await expectLater(UserList.parse(ev, secretKey: keys.secret),
+          completes);
+    });
+
+    test('UserList.fromContent with non-array decrypted JSON throws '
+        'DeserializationException', () async {
+      final keys = Keys('a' * 64);
+      // Encrypt a JSON *object* (not an array of tags) to self.
+      final payload = await Nip44.encrypt(
+        plaintext: '{"not":"an array"}',
+        senderSecretKey: keys.secret,
+        recipientPubkey: keys.public,
+      );
+      await expectLater(
+        UserList.fromContent(payload, keys.secret, keys.public),
+        throwsA(isA<DeserializationException>()),
+      );
+    });
   });
 
   group('Error messages do not echo candidate secrets', () {
