@@ -13,11 +13,15 @@ import 'package:nostr/src/nips/nip_044_utils.dart';
 /// This format MUST be used in the context of a signed event (NIP-01).
 ///
 /// Implementation notes:
-/// - Only the original 2-byte length prefix is supported (plaintexts of
-///   1..65535 bytes), matching rust-nostr and the official test vectors.
-///   The 6-byte extended prefix for ≥ 65536-byte plaintexts from the
-///   latest spec text is deliberately not implemented; such payloads are
-///   rejected at the padding check.
+/// - Only the original 2-byte length prefix is supported, so plaintexts
+///   are limited to 1..65535 bytes. NIP-44 now also defines a 6-byte
+///   extended prefix for plaintexts of 65536 bytes and above, together
+///   with test vectors for the boundary; this library does not implement
+///   it, and rejects those payloads at the padding check. rust-nostr
+///   makes the same choice ("This codec currently supports the original
+///   two-byte length prefix only"), and the spec explicitly lets an
+///   implementation enforce its own maximum — but a peer that follows the
+///   current spec can produce payloads this library cannot read.
 /// - The ECDH scalar multiplication (package:elliptic) is not
 ///   constant-time, unlike libsecp256k1. This is an inherent pure-Dart
 ///   limitation to be aware of for strong threat models.

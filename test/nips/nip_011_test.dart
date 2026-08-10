@@ -157,5 +157,51 @@ void main() {
       );
       expect(info, isNull);
     });
+
+    test('timeout is one deadline over headers and body, not one each',
+        () async {
+      // A server that stalls just under the limit before the headers and
+      // again before the end of the body used to pass: the timeout was
+      // applied to each phase separately, so the caller could be held for
+      // a multiple of the documented budget.
+      final url = await serve((request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        request.response.write('{"name":');
+        await request.response.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        request.response.write('"slow relay"}');
+        await request.response.close();
+      });
+
+      final stopwatch = Stopwatch()..start();
+      final info = await RelayInfo.fetch(
+        url,
+        timeout: const Duration(milliseconds: 400),
+      );
+      stopwatch.stop();
+
+      expect(info, isNull);
+      expect(
+        stopwatch.elapsed,
+        lessThan(const Duration(milliseconds: 900)),
+        reason: 'the deadline must cover the whole exchange',
+      );
+    });
+
+    test('an oversized body arriving as a single chunk is refused', () async {
+      // The guard must reject before buffering: some clients (notably
+      // BrowserClient) surface the whole body in one event, so checking
+      // after the append would allocate exactly what the cap exists to
+      // prevent.
+      final url = await serve((request) async {
+        request.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.json
+          ..write(json.encode({'name': 'x' * 200000}));
+        await request.response.close();
+      });
+
+      expect(await RelayInfo.fetch(url, maxBytes: 1024), isNull);
+    });
   });
 }

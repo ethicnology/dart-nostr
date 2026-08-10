@@ -159,6 +159,26 @@ void main() {
         expect(body, isNotNull);
         expect(body!.length, 64);
       });
+
+      test('a single oversized chunk is refused before being buffered',
+          () async {
+        // The cap must be checked against the incoming chunk, not after
+        // appending it: clients that deliver the whole body in one event
+        // (BrowserClient) would otherwise allocate it in full before the
+        // guard reports the overflow.
+        var consumed = 0;
+        final stream = Stream<List<int>>.fromIterable([
+          List<int>.filled(4096, 0x61),
+          List<int>.filled(8, 0x62),
+        ]).map((chunk) {
+          consumed += chunk.length;
+          return chunk;
+        });
+
+        expect(await readStreamWithLimit(stream, 64), isNull);
+        expect(consumed, 4096,
+            reason: 'the stream must be abandoned at the first chunk');
+      });
     });
   });
 }

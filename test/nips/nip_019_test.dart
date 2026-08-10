@@ -457,6 +457,102 @@ void main() {
         );
       });
 
+      test('nprofile without the mandatory identifier TLV is rejected', () {
+        // Only a relay TLV: the entity the identifier is supposed to
+        // point at is absent. This used to decode to an empty `data`,
+        // and NostrUri accepted the resulting URI.
+        final nprofile = bech32Encode(
+          Nip19Prefix.nprofile,
+          '01' '0d' '7773733a2f2f722e782e636f6d', // "wss://r.x.com"
+        );
+        expect(
+          () => Bech32Entity.decodeShareableIdentifiers(payload: nprofile),
+          throwsA(isA<DeserializationException>()),
+        );
+      });
+
+      test('nevent without the mandatory identifier TLV is rejected', () {
+        final nevent = bech32Encode(
+          Nip19Prefix.nevent,
+          '02' '20' '${'ab' * 32}', // author only, no event id
+        );
+        expect(
+          () => Bech32Entity.decodeShareableIdentifiers(payload: nevent),
+          throwsA(isA<DeserializationException>()),
+        );
+      });
+
+      test('naddr without an author or a kind TLV is rejected', () {
+        final noAuthor = bech32Encode(
+          Nip19Prefix.naddr,
+          '00' '04' '736c7567' '03' '04' '00007593',
+        );
+        expect(
+          () => Bech32Entity.decodeShareableIdentifiers(payload: noAuthor),
+          throwsA(isA<DeserializationException>()),
+        );
+
+        final noKind = bech32Encode(
+          Nip19Prefix.naddr,
+          '00' '04' '736c7567' '02' '20' '${'ab' * 32}',
+        );
+        expect(
+          () => Bech32Entity.decodeShareableIdentifiers(payload: noKind),
+          throwsA(isA<DeserializationException>()),
+        );
+      });
+
+      test('unsupported TLV types are ignored, not rejected', () {
+        // NIP-19: "TLVs that are not recognized or supported should be
+        // ignored, rather than causing an error." Types 2 and 3 are not
+        // defined for nprofile, and 9 is not defined at all — rust-nostr
+        // skips all three.
+        const pubkey =
+            '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+        final nprofile = bech32Encode(
+          Nip19Prefix.nprofile,
+          '00' '20' '$pubkey'
+          '02' '01' 'ff' // author: undefined for nprofile
+          '03' '02' 'beef' // kind: undefined for nprofile
+          '09' '02' 'dead', // unknown type
+        );
+        final decoded =
+            Bech32Entity.decodeShareableIdentifiers(payload: nprofile);
+        expect(decoded.data, pubkey);
+        expect(decoded.author, isNull);
+        expect(decoded.kind, isNull);
+      });
+
+      test('nevent keeps decoding when its optional author is malformed', () {
+        // rust-nostr: "NOT propagate error if public key is invalid" —
+        // the author is optional on nevent, so a broken one is dropped
+        // rather than sinking the whole identifier.
+        const eventId =
+            '2739cccdc3fa943ad447378e234ef1325a76f023a169b483b6fe8cab47a793e1';
+        final nevent = bech32Encode(
+          Nip19Prefix.nevent,
+          '00' '20' '$eventId'
+          '02' '02' 'abcd',
+        );
+        final decoded =
+            Bech32Entity.decodeShareableIdentifiers(payload: nevent);
+        expect(decoded.data, eventId);
+        expect(decoded.author, isNull);
+      });
+
+      test('a TLV value running past the end of the payload is rejected', () {
+        // Declares 32 bytes but supplies 2 — previously a RangeError
+        // caught by the catch-all, now an explicit structural error.
+        final truncated = bech32Encode(
+          Nip19Prefix.nprofile,
+          '00' '20' 'abcd',
+        );
+        expect(
+          () => Bech32Entity.decodeShareableIdentifiers(payload: truncated),
+          throwsA(isA<DeserializationException>()),
+        );
+      });
+
       test('a spec-shaped naddr still decodes (no false positive)', () {
         const author =
             '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';

@@ -125,6 +125,11 @@ enum CryptoErrorCode {
   /// be unsigned per spec — a signed rumor risks leaking the author.
   rumorMustBeUnsigned,
 
+  /// NIP-59: the rumor's `id` does not match the SHA-256 of its canonical
+  /// serialization. A rumor is unsigned, so the id is the only structural
+  /// binding between its fields and the identifier clients key off.
+  rumorIdMismatch,
+
   /// NIP-59: the seal (kind 13) carries tags. Per spec, seal events MUST
   /// have an empty tags array.
   sealMustHaveEmptyTags,

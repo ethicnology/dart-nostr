@@ -265,44 +265,74 @@ class Bech32Entity {
     _assertLength(payload);
     try {
       String data = '';
+      // naddr's identifier is legitimately the empty string for normal
+      // replaceable events, so presence is tracked separately from value.
+      var hasIdentifier = false;
       final List<String> relays = [];
       String? author;
       int? kind;
       final decoded = bech32Decode(payload, length: payload.length);
+      final prefix = decoded.prefix;
       final tlvBytes = hex.decode(decoded.data);
 
       var index = 0;
       while (index < tlvBytes.length) {
+        // T and L are one byte each. A truncated header or a value that
+        // runs past the end of the stream is malformed input and must be
+        // reported as such, not surface as a RangeError.
+        if (index + 2 > tlvBytes.length) {
+          throw const DeserializationException('truncated TLV header');
+        }
         final type = tlvBytes[index++];
         final length = tlvBytes[index++];
+        if (index + length > tlvBytes.length) {
+          throw const DeserializationException(
+            'TLV value runs past the end of the payload',
+          );
+        }
 
         final value =
             Uint8List.fromList(tlvBytes.sublist(index, index + length));
         index += length;
 
+        // NIP-19: "TLVs that are not recognized or supported should be
+        // ignored, rather than causing an error." A type counts as
+        // supported only for the prefixes the spec defines it for — types
+        // 2 and 3 are specified for nevent and naddr, never for nprofile.
+        // rust-nostr's `Nip19Profile::from_bech32_data` skips them the
+        // same way.
         if (type == 0) {
           // naddr type-0 carries the `d`-tag string; nprofile/nevent
           // type-0 carries 32 raw bytes (hex-encode for the caller).
-          if (decoded.prefix != Nip19Prefix.naddr && value.length != 32) {
-            throw const DeserializationException(
-              'TLV type 0 (identifier) must be 32 bytes',
-            );
+          if (prefix == Nip19Prefix.naddr) {
+            data = utf8.decode(value);
+          } else {
+            if (value.length != 32) {
+              throw const DeserializationException(
+                'TLV type 0 (identifier) must be 32 bytes',
+              );
+            }
+            data = hex.encode(value);
           }
-          data = (decoded.prefix == Nip19Prefix.naddr)
-              ? utf8.decode(value)
-              : hex.encode(value);
+          hasIdentifier = true;
         } else if (type == 1) {
           // Relays are ASCII per spec; UTF-8 decode is a strict superset
           // that round-trips with the encode path.
           relays.add(utf8.decode(value));
-        } else if (type == 2) {
+        } else if (type == 2 && prefix != Nip19Prefix.nprofile) {
           if (value.length != 32) {
-            throw const DeserializationException(
-              'TLV type 2 (author) must be 32 bytes',
-            );
+            // Required and therefore fatal for naddr; optional for nevent,
+            // where rust-nostr drops a malformed author instead of
+            // rejecting the whole identifier.
+            if (prefix == Nip19Prefix.naddr) {
+              throw const DeserializationException(
+                'TLV type 2 (author) must be 32 bytes',
+              );
+            }
+          } else {
+            author = hex.encode(value);
           }
-          author = hex.encode(value);
-        } else if (type == 3) {
+        } else if (type == 3 && prefix != Nip19Prefix.nprofile) {
           if (value.length != 4) {
             throw const DeserializationException(
               'TLV type 3 (kind) must be 4 bytes',
@@ -313,8 +343,31 @@ class Bech32Entity {
         }
       }
 
+      // Type 0 identifies the entity, so every shareable identifier needs
+      // it; naddr additionally needs the author and kind to address an
+      // addressable event. Without them the result decodes to something
+      // that points nowhere — rust-nostr raises the same missing-field
+      // errors, and the encode path above already refuses to build these.
+      if (!hasIdentifier) {
+        throw const DeserializationException(
+          'TLV type 0 (identifier) is required',
+        );
+      }
+      if (prefix == Nip19Prefix.naddr) {
+        if (author == null) {
+          throw const DeserializationException(
+            'naddr requires TLV type 2 (author)',
+          );
+        }
+        if (kind == null) {
+          throw const DeserializationException(
+            'naddr requires TLV type 3 (kind)',
+          );
+        }
+      }
+
       return ShareableIdentifierData(
-        prefix: decoded.prefix,
+        prefix: prefix,
         data: data,
         relays: relays,
         author: author,

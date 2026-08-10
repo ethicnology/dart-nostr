@@ -41,24 +41,38 @@ class RelayInfo {
 
     final client = http.Client();
     try {
-      final request = http.Request('GET', url)
-        ..headers['Accept'] = 'application/nostr+json';
-      final response = await client.send(request).timeout(timeout);
-
-      if (response.statusCode != 200) return null;
-
-      final body = await readStreamWithLimit(response.stream, maxBytes)
+      // A single deadline covers connection *and* body. Timing each phase
+      // separately would let a server that stalls just under the limit on
+      // every phase consume a multiple of the documented budget.
+      return await _fetchDocument(client, url, relayUrl, maxBytes)
           .timeout(timeout);
-      if (body == null) return null;
-
-      final decoded = json.decode(utf8.decode(body));
-      if (decoded is! Map<String, dynamic>) return null;
-      return RelayInfoData.fromMap(decoded, url: relayUrl);
     } on Exception {
       return null;
     } finally {
       client.close();
     }
+  }
+
+  /// Performs the unbounded part of [fetch]; the caller owns the deadline
+  /// and the client lifetime.
+  static Future<RelayInfoData?> _fetchDocument(
+    http.Client client,
+    Uri url,
+    String relayUrl,
+    int maxBytes,
+  ) async {
+    final request = http.Request('GET', url)
+      ..headers['Accept'] = 'application/nostr+json';
+    final response = await client.send(request);
+
+    if (response.statusCode != 200) return null;
+
+    final body = await readStreamWithLimit(response.stream, maxBytes);
+    if (body == null) return null;
+
+    final decoded = json.decode(utf8.decode(body));
+    if (decoded is! Map<String, dynamic>) return null;
+    return RelayInfoData.fromMap(decoded, url: relayUrl);
   }
 
   /// Normalises a WebSocket URL to its HTTP equivalent for NIP-11 fetch.

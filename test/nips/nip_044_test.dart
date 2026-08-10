@@ -265,6 +265,10 @@ void assertConversationKeyGenerationPub(
 
 void main() {
   group('rust-nostr NIP-44 vectors from JSON', () {
+    // The checked-in fixture predates the extended-length-prefix revision
+    // of NIP-44, so its `invalid.encrypt_msg_lengths` still lists 65536.
+    // The groups below only consume the vectors that are unaffected by
+    // that change (padding, conversation keys, encrypt/decrypt).
     late Map<String, dynamic> vectors;
 
     setUpAll(() {
@@ -1481,11 +1485,13 @@ void main() {
       expect(decrypted, plaintext);
     });
 
-    test('65536-byte plaintext is rejected (official invalid vector)',
-        () async {
-      // Matches the spec's invalid.encrypt_msg_lengths: [0, 65536, …] —
-      // the 6-byte extended prefix from the latest spec text is
-      // deliberately not implemented (rust-nostr parity).
+    test('65536-byte plaintext is rejected (implementation limit)', () async {
+      // NIP-44 now defines a 6-byte extended prefix from 65536 bytes on
+      // and ships vectors for the 65535/65536/65537 boundary. This
+      // library implements the 2-byte prefix only, like rust-nostr, and
+      // the spec permits an implementation-defined maximum. Pinned so the
+      // boundary cannot move silently — not because the current spec
+      // requires this input to be rejected.
       await expectLater(
         Nip44.encrypt(
           plaintext: 'x' * 65536,

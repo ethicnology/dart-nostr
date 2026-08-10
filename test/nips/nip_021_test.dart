@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:nostr/nostr.dart';
+// Internal import: hand-crafts a TLV payload the public encoder refuses
+// to build, to exercise the decode-side validation NIP-21 relies on.
+import 'package:nostr/src/nips/nip_019_utils.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -57,6 +60,24 @@ void main() {
       // Valid bech32 but wrong payload size (2 bytes instead of 32).
       expect(
         () => Nip21.decode('nostr:npub140xserft56'),
+        throwsA(isA<NostrException>()),
+      );
+    });
+
+    test('rejects an nprofile carrying no public key', () {
+      // Well-formed bech32 and a valid TLV stream, but no type-0 entry:
+      // the URI points at no profile at all. The prefix-scoped NIP-19
+      // validation is what makes this reachable from here.
+      final nprofile = bech32Encode(
+        Nip19Prefix.nprofile,
+        '01' '0d' '7773733a2f2f722e782e636f6d', // relay only, "wss://r.x.com"
+      );
+      expect(
+        () => Nip21.encode(nprofile),
+        throwsA(isA<NostrException>()),
+      );
+      expect(
+        () => Nip21.decode('nostr:$nprofile'),
         throwsA(isA<NostrException>()),
       );
     });

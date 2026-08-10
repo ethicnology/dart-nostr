@@ -65,18 +65,23 @@ List<String> findAllTagValues(List<List<String>> tags, String name) {
 }
 
 /// Reads an HTTP response [stream] to completion, returning `null` as soon
-/// as the accumulated body exceeds [maxBytes].
+/// as the accumulated body would exceed [maxBytes].
 ///
 /// Used by the HTTP-fetching NIPs (NIP-05, NIP-11) so a malicious or
 /// broken endpoint cannot exhaust memory with an unbounded response body.
+///
+/// The cap is checked *before* the chunk is appended: a single oversized
+/// chunk (the whole body arrives in one event on some clients, notably
+/// `BrowserClient`) must be refused rather than buffered and then
+/// reported, which would defeat the guard.
 Future<List<int>?> readStreamWithLimit(
   Stream<List<int>> stream,
   int maxBytes,
 ) async {
   final bytes = <int>[];
   await for (final chunk in stream) {
+    if (bytes.length + chunk.length > maxBytes) return null;
     bytes.addAll(chunk);
-    if (bytes.length > maxBytes) return null;
   }
   return bytes;
 }

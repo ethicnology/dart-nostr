@@ -287,6 +287,61 @@ void main() {
         );
       });
 
+      test('rejects a rumor whose id does not match its content', () async {
+        // The rumor is unsigned, so its id is the only structural binding
+        // between the payload and the identifier clients deduplicate and
+        // thread on. A seal-authenticated sender must not be able to pick
+        // that identifier freely.
+        final rumorJson = json.encode({
+          'id': '00' * 32,
+          'pubkey': author.public,
+          'created_at': 1700000000,
+          'kind': 1,
+          'tags': <List<String>>[],
+          'content': 'authenticated but misidentified',
+        });
+        final wrap = await wrapManually(rumorJson, author.secret, recipient);
+        await expectLater(
+          Nip59.unwrap(giftWrap: wrap, recipientSecretKey: recipient.secret),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.rumorIdMismatch,
+          )),
+        );
+      });
+
+      test('recomputes the id of a 2.0.0 rumor that carries an empty one',
+          () async {
+        // 2.0.0 serialized rumors through Event.partial, which defaults
+        // `id` to ''. Those gift wraps must keep unwrapping, with the id
+        // computed rather than propagated as an empty string.
+        final rumorJson = json.encode({
+          'id': '',
+          'pubkey': author.public,
+          'created_at': 1700000000,
+          'kind': 1,
+          'tags': <List<String>>[],
+          'content': 'legacy sender',
+        });
+        final wrap = await wrapManually(rumorJson, author.secret, recipient);
+        final rumor = await Nip59.unwrap(
+          giftWrap: wrap,
+          recipientSecretKey: recipient.secret,
+        );
+
+        expect(rumor.content, 'legacy sender');
+        expect(
+          rumor.id,
+          Event.unsigned(
+            pubkey: author.public,
+            createdAt: 1700000000,
+            kind: 1,
+            content: 'legacy sender',
+          ).id,
+        );
+      });
+
       test('rejects a rumor whose pubkey differs from the seal author',
           () async {
         // Impersonation attempt: the seal is signed by the attacker but

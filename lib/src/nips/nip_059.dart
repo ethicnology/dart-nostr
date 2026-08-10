@@ -215,15 +215,15 @@ class GiftWrap {
     final kind = getRequiredField<int>(rumorMap, 'kind');
     final content = getRequiredField<String>(rumorMap, 'content');
     final rawTags = getRequiredField<List>(rumorMap, 'tags');
-    // The id is optional on the wire (older senders omit it) but carried
-    // through when present, like rust-nostr's `UnsignedEvent`. It is NOT
-    // re-verified here: a rumor is unsigned by design, so its id is
-    // informational only — the seal's signature is what authenticates
-    // the payload.
-    final rumorId = rumorMap['id'];
-    if (rumorId != null && rumorId is! String) {
+    // The id is optional on the wire: senders before 2.0.1 emitted an
+    // empty string, and the field may be absent entirely. When it does
+    // carry a value it is checked against the recomputed canonical id
+    // below rather than trusted.
+    final Object? rawRumorId = rumorMap['id'];
+    if (rawRumorId != null && rawRumorId is! String) {
       throw const DeserializationException('rumor id must be a string');
     }
+    final String? rumorId = rawRumorId as String?;
     // NIP-59: "The inner event MUST always be unsigned." This check must
     // read the `sig` field straight from the wire — building the rumor
     // first would default sig to '' and make the rejection unreachable.
@@ -258,14 +258,26 @@ class GiftWrap {
       tags.add(tag);
     }
 
-    final rumor = Event.partial(
-      id: (rumorId as String?) ?? '',
+    // Recompute the canonical id instead of carrying the wire value
+    // through. A rumor has no signature, so nothing else binds the id to
+    // the fields it claims to identify — and clients use that id to
+    // deduplicate, thread and reference the message. A sender that
+    // supplies a mismatching id is either broken or trying to make the
+    // same payload appear under an identifier of their choosing.
+    final rumor = Event.unsigned(
       pubkey: pubkey,
       createdAt: createdAt,
       kind: kind,
       content: content,
       tags: tags,
     );
+    // An empty id means "not supplied" (2.0.0 wire shape), not "mismatch".
+    if (rumorId != null && rumorId.isNotEmpty && rumorId != rumor.id) {
+      throw const CryptoException(
+        'Rumor id does not match its canonical serialization',
+        CryptoErrorCode.rumorIdMismatch,
+      );
+    }
 
     if (seal.pubkey != rumor.pubkey) {
       throw const CryptoException(

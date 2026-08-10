@@ -112,45 +112,61 @@ class DnsIdentifier {
 
     final client = http.Client();
     try {
-      // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
-      final request = http.Request('GET', url)..followRedirects = false;
-      final response = await client.send(request).timeout(timeout);
-
-      if (response.statusCode != 200) return null;
-
-      // Read body BEFORE closing the client (stream depends on
-      // connection), giving up when the body exceeds maxBytes.
-      final body = await readStreamWithLimit(response.stream, maxBytes)
+      // A single deadline covers connection *and* body. Timing each phase
+      // separately would let a server that stalls just under the limit on
+      // every phase consume a multiple of the documented budget.
+      return await _resolve(client, url, name, domain, maxBytes)
           .timeout(timeout);
-      if (body == null) return null;
-
-      final Map<String, dynamic> data = json.decode(utf8.decode(body));
-      final Map<String, dynamic>? names = data['names'];
-      if (names == null) return null;
-
-      final String? pubkey = names[name];
-      if (pubkey == null) return null;
-
-      // Extract relays for this pubkey (optional per spec)
-      final Map<String, dynamic>? relaysMap = data['relays'];
-      final List<String> relays = relaysMap != null && relaysMap[pubkey] != null
-          ? (relaysMap[pubkey] as List).map((e) => e.toString()).toList()
-          : [];
-
-      return DnsData(
-        name: name,
-        domain: domain,
-        pubkey: pubkey,
-        relays: relays,
-      );
     } on Object {
-      // Includes _TypeError from the implicit casts above (e.g. when a
-      // misbehaving .well-known endpoint returns the wrong JSON shape).
-      // Spec says "return null on any resolution failure".
+      // Includes _TypeError from the implicit casts in _resolve (e.g. when
+      // a misbehaving .well-known endpoint returns the wrong JSON shape)
+      // and TimeoutException. Spec says "return null on any resolution
+      // failure".
       return null;
     } finally {
       client.close();
     }
+  }
+
+  /// Performs the unbounded part of [fetch]; the caller owns the deadline
+  /// and the client lifetime.
+  static Future<DnsData?> _resolve(
+    http.Client client,
+    Uri url,
+    String name,
+    String domain,
+    int maxBytes,
+  ) async {
+    // Per NIP-05 spec: fetchers MUST ignore any HTTP redirects.
+    final request = http.Request('GET', url)..followRedirects = false;
+    final response = await client.send(request);
+
+    if (response.statusCode != 200) return null;
+
+    // Read body BEFORE closing the client (stream depends on connection),
+    // giving up when the body exceeds maxBytes.
+    final body = await readStreamWithLimit(response.stream, maxBytes);
+    if (body == null) return null;
+
+    final Map<String, dynamic> data = json.decode(utf8.decode(body));
+    final Map<String, dynamic>? names = data['names'];
+    if (names == null) return null;
+
+    final String? pubkey = names[name];
+    if (pubkey == null) return null;
+
+    // Extract relays for this pubkey (optional per spec)
+    final Map<String, dynamic>? relaysMap = data['relays'];
+    final List<String> relays = relaysMap != null && relaysMap[pubkey] != null
+        ? (relaysMap[pubkey] as List).map((e) => e.toString()).toList()
+        : [];
+
+    return DnsData(
+      name: name,
+      domain: domain,
+      pubkey: pubkey,
+      relays: relays,
+    );
   }
 
   /// Verify a NIP-05 identifier against the claimed public key.

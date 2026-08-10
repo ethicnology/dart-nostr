@@ -63,13 +63,19 @@ class Keys {
   /// a valid BIP-340 secret key.
   Keys.generate() {
     while (true) {
-      secret = generateRandomHex();
+      // Validate the candidate BEFORE assigning: `secret` and `public` are
+      // `late final`, so writing an out-of-range scalar and re-sampling
+      // would throw LateInitializationError on the second assignment.
+      final candidate = generateRandomHex();
       try {
-        public = Schnorr.derivePublicKey(secret);
-        return;
+        Schnorr.assertValidSecretKey(candidate);
       } on InvalidKeyException {
         // Out-of-range scalar (0 or >= n) — sample again.
+        continue;
       }
+      secret = candidate;
+      public = Schnorr.derivePublicKey(candidate);
+      return;
     }
   }
 
