@@ -203,8 +203,14 @@ class Zap {
       senderPubkey: privateZapEvent.pubkey,
     );
 
-    // Parse the inner event
-    final innerEvent = Event.fromJson(decrypted, verify: false);
+    // Parse the inner event. Verification is mandatory (it is the
+    // fromJson default and must stay that way here): the inner event
+    // claims a sender identity (its pubkey), and only its Schnorr
+    // signature proves it. Without this check anyone could forge a
+    // "private zap" attributing an arbitrary payment intent to any
+    // pubkey — the outer event is signed by a throwaway ephemeral key
+    // and authenticates nothing about the claimed sender.
+    final innerEvent = Event.fromJson(decrypted);
     return _parseZapRequestData(innerEvent);
   }
 
