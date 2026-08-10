@@ -51,9 +51,12 @@ class GiftWrap {
       );
     }
 
-    // if 'rumor' is already signed, let's forcibly remove the signature & id:
-    // Copy without "id" and "sig" to ensure it's an unsigned rumor:
-    final unsignedRumor = Event.partial(
+    // Rebuild the rumor from scratch: forcibly drop any pre-existing
+    // signature (a rumor MUST NOT be signed), then compute the canonical
+    // id. The NIP-59 example, NIP-17 ("Fields id and created_at are
+    // required"), rust-nostr (`UnsignedEvent::ensure_id`) and nostr-tools
+    // all carry the computed id on the wire.
+    final canonicalRumor = Event.unsigned(
       pubkey: authorPubkey,
       createdAt: rumor.createdAt,
       kind: rumor.kind,
@@ -61,7 +64,16 @@ class GiftWrap {
       content: rumor.content,
     );
 
-    final rumorJson = unsignedRumor.toJson();
+    // Serialize WITHOUT the `sig` field, matching the NIP-59 example and
+    // rust-nostr's `UnsignedEvent` JSON shape (id present, sig absent).
+    final rumorJson = json.encode({
+      'id': canonicalRumor.id,
+      'pubkey': canonicalRumor.pubkey,
+      'created_at': canonicalRumor.createdAt,
+      'kind': canonicalRumor.kind,
+      'tags': canonicalRumor.tags,
+      'content': canonicalRumor.content,
+    });
 
     // Encrypt rumor with (authorSecretKey, recipientPubkey)
     final sealCiphertext = await Encryption.encrypt(
@@ -203,6 +215,28 @@ class GiftWrap {
     final kind = getRequiredField<int>(rumorMap, 'kind');
     final content = getRequiredField<String>(rumorMap, 'content');
     final rawTags = getRequiredField<List>(rumorMap, 'tags');
+    // The id is optional on the wire (older senders omit it) but carried
+    // through when present, like rust-nostr's `UnsignedEvent`. It is NOT
+    // re-verified here: a rumor is unsigned by design, so its id is
+    // informational only — the seal's signature is what authenticates
+    // the payload.
+    final rumorId = rumorMap['id'];
+    if (rumorId != null && rumorId is! String) {
+      throw const DeserializationException('rumor id must be a string');
+    }
+    // NIP-59: "The inner event MUST always be unsigned." This check must
+    // read the `sig` field straight from the wire — building the rumor
+    // first would default sig to '' and make the rejection unreachable.
+    final rumorSig = rumorMap['sig'];
+    if (rumorSig != null && rumorSig is! String) {
+      throw const DeserializationException('rumor sig must be a string');
+    }
+    if (rumorSig != null && rumorSig.isNotEmpty) {
+      throw const CryptoException(
+        'Rumor must be unsigned',
+        CryptoErrorCode.rumorMustBeUnsigned,
+      );
+    }
     final tags = <List<String>>[];
     for (var i = 0; i < rawTags.length; i++) {
       final entry = rawTags[i];
@@ -225,6 +259,7 @@ class GiftWrap {
     }
 
     final rumor = Event.partial(
+      id: (rumorId as String?) ?? '',
       pubkey: pubkey,
       createdAt: createdAt,
       kind: kind,
@@ -239,15 +274,8 @@ class GiftWrap {
       );
     }
 
-    if (rumor.sig.isNotEmpty) {
-      // If it is signed, the message might leak to relays and become fully public.
-      throw const CryptoException(
-        'Rumor should be unsigned',
-        CryptoErrorCode.rumorMustBeUnsigned,
-      );
-    }
-
-    // The rumor is intentionally unsigned per NIP-59. It can be any kind of event, but .sig is empty. Return it:
+    // The rumor is intentionally unsigned per NIP-59 (enforced on the
+    // wire above). It can be any kind of event, but .sig is empty.
     return rumor;
   }
 

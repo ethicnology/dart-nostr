@@ -66,8 +66,53 @@ void main() {
       expect(unwrappedRumor.kind, 1);
       expect(unwrappedRumor.content, rumorContent);
       expect(unwrappedRumor.sig, isEmpty, reason: 'Rumor must remain unsigned');
-      expect(unwrappedRumor.id, isEmpty,
-          reason: 'Rumor is never broadcast as itself');
+      // Per the NIP-59 example (and NIP-17: "Fields id and created_at are
+      // required"), the rumor carries its canonical id on the wire — this
+      // is the exact id from the spec example.
+      expect(
+        unwrappedRumor.id,
+        '9dd003c6d3b73b74a85a9ab099469ce251653a7af76f523671ab828acd2a0ef9',
+        reason: 'Rumor carries the canonical id from the NIP-59 example',
+      );
+    });
+
+    test('the sealed rumor JSON has an id and no sig field (spec shape)',
+        () async {
+      // Decrypt the seal out of a gift wrap and inspect the rumor JSON
+      // directly: rust-nostr's UnsignedEvent and the NIP-59 example both
+      // serialize `id` present and `sig` absent.
+      final rumor = Event.partial(
+        tags: [],
+        content: rumorContent,
+        createdAt: rumorCreatedAt,
+        pubkey: rumorPubkey,
+      );
+      final giftWrap = await Nip59.wrap(
+        rumor: rumor,
+        authorSecretKey: authorSecretKey,
+        recipientPubkey: Keys(recipientSecretKey).public,
+        ephemeralSecretKey: ephemeralSecretKey,
+      );
+
+      // Peel the gift wrap, then the seal, using the recipient key.
+      final sealJson = await Nip44.decrypt(
+        payload: giftWrap.content,
+        recipientSecretKey: recipientSecretKey,
+        senderPubkey: giftWrap.pubkey,
+      );
+      final seal = Event.fromJson(sealJson);
+      final rumorJson = await Nip44.decrypt(
+        payload: seal.content,
+        recipientSecretKey: recipientSecretKey,
+        senderPubkey: seal.pubkey,
+      );
+      final decoded = json.decode(rumorJson) as Map<String, dynamic>;
+
+      expect(decoded['id'],
+          '9dd003c6d3b73b74a85a9ab099469ce251653a7af76f523671ab828acd2a0ef9');
+      expect(decoded.containsKey('sig'), isFalse,
+          reason: 'rumor JSON must not carry a sig field (NIP-59 example, '
+              'rust-nostr UnsignedEvent)');
     });
 
     test('wrap/unwrap with rust-nostr test keys', () async {
@@ -178,6 +223,152 @@ void main() {
           CryptoErrorCode.sealMustHaveEmptyTags,
         )),
       );
+    });
+
+    group('adversarial unwrap', () {
+      final recipient = Keys(recipientSecretKey);
+      final author = Keys(authorSecretKey);
+
+      /// Wraps [rumorJson] into a gift wrap encrypted to [recipient],
+      /// signing the seal with [sealSecret] and the wrap with a fresh
+      /// ephemeral key — the manual path needed to smuggle non-conformant
+      /// inner payloads past Nip59.wrap (which rebuilds the rumor).
+      Future<Event> wrapManually(
+        String rumorJson,
+        String sealSecret,
+        Keys recipient,
+      ) async {
+        final sealCiphertext = await Encryption.encrypt(
+          plaintext: rumorJson,
+          senderSecretKey: sealSecret,
+          recipientPubkey: recipient.public,
+        );
+        final seal = Event.from(
+          kind: GiftWrap.kindSeal,
+          content: sealCiphertext,
+          secretKey: sealSecret,
+        );
+        final ephemeral = Keys.generate();
+        final wrapCiphertext = await Encryption.encrypt(
+          plaintext: seal.toJson(),
+          senderSecretKey: ephemeral.secret,
+          recipientPubkey: recipient.public,
+        );
+        return Event.from(
+          kind: GiftWrap.kindGiftWrap,
+          tags: [
+            ['p', recipient.public]
+          ],
+          content: wrapCiphertext,
+          secretKey: ephemeral.secret,
+        );
+      }
+
+      test('rejects a signed rumor (rumorMustBeUnsigned)', () async {
+        // A rumor carrying a signature breaks deniability — the spec says
+        // the inner event MUST always be unsigned.
+        final signedRumor = Event.from(
+          kind: 1,
+          content: 'i am signed',
+          secretKey: author.secret,
+        );
+        final wrap = await wrapManually(
+          signedRumor.toJson(),
+          author.secret,
+          recipient,
+        );
+        await expectLater(
+          Nip59.unwrap(giftWrap: wrap, recipientSecretKey: recipient.secret),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.rumorMustBeUnsigned,
+          )),
+        );
+      });
+
+      test('rejects a rumor whose pubkey differs from the seal author',
+          () async {
+        // Impersonation attempt: the seal is signed by the attacker but
+        // the rumor claims a victim's pubkey. NIP-17: "Clients MUST
+        // verify if pubkey of the kind:13 is the same pubkey as that of
+        // the unsignedMessageRumor".
+        final victim = Keys.generate();
+        final attacker = Keys.generate();
+        final rumorJson = json.encode({
+          'id': '',
+          'pubkey': victim.public,
+          'created_at': 1700000000,
+          'kind': 1,
+          'tags': [],
+          'content': 'spoofed',
+        });
+        final wrap = await wrapManually(rumorJson, attacker.secret, recipient);
+        await expectLater(
+          Nip59.unwrap(giftWrap: wrap, recipientSecretKey: recipient.secret),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.sealAuthorMismatch,
+          )),
+        );
+      });
+
+      test('rejects a gift wrap with an invalid signature', () async {
+        final rumor = Event.partial(
+          pubkey: author.public,
+          content: 'hello',
+          createdAt: 1700000000,
+        );
+        final giftWrap = await Nip59.wrap(
+          rumor: rumor,
+          authorSecretKey: author.secret,
+          recipientPubkey: recipient.public,
+        );
+        // Re-sign the wrap's content with a DIFFERENT key while keeping
+        // the original ephemeral pubkey — the signature no longer matches.
+        final attacker = Keys.generate();
+        final tampered = Event.from(
+          kind: giftWrap.kind,
+          tags: giftWrap.tags,
+          content: giftWrap.content,
+          secretKey: attacker.secret,
+          pubkey: giftWrap.pubkey,
+          createdAt: giftWrap.createdAt,
+        );
+        await expectLater(
+          Nip59.unwrap(giftWrap: tampered, recipientSecretKey: recipient.secret),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.invalidGiftWrapSignature,
+          )),
+        );
+      });
+
+      test('unwrap with the wrong recipient key fails at the MAC check',
+          () async {
+        final rumor = Event.partial(
+          pubkey: author.public,
+          content: 'for your eyes only',
+          createdAt: 1700000000,
+        );
+        final giftWrap = await Nip59.wrap(
+          rumor: rumor,
+          authorSecretKey: author.secret,
+          recipientPubkey: recipient.public,
+        );
+        final eavesdropper = Keys.generate();
+        await expectLater(
+          Nip59.unwrap(
+              giftWrap: giftWrap, recipientSecretKey: eavesdropper.secret),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.invalidMac,
+          )),
+        );
+      });
     });
   });
 }
