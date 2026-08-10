@@ -218,6 +218,18 @@ Map<String, dynamic> parsePayload(String payload) {
     );
   }
 
+  // Per spec: "Validate minimum length of decoded message to verify output
+  // of the decoder: it must be at least 99 bytes". The upper bound matches
+  // rust-nostr's MAX_PAYLOAD_SIZE (1 version + 32 nonce + 2 + 65536 padded
+  // + 32 MAC) — the base64 length gate above alone would let a 65604-byte
+  // decode slip through.
+  if (data.length < 99 || data.length > 65603) {
+    throw const CryptoException(
+      'Invalid payload size',
+      CryptoErrorCode.invalidPayloadSize,
+    );
+  }
+
   if (data[0] != 0x02) {
     throw const CryptoException(
       'Unsupported version',
@@ -267,12 +279,17 @@ bool _constantTimeEqual(List<int> a, List<int> b) {
 
 /// Ensures a public key has the correct compressed prefix.
 ///
+/// Accepts the x-only 32-byte form (64 hex chars, Nostr convention —
+/// even-Y `02` prefix is assumed), the compressed 33-byte form (66 hex
+/// chars, `02`/`03` prefix), or the uncompressed 65-byte form (130 hex
+/// chars, `04` prefix).
+///
 /// Throws [CryptoException] if the public key format is unrecognizable.
 String checkPublicKey(String publicKey) {
   if (publicKey.length == 66 &&
       (publicKey.startsWith('02') || publicKey.startsWith('03'))) {
     return publicKey;
-  } else if (publicKey.length > 66 && publicKey.startsWith('04')) {
+  } else if (publicKey.length == 130 && publicKey.startsWith('04')) {
     return publicKey;
   } else if (publicKey.length == 64) {
     return '02$publicKey';

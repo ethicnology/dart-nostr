@@ -473,7 +473,7 @@ void main() {
     await assertConversationKeyFail(
       'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
       '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-      'point is not on curve',
+      'secretKey must be a scalar in range [1, secp256k1.n - 1]',
     );
   });
 
@@ -482,7 +482,7 @@ void main() {
     await assertConversationKeyFail(
       '0000000000000000000000000000000000000000000000000000000000000000',
       '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-      'point is not on curve',
+      'secretKey must be a scalar in range [1, secp256k1.n - 1]',
     );
   });
 
@@ -491,7 +491,7 @@ void main() {
     await assertConversationKeyFail(
       'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364139',
       'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
-      'invalid public key X value',
+      'Invalid Public Key',
     );
   });
 
@@ -500,7 +500,7 @@ void main() {
     await assertConversationKeyFail(
       'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141',
       '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-      'point is not on curve',
+      'secretKey must be a scalar in range [1, secp256k1.n - 1]',
     );
   });
 
@@ -509,7 +509,7 @@ void main() {
     await assertConversationKeyFail(
       '0000000000000000000000000000000000000000000000000000000000000002',
       '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-      'point is not on curve',
+      'Invalid Public Key',
     );
   });
 
@@ -518,7 +518,7 @@ void main() {
     await assertConversationKeyFail(
       '0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20',
       '0000000000000000000000000000000000000000000000000000000000000000',
-      'point is not on curve',
+      'Invalid Public Key',
     );
   });
 
@@ -527,7 +527,7 @@ void main() {
     await assertConversationKeyFail(
       '0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20',
       'eb1f7200aecaa86682376fb1c13cd12b732221e774f553b0a0857f88fa20f86d',
-      'point is not on curve',
+      'Invalid Public Key',
     );
   });
 
@@ -536,8 +536,84 @@ void main() {
     await assertConversationKeyFail(
       '0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20',
       '709858a4c121e4a84eb59c0ded0261093c71e8ca29efeef21a6161c447bcaf9f',
-      'point is not on curve',
+      'Invalid Public Key',
     );
+  });
+
+  group('secret key range validation is not masked by an invalid pub2', () {
+    // The official invalid.get_conversation_key vectors pair invalid sec1
+    // values with a pub2 that is *itself* invalid ('1234…' has no sqrt),
+    // so an implementation that only validates the public key would still
+    // "pass" them. These cases use a known-valid pub2 (the public key of
+    // sec2 = 2 from the valid vectors) to prove the sec1 check is real.
+    final validPub2 = Keys(
+            '0000000000000000000000000000000000000000000000000000000000000002')
+        .public;
+
+    for (final (note, sec1) in [
+      ('sec1 is 0',
+          '0000000000000000000000000000000000000000000000000000000000000000'),
+      ('sec1 == curve.n',
+          'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
+      ('sec1 higher than curve.n',
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
+    ]) {
+      test(note, () {
+        expect(
+          () => Nip44.computeSharedSecret(
+            secretKeyHex: sec1,
+            publicKeyHex: validPub2,
+          ),
+          throwsA(isA<InvalidKeyException>().having(
+            (e) => e.message,
+            'message',
+            contains('scalar in range'),
+          )),
+        );
+      });
+    }
+
+    test('sec1 too short (1 byte)', () {
+      expect(
+        () => Nip44.computeSharedSecret(
+          secretKeyHex: 'ff',
+          publicKeyHex: validPub2,
+        ),
+        throwsA(isA<InvalidKeyException>()),
+      );
+    });
+
+    test('sec1 = n - 1 is accepted (boundary)', () {
+      final secret = Nip44.computeSharedSecret(
+        secretKeyHex:
+            'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140',
+        publicKeyHex: validPub2,
+      );
+      expect(secret.length, 32);
+    });
+
+    test('malformed public key surfaces CryptoException, never a raw error',
+        () {
+      // Uncompressed form with a wrong length used to propagate a thrown
+      // String from package:elliptic, breaking the NostrException contract.
+      for (final badPub in [
+        '04${'ab' * 70}', // 04 prefix, 142 chars — invalid length
+        '05${'ab' * 32}', // unknown prefix
+        'zz${'ab' * 32}', // non-hex
+      ]) {
+        expect(
+          () => Nip44.computeSharedSecret(
+            secretKeyHex: 'a' * 64,
+            publicKeyHex: badPub,
+          ),
+          throwsA(isA<CryptoException>().having(
+            (e) => e.code,
+            'code',
+            CryptoErrorCode.invalidPublicKey,
+          )),
+        );
+      }
+    });
   });
 
   test('TestDecryptFail001', () async {
@@ -1295,6 +1371,147 @@ void main() {
       expect(
         () => unpad(zero),
         throwsA(isA<CryptoException>()),
+      );
+    });
+  });
+
+  group('payload size gates (NIP-44 v2 §decode_payload)', () {
+    test('decoded payload below 99 bytes is rejected before MAC/chacha', () {
+      // 132 base64 chars ending with '==' decode to 97 bytes — the base64
+      // length gate alone lets it through, but the spec requires the
+      // *decoded* message to be at least 99 bytes.
+      final data = List<int>.filled(97, 0);
+      data[0] = 0x02; // version
+      final payload = base64.encode(data);
+      expect(payload.length, 132);
+
+      expect(
+        () => parsePayload(payload),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.invalidPayloadSize,
+        )),
+      );
+    });
+
+    test('decoded payload above 65603 bytes is rejected', () {
+      // rust-nostr's MAX_PAYLOAD_SIZE. 87472 base64 chars without padding
+      // decode to 65604 bytes — one past the maximum.
+      final data = List<int>.filled(65604, 0);
+      data[0] = 0x02;
+      final payload = base64.encode(data);
+      expect(payload.length, 87472);
+
+      expect(
+        () => parsePayload(payload),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.invalidPayloadSize,
+        )),
+      );
+    });
+
+    test('99-byte decoded payload passes the size gate', () {
+      // Smallest legal decode: 1 version + 32 nonce + 34 ciphertext + 32
+      // mac. The MAC won't verify (zero bytes) but the failure must come
+      // from the MAC check, proving the size gate let it through.
+      final data = List<int>.filled(99, 0);
+      data[0] = 0x02;
+      expect(
+        () => parsePayload(base64.encode(data)),
+        returnsNormally,
+      );
+    });
+  });
+
+  group('decrypt surfaces CryptoException for non-UTF-8 plaintext', () {
+    test('invalid UTF-8 after a valid MAC throws invalidUtf8', () async {
+      // Craft a payload whose plaintext is 0xFF 0xFE (invalid UTF-8) by
+      // encrypting raw bytes through the internal primitives with a known
+      // conversation key — the public encrypt() only accepts Strings.
+      final conversationKey = List<int>.filled(32, 7);
+      final nonce = List<int>.filled(32, 1);
+      final keys = deriveMessageKeys(conversationKey, nonce);
+
+      final padded = pad([0xFF, 0xFE]);
+      final ciphertext =
+          chacha20(keys['chachaKey']!, keys['chachaNonce']!, padded, true);
+      final mac = calculateMac(keys['hmacKey']!, nonce, ciphertext);
+      final payload = constructPayload(nonce, ciphertext, mac);
+
+      await expectLater(
+        Encryption.decrypt(
+          payload: payload,
+          recipientSecretKey: '',
+          senderPubkey: '',
+          conversationKey: conversationKey,
+        ),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.invalidUtf8,
+        )),
+      );
+    });
+  });
+
+  group('plaintext size boundary (2-byte length prefix)', () {
+    final alice = Keys.generate();
+    final bob = Keys.generate();
+
+    test('65535-byte plaintext round-trips (maximum for 2-byte prefix)',
+        () async {
+      final plaintext = 'x' * 65535;
+      final payload = await Nip44.encrypt(
+        plaintext: plaintext,
+        senderSecretKey: alice.secret,
+        recipientPubkey: bob.public,
+      );
+      // 1 version + 32 nonce + (2 + 65536 padded) + 32 mac = 65603 bytes
+      // → 87472 base64 chars, exactly at both size gates.
+      expect(payload.length, 87472);
+
+      final decrypted = await Nip44.decrypt(
+        payload: payload,
+        recipientSecretKey: bob.secret,
+        senderPubkey: alice.public,
+      );
+      expect(decrypted, plaintext);
+    });
+
+    test('65536-byte plaintext is rejected (official invalid vector)',
+        () async {
+      // Matches the spec's invalid.encrypt_msg_lengths: [0, 65536, …] —
+      // the 6-byte extended prefix from the latest spec text is
+      // deliberately not implemented (rust-nostr parity).
+      await expectLater(
+        Nip44.encrypt(
+          plaintext: 'x' * 65536,
+          senderSecretKey: alice.secret,
+          recipientPubkey: bob.public,
+        ),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.invalidPlaintextLength,
+        )),
+      );
+    });
+
+    test('empty plaintext is rejected (official invalid vector)', () async {
+      await expectLater(
+        Nip44.encrypt(
+          plaintext: '',
+          senderSecretKey: alice.secret,
+          recipientPubkey: bob.public,
+        ),
+        throwsA(isA<CryptoException>().having(
+          (e) => e.code,
+          'code',
+          CryptoErrorCode.invalidPlaintextLength,
+        )),
       );
     });
   });
